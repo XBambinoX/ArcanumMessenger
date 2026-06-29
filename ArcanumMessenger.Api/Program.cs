@@ -10,7 +10,7 @@ namespace ArcanumMessenger
             // Add services to the container.
 
             builder.Services.AddControllers();
-            // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+            builder.Services.AddHealthChecks();
             builder.Services.AddSwaggerGen();
 
             var app = builder.Build();
@@ -28,6 +28,7 @@ namespace ArcanumMessenger
 
 
             app.MapControllers();
+            app.MapHealthChecks("/health");
 
             app.Run();
         }

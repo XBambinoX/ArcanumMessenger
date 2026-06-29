@@ -1,0 +1,28 @@
+services:
+    api:
+        build:
+            context: .
+            dockerfile: ArcanumMessenger.Api/Dockerfile
+        container_name: arcanum-api
+        ports:
+            - "5135:8080"
+            - "7039:8081"
+        environment:
+            ASPNETCORE_ENVIRONMENT: Development
+            ASPNETCORE_URLS: https://+:8081;http://+:8080
+            ASPNETCORE_Kestrel__Certificates__Default__Path: /https/arcanum.pfx
+            ASPNETCORE_Kestrel__Certificates__Default__Password: ArcDev2026
+        volumes:
+            - ${HOME}/.aspnet/https:/https:ro
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+            interval: 30s
+            timeout: 5s
+            retries: 3
+            start_period: 10s
+
+# Later:
+# db (PostgreSQL/Redis)
+# Client (React)
+# Nginx (reverse proxy)

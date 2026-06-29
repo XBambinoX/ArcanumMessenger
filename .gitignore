@@ -61,6 +61,14 @@ bld/
 # Visual Studio 2017 auto generated files
 Generated\ Files/
 
+# Rider
+.idea/
+*.sln.iml
+
+# VS Code
+.vscode/
+*.code-workspace
+
 # MSTest test Results
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
