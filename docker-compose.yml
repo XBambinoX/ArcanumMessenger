@@ -10,8 +10,8 @@ services:
         environment:
             ASPNETCORE_ENVIRONMENT: Development
             ASPNETCORE_URLS: https://+:8081;http://+:8080
-            ASPNETCORE_Kestrel__Certificates__Default__Path: /https/arcanum.pfx
-            ASPNETCORE_Kestrel__Certificates__Default__Password: ArcDev2026
+            ASPNETCORE_Kestrel__Certificates__Default__Path: ${KESTREL_CERT_PATH}
+            ASPNETCORE_Kestrel__Certificates__Default__Password: ${KESTREL_CERT_PASSWORD}
         volumes:
             - ${HOME}/.aspnet/https:/https:ro
         restart: unless-stopped
@@ -22,7 +22,21 @@ services:
             retries: 3
             start_period: 10s
 
+    client:
+        build:
+            context: ./ArcanumMessenger.Client
+            dockerfile: Dockerfile
+        container_name: arcanum-client
+        ports:
+            - "5173:5173"
+        environment:
+            API_URL: http://api:8080
+        volumes:
+            - ./ArcanumMessenger.Client:/app
+            - /app/node_modules
+        depends_on:
+            - api
+
 # Later:
 # db (PostgreSQL/Redis)
-# Client (React)
 # Nginx (reverse proxy)
