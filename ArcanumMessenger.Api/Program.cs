@@ -1,4 +1,7 @@
 
+using ArcanumMessenger.Data;
+using Microsoft.EntityFrameworkCore;
+
 namespace ArcanumMessenger
 {
     public class Program
@@ -8,6 +11,9 @@ namespace ArcanumMessenger
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
+
+            builder.Services.AddDbContext<AppDbContext>(options =>
+                options.UseNpgsql(builder.Configuration.GetConnectionString("Postgres")));
 
             builder.Services.AddCors(options =>
             {

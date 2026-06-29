@@ -12,9 +12,16 @@ services:
             ASPNETCORE_URLS: https://+:8081;http://+:8080
             ASPNETCORE_Kestrel__Certificates__Default__Path: ${KESTREL_CERT_PATH}
             ASPNETCORE_Kestrel__Certificates__Default__Password: ${KESTREL_CERT_PASSWORD}
+            ConnectionStrings__Postgres: Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+            ConnectionStrings__Redis: redis:6379
         volumes:
             - ${HOME}/.aspnet/https:/https:ro
         restart: unless-stopped
+        depends_on:
+            db:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
         healthcheck:
             test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
             interval: 30s
@@ -37,6 +44,43 @@ services:
         depends_on:
             - api
 
+    db:
+        image: postgres:16-alpine
+        container_name: arcanum-db
+        ports:
+            - "5432:5432"
+        environment:
+            POSTGRES_DB: ${POSTGRES_DB}
+            POSTGRES_USER: ${POSTGRES_USER}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 10s
+
+    redis:
+        image: redis:7.2-alpine
+        container_name: arcanum-redis
+        ports:
+            - "6379:6379"
+        volumes:
+            - redis_data:/data
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 5s
+
+volumes:
+    postgres_data:
+    redis_data:
+
 # Later:
-# db (PostgreSQL/Redis)
 # Nginx (reverse proxy)
