@@ -4,100 +4,139 @@ import styles from "./WelcomePage.module.css";
 function useReveal() {
     const ref = useRef<HTMLDivElement>(null);
     const [visible, setVisible] = useState(false);
-
     useEffect(() => {
         const el = ref.current;
         if (!el) return;
         const observer = new IntersectionObserver(
             ([entry]) => { if (entry.isIntersecting) setVisible(true); },
-            { threshold: 0.15 }
+            { threshold: 0.12 }
         );
         observer.observe(el);
         return () => observer.disconnect();
     }, []);
-
     return { ref, visible };
+}
+
+// Particles
+function useParticles(canvasRef: React.RefObject<HTMLCanvasElement>) {
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        const resize = () => {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+        };
+        resize();
+        window.addEventListener("resize", resize);
+
+        const particles = Array.from({ length: 60 }, () => ({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            r: Math.random() * 1.5 + 0.3,
+            dx: (Math.random() - 0.5) * 0.3,
+            dy: (Math.random() - 0.5) * 0.3,
+            o: Math.random() * 0.5 + 0.1,
+        }));
+
+        let raf: number;
+        const draw = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (const p of particles) {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(167,139,250,${p.o})`;
+                ctx.fill();
+                p.x += p.dx;
+                p.y += p.dy;
+                if (p.x < 0) p.x = canvas.width;
+                if (p.x > canvas.width) p.x = 0;
+                if (p.y < 0) p.y = canvas.height;
+                if (p.y > canvas.height) p.y = 0;
+            }
+            raf = requestAnimationFrame(draw);
+        };
+        draw();
+        return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", resize); };
+    }, []);
 }
 
 const features = [
     {
-        icon: (
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2" />
-                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            </svg>
-        ),
+        big: true,
+        icon: "🔐",
         iconBg: "rgba(124,58,237,0.15)",
-        iconColor: "#a78bfa",
         title: "End-to-end encryption",
-        text: "All messages are encrypted on your device. Not even the server can see the content of your conversations.",
+        text: "Every message is encrypted on your device before it leaves. Not even the server has access to your conversations. Your privacy is guaranteed at the protocol level — no backdoors, no exceptions.",
     },
     {
-        icon: (
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-            </svg>
-        ),
+        icon: "⚡",
         iconBg: "rgba(6,182,212,0.12)",
-        iconColor: "#22d3ee",
-        title: "Lightning-fast speed",
-        text: "An architecture based on SignalR and Redis enables real-time message delivery.",
+        title: "Real-time delivery",
+        text: "Powered by SignalR and Redis — messages arrive in milliseconds.",
     },
     {
-        icon: (
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="8" r="4" />
-                <path d="M6 20v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" />
-            </svg>
-        ),
+        icon: "👥",
         iconBg: "rgba(99,102,241,0.15)",
-        iconColor: "#818cf8",
         title: "Group chats",
-        text: "Create groups, manage members, and communicate with your team all in one place.",
+        text: "Create groups, manage members, and collaborate in one place.",
     },
     {
-        icon: (
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-            </svg>
-        ),
+        icon: "📡",
         iconBg: "rgba(124,58,237,0.15)",
-        iconColor: "#a78bfa",
-        title: "Activity status",
-        text: "You can see when the person you're chatting with is online and whether they're reading your message right now.",
+        title: "Online status",
+        text: "See when someone is active and when they're typing.",
     },
     {
-        icon: (
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-            </svg>
-        ),
+        icon: "🗂️",
         iconBg: "rgba(6,182,212,0.12)",
-        iconColor: "#22d3ee",
-        title: "Media and Files",
-        text: "Send photos, videos, and files of any size without losing quality.",
+        title: "Files & media",
+        text: "Send photos, videos, and files of any size without quality loss.",
     },
-    {
-        icon: (
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <ellipse cx="12" cy="5" rx="9" ry="3" />
-                <path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5" />
-                <path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3" />
-            </svg>
-        ),
-        iconBg: "rgba(99,102,241,0.15)",
-        iconColor: "#818cf8",
-        title: "Self-hosted",
-        text: "Deploy on your own server using Docker. Full control over your data and infrastructure.",
-    },
+];
+
+const techStack = [
+    { icon: "⚙️", bg: "rgba(99,102,241,0.15)", name: ".NET 10", desc: "High-performance API backend" },
+    { icon: "🐘", bg: "rgba(59,130,246,0.15)", name: "PostgreSQL 16 - alphine", desc: "Reliable relational database" },
+    { icon: "🔴", bg: "rgba(239,68,68,0.15)", name: "Redis 7.2", desc: "In-memory cache & pub/sub" },
+    { icon: "🐳", bg: "rgba(6,182,212,0.15)", name: "Docker", desc: "Fully containerized stack" },
 ];
 
 export default function WelcomePage() {
     const hero = useReveal();
-    const cardRefs = features.map(() => useReveal());
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    useParticles(canvasRef);
+
+    const featRefs = features.map(() => useReveal());
+    const techRefs = techStack.map(() => useReveal());
 
     return (
         <div className={styles.root}>
+
+            {/* ── NAVBAR ── */}
+            <nav className={styles.navbar}>
+                <div className={styles.navLogo}>
+                    <div className={styles.navLogoIcon}>
+                        <svg width="18" height="18" viewBox="0 0 48 48" fill="none">
+                            <path d="M24 4L42 14.5V33.5L24 44L6 33.5V14.5L24 4Z" stroke="url(#ng)" strokeWidth="2.5" fill="none" />
+                            <circle cx="24" cy="24" r="4" fill="url(#ng)" />
+                            <defs>
+                                <linearGradient id="ng" x1="6" y1="4" x2="42" y2="44" gradientUnits="userSpaceOnUse">
+                                    <stop stopColor="#a78bfa" /><stop offset="1" stopColor="#22d3ee" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                    <span className={styles.navLogoText}>Arcanum</span>
+                </div>
+                <div className={styles.navLinks}>
+                    <button className={styles.navLink}>Features</button>
+                    <button className={styles.navLink}>Tech stack</button>
+                    <button className={styles.navBtn}>Sign in</button>
+                </div>
+            </nav>
 
             {/* ── HERO ── */}
             <section className={styles.hero}>
@@ -105,29 +144,10 @@ export default function WelcomePage() {
                 <div className={styles.orb2} />
                 <div className={styles.orb3} />
                 <div className={styles.grid} />
+                <canvas ref={canvasRef} className={styles.particles} />
 
                 <div ref={hero.ref} className={`${styles.heroInner} ${hero.visible ? styles.visible : ""}`}>
 
-                    {/* Logo */}
-                    <div className={styles.logoWrap}>
-                        <span className={styles.pulseRing} />
-                        <div className={styles.logoBox}>
-                            <svg width="38" height="38" viewBox="0 0 48 48" fill="none">
-                                <path d="M24 4L42 14.5V33.5L24 44L6 33.5V14.5L24 4Z" stroke="url(#hg)" strokeWidth="2" fill="none" />
-                                <circle cx="24" cy="24" r="4.5" fill="url(#hg)" />
-                                <path d="M24 14V19M24 29V34M14.5 19.5L18.5 22M29.5 26L33.5 28.5M14.5 28.5L18.5 26M29.5 22L33.5 19.5"
-                                    stroke="url(#hg)" strokeWidth="1.5" strokeLinecap="round" />
-                                <defs>
-                                    <linearGradient id="hg" x1="6" y1="4" x2="42" y2="44" gradientUnits="userSpaceOnUse">
-                                        <stop stopColor="#a78bfa" />
-                                        <stop offset="1" stopColor="#22d3ee" />
-                                    </linearGradient>
-                                </defs>
-                            </svg>
-                        </div>
-                    </div>
-
-                    {/* Name */}
                     <div>
                         <h1 className={styles.brandName}>Arcanum</h1>
                         <p className={styles.brandSub}>Messenger</p>
@@ -141,23 +161,23 @@ export default function WelcomePage() {
 
                     <p className={styles.description}>
                         Secure messaging for those who value privacy.
-                        Communicate without limits—quickly, reliably, and in an encrypted environment.
+                        Communicate without limits — quickly, reliably, and fully encrypted.
                     </p>
 
                     <div className={styles.buttons}>
-                        <button className={styles.btnPrimary} onClick={() => {/* navigate("/login") */ }}>
+                        <button className={styles.btnPrimary}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" />
                             </svg>
-                            Увійти
+                            Sign in
                         </button>
-                        <button className={styles.btnSecondary} onClick={() => {/* navigate("/register") */ }}>
+                        <button className={styles.btnSecondary}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
                                 <circle cx="9" cy="7" r="4" />
                                 <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
                             </svg>
-                            Реєстрація
+                            Create account
                         </button>
                     </div>
 
@@ -166,7 +186,6 @@ export default function WelcomePage() {
                     </p>
                 </div>
 
-                {/* Scroll hint */}
                 <div className={styles.scrollHint}>
                     <span>scroll</span>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -181,21 +200,18 @@ export default function WelcomePage() {
                     <p className={styles.sectionLabel}>Features</p>
                     <h2 className={styles.sectionTitle}>Everything you need to communicate</h2>
                     <p className={styles.sectionSubtitle}>
-                        Arcanum is built on a modern tech stack—.NET, PostgreSQL, Redis, and Docker.
+                        Built for privacy-first users who want full control over their data.
                     </p>
 
-                    <div className={styles.grid3}>
+                    <div className={styles.featGrid}>
                         {features.map((f, i) => (
                             <div
                                 key={i}
-                                ref={cardRefs[i].ref}
-                                className={`${styles.card} ${cardRefs[i].visible ? styles.visible : ""}`}
+                                ref={featRefs[i].ref}
+                                className={`${styles.card} ${f.big ? styles.featCardBig : ""} ${featRefs[i].visible ? styles.visible : ""}`}
                                 style={{ transitionDelay: `${i * 80}ms` }}
                             >
-                                <div
-                                    className={styles.cardIcon}
-                                    style={{ background: f.iconBg, color: f.iconColor }}
-                                >
+                                <div className={styles.cardIcon} style={{ background: f.iconBg, fontSize: f.big ? "28px" : "22px" }}>
                                     {f.icon}
                                 </div>
                                 <h3 className={styles.cardTitle}>{f.title}</h3>
@@ -206,10 +222,41 @@ export default function WelcomePage() {
                 </div>
             </section>
 
+            {/* ── TECH STACK ── */}
+            <section className={styles.tech}>
+                <div className={styles.techInner}>
+                    <p className={styles.sectionLabel}>Tech stack</p>
+                    <h2 className={styles.sectionTitle}>Built on solid foundations</h2>
+                    <p className={styles.sectionSubtitle}>
+                        Modern, battle-tested technologies wrapped in Docker for easy deployment.
+                    </p>
+
+                    <div className={styles.techGrid}>
+                        {techStack.map((t, i) => (
+                            <div
+                                key={i}
+                                ref={techRefs[i].ref}
+                                className={`${styles.techCard} ${techRefs[i].visible ? styles.visible : ""}`}
+                                style={{ transitionDelay: `${i * 100}ms` }}
+                            >
+                                <div className={styles.techIcon} style={{ background: t.bg }}>{t.icon}</div>
+                                <p className={styles.techName}>{t.name}</p>
+                                <p className={styles.techDesc}>{t.desc}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
             {/* ── FOOTER ── */}
             <footer className={styles.footer}>
-                © {new Date().getFullYear()} Arcanum Messenger · Also check out {" "}
-                <a href="https://github.com/Blackcat-404/AuthVault---password-manager" target="_blank" rel="noopener noreferrer" style={{ color: "rgba(167,139,250,0.7)", textDecoration: "none" }}>
+                © {new Date().getFullYear()} Arcanum Messenger · Also check out{" "}
+                <a
+                    href="https://github.com/Blackcat-404/AuthVault---password-manager"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.footerLink}
+                >
                     AuthVault
                 </a>
             </footer>
