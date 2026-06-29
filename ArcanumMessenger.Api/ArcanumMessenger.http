@@ -1,0 +1,6 @@
+@ArcanumMessenger_HostAddress = http://localhost:5101
+
+GET {{ArcanumMessenger_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
