@@ -15,7 +15,7 @@ services:
             ConnectionStrings__Postgres: Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
             ConnectionStrings__Redis: redis:6379
         volumes:
-            - ${HOME}/.aspnet/https:/https:ro
+            - ${HTTPS_CERT_DIR}:/https:ro
         restart: unless-stopped
         depends_on:
             db:
