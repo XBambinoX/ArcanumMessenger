@@ -59,6 +59,7 @@
 
 /* Logo header */
 .header {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -377,3 +378,25 @@
     align-items: center;
     justify-content: center;
 }
+
+.backHome {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid rgba(124, 58, 237, 0.25);
+    background: rgba(124, 58, 237, 0.05);
+    color: rgba(167, 139, 250, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+    .backHome:hover {
+        background: rgba(124, 58, 237, 0.12);
+        border-color: rgba(167, 139, 250, 0.4);
+    }

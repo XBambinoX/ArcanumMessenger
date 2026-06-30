@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import styles from "./RegisterPage.module.css";
 import { checkUsername } from "../api/auth";
+import { useNavigate } from "react-router-dom";
 
 type Step = 0 | 1 | 2 | 3;
 
@@ -9,6 +10,7 @@ const CODE_LENGTH = 6;
 const RESEND_COOLDOWN = 30; // seconds
 
 export default function RegisterPage() {
+    const navigate = useNavigate();
     const [step, setStep] = useState<Step>(0);
 
     // ── Form state ──
@@ -155,6 +157,12 @@ export default function RegisterPage() {
             <div className={styles.card}>
                 {/* Header */}
                 <div className={styles.header}>
+                    <button className={styles.backHome} onClick={() => navigate("/welcome")} aria-label="Back to welcome">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M19 12H5M12 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+
                     <div className={styles.logoBox}>
                         <svg width="26" height="26" viewBox="0 0 48 48" fill="none">
                             <path d="M24 4L42 14.5V33.5L24 44L6 33.5V14.5L24 4Z" stroke="url(#rg)" strokeWidth="2.2" fill="none" />
