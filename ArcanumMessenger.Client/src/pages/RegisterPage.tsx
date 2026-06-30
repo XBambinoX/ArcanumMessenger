@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import styles from "./RegisterPage.module.css";
+import { checkUsername } from "../api/auth";
 
 type Step = 0 | 1 | 2 | 3;
 
@@ -54,11 +55,18 @@ export default function RegisterPage() {
             return;
         }
         setLoading(true);
-        // TODO: call API to check username availability
-        // const res = await fetch("/api/auth/check-username", { method: "POST", body: JSON.stringify({ username }) });
-        await fakeDelay();
-        setLoading(false);
-        goNext();
+        try {
+            const { available, reason } = await checkUsername(username);
+            if (!available) {
+                setError(reason === "taken" ? "This username is already taken" : "Invalid username format");
+                return;
+            }
+            goNext();
+        } catch {
+            setError("Something went wrong, try again");
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleEmailSubmit = async () => {

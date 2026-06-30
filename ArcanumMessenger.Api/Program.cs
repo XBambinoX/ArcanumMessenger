@@ -35,7 +35,7 @@ namespace ArcanumMessenger
                 app.UseSwaggerUI();
             }
 
-            app.UseHttpsRedirection();
+            //app.UseHttpsRedirection(); TEMPORARY DURING LOCALHOST DEVELOPMENT
             app.UseCors("DevClient");
 
             app.UseAuthorization();
