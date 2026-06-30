@@ -27,14 +27,28 @@ export default function RegisterPage() {
 
     const codeInputs = useRef<(HTMLInputElement | null)[]>([]);
 
-    const [emailConsentShown, setEmailConsentShown] = useState(false);
-    const [emailVisibilityConsent, setEmailVisibilityConsent] = useState<boolean | null>(null);
+    const [emailInfoShown, setEmailInfoShown] = useState(false);
+    const [emailInfoSeen, setEmailInfoSeen] = useState(false);
+    const [emailInfoCountdown, setEmailInfoCountdown] = useState(5);
+    const [emailVisibilityConsent, setEmailVisibilityConsent] = useState(false);
 
     useEffect(() => {
-        if (resendCooldown <= 0) return;
-        const t = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+        if (step === 1 && !emailInfoSeen) {
+            setEmailInfoShown(true);
+            setEmailInfoCountdown(5);
+        }
+    }, [step, emailInfoSeen]);
+
+    useEffect(() => {
+        if (!emailInfoShown || emailInfoCountdown <= 0) return;
+        const t = setTimeout(() => setEmailInfoCountdown((c) => c - 1), 1000);
         return () => clearTimeout(t);
-    }, [resendCooldown]);
+    }, [emailInfoShown, emailInfoCountdown]);
+
+    const handleEmailInfoAck = () => {
+        setEmailInfoShown(false);
+        setEmailInfoSeen(true);
+    };
 
     const goNext = () => {
         setError("");
@@ -67,7 +81,7 @@ export default function RegisterPage() {
                 return;
             }
             if (emailVisibilityConsent === null) {
-                setEmailConsentShown(true);
+                setEmailInfoShown(true);
             }
             goNext();
         } catch {
@@ -75,11 +89,6 @@ export default function RegisterPage() {
         } finally {
             setLoading(false);
         }
-    };
-
-    const handleConsentChoice = (allow: boolean) => {
-        setEmailVisibilityConsent(allow);
-        setEmailConsentShown(false);
     };
 
     const handleEmailSubmit = async () => {
@@ -400,32 +409,31 @@ export default function RegisterPage() {
                     </div>
                 </div>
             </div>
-            {emailConsentShown && (
+            {emailInfoShown && (
                 <div className={styles.modalOverlay}>
                     <div className={styles.modal}>
                         <div className={styles.modalIcon}>🔒</div>
                         <h3 className={styles.modalTitle}>About your email</h3>
                         <p className={styles.modalText}>
-                            Your email is stored only as a one-way hash and not even developers can read or recover it.
+                            Your email is private and not even developers can read or recover it. If you'd like to show your email on your public profile later, we need your
+                            permission to know it in plain form.
                         </p>
                         <p className={styles.modalText}>
-                            If you'd like to show your email on your public profile later, we need your
-                            permission to know it in plain form.
-                            <br />
                             <br />
                             <span className={styles.modalWarning}>
                                 Without this, your email stays hashed forever — and you won't be able
                                 to add it to your profile, even afterward.
                             </span>
                         </p>
-                        <div className={styles.modalActions}>
-                            <button className={styles.btnSecondary} onClick={() => handleConsentChoice(false)}>
-                                Keep it fully private
-                            </button>
-                            <button className={styles.btnPrimary} onClick={() => handleConsentChoice(true)}>
-                                Allow for my profile
-                            </button>
-                        </div>
+                        <button
+                            className={styles.btnPrimary}
+                            onClick={handleEmailInfoAck}
+                            disabled={emailInfoCountdown > 0}
+                        >
+                            {emailInfoCountdown > 0
+                                ? `I've read and understand (${emailInfoCountdown})`
+                                : "I've read and understand"}
+                        </button>
                     </div>
                 </div>
             )}
