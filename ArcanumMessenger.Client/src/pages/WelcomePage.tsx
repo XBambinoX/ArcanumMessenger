@@ -17,6 +17,56 @@ function useReveal() {
     return { ref, visible };
 }
 
+// Scroll progress (0–100)
+function useScrollProgress() {
+    const [progress, setProgress] = useState(0);
+    useEffect(() => {
+        const onScroll = () => {
+            const scrollTop = window.scrollY;
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            setProgress(docHeight > 0 ? (scrollTop / docHeight) * 100 : 0);
+        };
+        window.addEventListener("scroll", onScroll, { passive: true });
+        onScroll();
+        return () => window.removeEventListener("scroll", onScroll);
+    }, []);
+    return progress;
+}
+
+// Tracks which section id is currently in view, for navbar highlighting
+function useActiveSection(ids: string[]) {
+    const [active, setActive] = useState<string>(ids[0] ?? "");
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) setActive(entry.target.id);
+                });
+            },
+            { rootMargin: "-40% 0px -50% 0px", threshold: 0 }
+        );
+        ids.forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) observer.observe(el);
+        });
+        return () => observer.disconnect();
+    }, [ids]);
+    return active;
+}
+
+// Glow that follows the mouse
+function useMouseGlow(glowRef: React.RefObject<HTMLDivElement>) {
+    useEffect(() => {
+        const el = glowRef.current;
+        if (!el) return;
+        const onMove = (e: MouseEvent) => {
+            el.style.transform = `translate(${e.clientX}px, ${e.clientY}px) translate(-50%, -50%)`;
+        };
+        window.addEventListener("mousemove", onMove);
+        return () => window.removeEventListener("mousemove", onMove);
+    }, []);
+}
+
 // Particles
 function useParticles(canvasRef: React.RefObject<HTMLCanvasElement>) {
     useEffect(() => {
@@ -98,8 +148,8 @@ const features = [
 ];
 
 const techStack = [
-    { icon: "⚙️", bg: "rgba(99,102,241,0.15)", name: ".NET 10", desc: "High-performance API backend" },
-    { icon: "🐘", bg: "rgba(59,130,246,0.15)", name: "PostgreSQL 16 - alphine", desc: "Reliable relational database" },
+    { icon: "⚙️", bg: "rgba(99,102,241,0.15)", name: ".NET 9", desc: "High-performance API backend" },
+    { icon: "🐘", bg: "rgba(59,130,246,0.15)", name: "PostgreSQL 16", desc: "Reliable relational database" },
     { icon: "🔴", bg: "rgba(239,68,68,0.15)", name: "Redis 7.2", desc: "In-memory cache & pub/sub" },
     { icon: "🐳", bg: "rgba(6,182,212,0.15)", name: "Docker", desc: "Fully containerized stack" },
 ];
@@ -112,8 +162,23 @@ export default function WelcomePage() {
     const featRefs = features.map(() => useReveal());
     const techRefs = techStack.map(() => useReveal());
 
+    const scrollProgress = useScrollProgress();
+    const activeSection = useActiveSection(["hero-section", "features-section", "tech-section"]);
+    const glowRef = useRef<HTMLDivElement>(null);
+    useMouseGlow(glowRef);
+
+    const scrollTo = (id: string) => {
+        document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+    };
+
     return (
         <div className={styles.root}>
+
+            {/* Scroll progress bar */}
+            <div className={styles.scrollProgress} style={{ width: `${scrollProgress}%` }} />
+
+            {/* Mouse glow */}
+            <div ref={glowRef} className={styles.mouseGlow} />
 
             {/* ── NAVBAR ── */}
             <nav className={styles.navbar}>
@@ -132,14 +197,24 @@ export default function WelcomePage() {
                     <span className={styles.navLogoText}>Arcanum</span>
                 </div>
                 <div className={styles.navLinks}>
-                    <button className={styles.navLink}>Features</button>
-                    <button className={styles.navLink}>Tech stack</button>
+                    <button
+                        className={`${styles.navLink} ${activeSection === "features-section" ? styles.active : ""}`}
+                        onClick={() => scrollTo("features-section")}
+                    >
+                        Features
+                    </button>
+                    <button
+                        className={`${styles.navLink} ${activeSection === "tech-section" ? styles.active : ""}`}
+                        onClick={() => scrollTo("tech-section")}
+                    >
+                        Tech stack
+                    </button>
                     <button className={styles.navBtn}>Sign in</button>
                 </div>
             </nav>
 
             {/* ── HERO ── */}
-            <section className={styles.hero}>
+            <section id="hero-section" className={styles.hero}>
                 <div className={styles.orb1} />
                 <div className={styles.orb2} />
                 <div className={styles.orb3} />
@@ -195,7 +270,7 @@ export default function WelcomePage() {
             </section>
 
             {/* ── FEATURES ── */}
-            <section className={styles.features}>
+            <section id="features-section" className={styles.features}>
                 <div className={styles.featuresInner}>
                     <p className={styles.sectionLabel}>Features</p>
                     <h2 className={styles.sectionTitle}>Everything you need to communicate</h2>
@@ -223,7 +298,7 @@ export default function WelcomePage() {
             </section>
 
             {/* ── TECH STACK ── */}
-            <section className={styles.tech}>
+            <section id="tech-section" className={styles.tech}>
                 <div className={styles.techInner}>
                     <p className={styles.sectionLabel}>Tech stack</p>
                     <h2 className={styles.sectionTitle}>Built on solid foundations</h2>

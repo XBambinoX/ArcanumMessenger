@@ -54,6 +54,7 @@
 }
 
 .navLink {
+    position: relative;
     font-size: 14px;
     color: rgba(148, 163, 184, 0.7);
     text-decoration: none;
@@ -62,12 +63,59 @@
     background: none;
     border: none;
     font-family: inherit;
-    padding: 0;
+    padding: 0 0 4px;
 }
 
     .navLink:hover {
         color: rgba(167, 139, 250, 0.9);
     }
+
+    .navLink::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 100%;
+        bottom: 0;
+        height: 2px;
+        border-radius: 2px;
+        background: linear-gradient(90deg, #a78bfa, #22d3ee);
+        transition: right 0.25s ease;
+    }
+
+    .navLink.active {
+        color: rgba(167, 139, 250, 0.95);
+    }
+
+        .navLink.active::after {
+            right: 0;
+        }
+
+/* Scroll progress bar */
+.scrollProgress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 2px;
+    z-index: 200;
+    background: linear-gradient(90deg, #7c3aed, #22d3ee);
+    transition: width 0.1s ease-out;
+    box-shadow: 0 0 8px rgba(124, 58, 237, 0.6);
+}
+
+/* Mouse glow */
+.mouseGlow {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 500px;
+    height: 500px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 1;
+    background: radial-gradient(circle, rgba(124, 58, 237, 0.08) 0%, transparent 70%);
+    transform: translate(-50%, -50%);
+    will-change: transform;
+}
 
 .navBtn {
     padding: 8px 20px;
@@ -93,7 +141,7 @@
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    padding: 220px 24px 80px;
+    padding: 200px 24px 80px;
     overflow: hidden;
 }
 
@@ -112,8 +160,8 @@
 }
 
 .orb2 {
-    bottom: -100px;
-    right: -100px;
+    bottom: 100px;
+    right: 450px;
     width: 550px;
     height: 550px;
     background: radial-gradient(circle, rgba(6, 182, 212, 0.15) 0%, transparent 65%);
@@ -121,7 +169,7 @@
 
 .orb3 {
     top: 40%;
-    left: 55%;
+    left: 65%;
     width: 350px;
     height: 350px;
     background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 65%);
