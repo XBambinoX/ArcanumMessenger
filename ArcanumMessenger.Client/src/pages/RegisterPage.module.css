@@ -400,3 +400,59 @@
         background: rgba(124, 58, 237, 0.12);
         border-color: rgba(167, 139, 250, 0.4);
     }
+
+.modalOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: rgba(8, 6, 20, 0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.modal {
+    width: 100%;
+    max-width: 380px;
+    border-radius: 20px;
+    border: 1px solid rgba(124, 58, 237, 0.3);
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(15, 12, 30, 0.97));
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(124, 58, 237, 0.12);
+    padding: 28px 26px 24px;
+    text-align: center;
+}
+
+.modalIcon {
+    font-size: 32px;
+    margin-bottom: 10px;
+}
+
+.modalTitle {
+    font-size: 18px;
+    font-weight: 700;
+    color: rgba(226, 232, 240, 0.95);
+    margin: 0 0 12px;
+}
+
+.modalText {
+    font-size: 13px;
+    line-height: 1.6;
+    color: rgba(148, 163, 184, 0.75);
+    margin: 0 0 12px;
+    text-align: left;
+}
+
+.modalActions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.modalWarning {
+    display: block;
+    color: #ef4444;
+    font-weight: 600;
+}
