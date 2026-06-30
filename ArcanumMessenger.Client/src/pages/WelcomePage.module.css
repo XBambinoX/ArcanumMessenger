@@ -1,0 +1,687 @@
+.root {
+    background: #0d0b1e;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    overflow-x: hidden;
+}
+
+/* ── NAVBAR ── */
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 48px;
+    background: rgba(13, 11, 30, 0.7);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(124, 58, 237, 0.1);
+    transition: background 0.3s;
+}
+
+.navLogo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.navLogoIcon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid rgba(124, 58, 237, 0.45);
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.28), rgba(79, 70, 229, 0.18));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.navLogoText {
+    font-size: 16px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #a78bfa, #22d3ee);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.navLinks {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+}
+
+.navLink {
+    position: relative;
+    font-size: 14px;
+    color: rgba(148, 163, 184, 0.7);
+    text-decoration: none;
+    transition: color 0.2s;
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-family: inherit;
+    padding: 0 0 4px;
+}
+
+    .navLink:hover {
+        color: rgba(167, 139, 250, 0.9);
+    }
+
+    .navLink::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 100%;
+        bottom: 0;
+        height: 2px;
+        border-radius: 2px;
+        background: linear-gradient(90deg, #a78bfa, #22d3ee);
+        transition: right 0.25s ease;
+    }
+
+    .navLink.active {
+        color: rgba(167, 139, 250, 0.95);
+    }
+
+        .navLink.active::after {
+            right: 0;
+        }
+
+/* Scroll progress bar */
+.scrollProgress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 2px;
+    z-index: 200;
+    background: linear-gradient(90deg, #7c3aed, #22d3ee);
+    transition: width 0.1s ease-out;
+    box-shadow: 0 0 8px rgba(124, 58, 237, 0.6);
+}
+
+/* Mouse glow */
+.mouseGlow {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 500px;
+    height: 500px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 1;
+    background: radial-gradient(circle, rgba(124, 58, 237, 0.08) 0%, transparent 70%);
+    transform: translate(-50%, -50%);
+    will-change: transform;
+}
+
+.navBtn {
+    padding: 8px 20px;
+    border-radius: 10px;
+    border: 1px solid rgba(124, 58, 237, 0.4);
+    background: rgba(124, 58, 237, 0.1);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(167, 139, 250, 0.9);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+    .navBtn:hover {
+        background: rgba(124, 58, 237, 0.2);
+        border-color: rgba(167, 139, 250, 0.5);
+    }
+
+/* ── HERO ── */
+.hero {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 200px 24px 80px;
+    overflow: hidden;
+}
+
+.orb1, .orb2, .orb3 {
+    pointer-events: none;
+    position: absolute;
+    border-radius: 50%;
+}
+
+.orb1 {
+    top: -150px;
+    left: -150px;
+    width: 700px;
+    height: 700px;
+    background: radial-gradient(circle, rgba(124, 58, 237, 0.22) 0%, transparent 65%);
+}
+
+.orb2 {
+    bottom: 100px;
+    right: 450px;
+    width: 550px;
+    height: 550px;
+    background: radial-gradient(circle, rgba(6, 182, 212, 0.15) 0%, transparent 65%);
+}
+
+.orb3 {
+    top: 40%;
+    left: 65%;
+    width: 350px;
+    height: 350px;
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 65%);
+}
+
+.grid {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    opacity: 0.03;
+    background-image: linear-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.15) 1px, transparent 1px);
+    background-size: 48px 48px;
+}
+
+/* Particles canvas */
+.particles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.heroInner {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    max-width: 860px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    text-align: center;
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+    .heroInner.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+/* Badge */
+.heroBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 100px;
+    border: 1px solid rgba(124, 58, 237, 0.3);
+    background: rgba(124, 58, 237, 0.08);
+    font-size: 12px;
+    color: rgba(167, 139, 250, 0.8);
+    letter-spacing: 0.05em;
+}
+
+.badgeDot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #a78bfa;
+    animation: blink 2s ease-in-out infinite;
+}
+
+@keyframes blink {
+    0%, 100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.3;
+    }
+}
+
+/* Logo */
+.logoWrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pulseRing {
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: rgba(124, 58, 237, 0.18);
+    animation: pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 0.7;
+    }
+
+    50% {
+        transform: scale(1.45);
+        opacity: 0;
+    }
+}
+
+.logoBox {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    border-radius: 22px;
+    border: 1px solid rgba(124, 58, 237, 0.45);
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.28), rgba(79, 70, 229, 0.18));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 40px rgba(124, 58, 237, 0.28);
+}
+
+/* Brand */
+.brandName {
+    font-size: 80px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, #a78bfa 0%, #818cf8 45%, #22d3ee 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.05;
+    margin: 0;
+}
+
+.brandSub {
+    font-size: 12px;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: rgba(167, 139, 250, 0.55);
+    font-weight: 500;
+    margin: 6px 0 0;
+}
+
+/* Divider */
+.divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 200px;
+}
+
+.divLine {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(124, 58, 237, 0.4));
+}
+
+.divLineR {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(124, 58, 237, 0.4), transparent);
+}
+
+.divStar {
+    color: rgba(124, 58, 237, 0.5);
+    font-size: 11px;
+}
+
+/* Description */
+.description {
+    max-width: 520px;
+    font-size: 18px;
+    line-height: 1.75;
+    color: rgba(148, 163, 184, 0.85);
+    margin: 0;
+}
+
+/* Buttons */
+.buttons {
+    display: flex;
+    gap: 12px;
+    padding-top: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.btnPrimary {
+    position: relative;
+    overflow: hidden;
+    padding: 14px 36px;
+    border-radius: 14px;
+    border: none;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    cursor: pointer;
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    box-shadow: 0 0 24px rgba(124, 58, 237, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transition: transform 0.15s, box-shadow 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+    .btnPrimary:hover {
+        transform: scale(1.03);
+        box-shadow: 0 0 32px rgba(124, 58, 237, 0.5);
+    }
+
+    .btnPrimary:active {
+        transform: scale(0.97);
+    }
+
+.btnSecondary {
+    padding: 14px 36px;
+    border-radius: 14px;
+    border: 1px solid rgba(124, 58, 237, 0.32);
+    background: rgba(124, 58, 237, 0.06);
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    color: rgba(167, 139, 250, 0.9);
+    cursor: pointer;
+    transition: transform 0.15s, border-color 0.15s, background 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+    .btnSecondary:hover {
+        transform: scale(1.03);
+        border-color: rgba(167, 139, 250, 0.5);
+        background: rgba(124, 58, 237, 0.12);
+    }
+
+    .btnSecondary:active {
+        transform: scale(0.97);
+    }
+
+.footerHint {
+    font-size: 12px;
+    color: rgba(100, 116, 139, 0.55);
+    margin: 8px 0 0;
+    letter-spacing: 0.03em;
+}
+
+/* Scroll hint */
+.scrollHint {
+    position: absolute;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    color: rgba(148, 163, 184, 0.35);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    animation: bounce 2s ease-in-out infinite;
+    z-index: 2;
+}
+
+@keyframes bounce {
+    0%, 100% {
+        transform: translateX(-50%) translateY(0);
+    }
+
+    50% {
+        transform: translateX(-50%) translateY(6px);
+    }
+}
+
+/* ── FEATURES ── */
+.features {
+    position: relative;
+    padding: 120px 48px;
+    background: linear-gradient(180deg, #0d0b1e 0%, #100d24 50%, #0d0b1e 100%);
+}
+
+.featuresInner {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.sectionLabel {
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: rgba(167, 139, 250, 0.55);
+    font-weight: 500;
+    margin-bottom: 16px;
+}
+
+.sectionTitle {
+    text-align: center;
+    font-size: 42px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: rgba(226, 232, 240, 0.92);
+    margin: 0 0 12px;
+}
+
+.sectionSubtitle {
+    text-align: center;
+    font-size: 16px;
+    color: rgba(148, 163, 184, 0.7);
+    max-width: 480px;
+    margin: 0 auto 64px;
+    line-height: 1.6;
+}
+
+/* Features — big card + 2 small */
+.featGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 20px;
+}
+
+.featCardBig {
+    grid-row: span 2;
+}
+
+.card {
+    position: relative;
+    padding: 36px 32px;
+    border-radius: 20px;
+    border: 1px solid rgba(124, 58, 237, 0.15);
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.07), rgba(15, 12, 30, 0.85));
+    transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    opacity: 0;
+    transform: translateY(32px);
+}
+
+    .card.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .card:hover {
+        transform: translateY(-4px);
+        border-color: rgba(124, 58, 237, 0.35);
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3), 0 0 24px rgba(124, 58, 237, 0.1);
+    }
+
+    .card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 24px;
+        right: 24px;
+        height: 1px;
+        border-radius: 1px;
+        background: linear-gradient(90deg, transparent, rgba(167, 139, 250, 0.4), transparent);
+    }
+
+.cardIcon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.cardTitle {
+    font-size: 18px;
+    font-weight: 600;
+    color: rgba(226, 232, 240, 0.92);
+    margin: 0 0 10px;
+}
+
+.cardText {
+    font-size: 14px;
+    line-height: 1.65;
+    color: rgba(148, 163, 184, 0.7);
+    margin: 0;
+}
+
+.featCardBig .cardTitle {
+    font-size: 22px;
+    margin-bottom: 14px;
+}
+
+.featCardBig .cardText {
+    font-size: 15px;
+}
+
+.featCardBig .cardIcon {
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+    margin-bottom: 28px;
+}
+
+/* ── TECH STACK ── */
+.tech {
+    padding: 100px 48px;
+    background: #0d0b1e;
+}
+
+.techInner {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.techGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-top: 0;
+}
+
+.techCard {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    padding: 32px 20px;
+    border-radius: 16px;
+    border: 1px solid rgba(124, 58, 237, 0.12);
+    background: rgba(124, 58, 237, 0.04);
+    transition: transform 0.25s, border-color 0.25s;
+    opacity: 0;
+    transform: translateY(24px);
+}
+
+    .techCard.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .techCard:hover {
+        transform: translateY(-3px);
+        border-color: rgba(124, 58, 237, 0.3);
+    }
+
+.techIcon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+}
+
+.techName {
+    font-size: 15px;
+    font-weight: 600;
+    color: rgba(226, 232, 240, 0.88);
+    margin: 0;
+}
+
+.techDesc {
+    font-size: 12px;
+    color: rgba(148, 163, 184, 0.6);
+    text-align: center;
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* ── FOOTER ── */
+.footer {
+    border-top: 1px solid rgba(124, 58, 237, 0.1);
+    padding: 32px 24px;
+    text-align: center;
+    font-size: 12px;
+    color: rgba(100, 116, 139, 0.45);
+    letter-spacing: 0.03em;
+}
+
+.footerLink {
+    color: rgba(167, 139, 250, 0.7);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+    .footerLink:hover {
+        color: rgba(167, 139, 250, 1);
+    }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+    .navbar {
+        padding: 16px 24px;
+    }
+
+    .navLinks {
+        gap: 16px;
+    }
+
+    .brandName {
+        font-size: 56px;
+    }
+
+    .featGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .featCardBig {
+        grid-row: span 1;
+    }
+
+    .techGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .features, .tech {
+        padding: 80px 24px;
+    }
+
+    .sectionTitle {
+        font-size: 30px;
+    }
+}
