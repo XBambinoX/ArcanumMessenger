@@ -55,7 +55,7 @@ function useActiveSection(ids: string[]) {
 }
 
 // Glow that follows the mouse
-function useMouseGlow(glowRef: React.RefObject<HTMLDivElement>) {
+function useMouseGlow(glowRef: React.RefObject<HTMLDivElement | null>) {
     useEffect(() => {
         const el = glowRef.current;
         if (!el) return;
@@ -68,7 +68,7 @@ function useMouseGlow(glowRef: React.RefObject<HTMLDivElement>) {
 }
 
 // Particles
-function useParticles(canvasRef: React.RefObject<HTMLCanvasElement>) {
+function useParticles(canvasRef: React.RefObject<HTMLCanvasElement | null>) {
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
