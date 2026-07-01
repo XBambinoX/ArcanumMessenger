@@ -9,4 +9,9 @@ public class RegistrationSession
     public bool EmailVerified { get; set; }
     public int Step { get; set; }
     public DateTime CreatedAt { get; set; }
+
+    public string? VerificationCode { get; set; }
+    public DateTime? CodeExpiresAt { get; set; }
+    public int CodeAttempts { get; set; }
+    public string? PlainEmail { get; set; }
 }

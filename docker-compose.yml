@@ -14,6 +14,13 @@ services:
             ASPNETCORE_Kestrel__Certificates__Default__Password: ${KESTREL_CERT_PASSWORD}
             ConnectionStrings__Postgres: Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
             ConnectionStrings__Redis: redis:6379
+
+            Smtp__Host: smtp.gmail.com
+            Smtp__Port: 587
+            Smtp__Username: ${SMTP_USERNAME}
+            Smtp__Password: ${SMTP_PASSWORD}
+            Smtp__FromName: Arcanum Messenger
+
         volumes:
             - ${HTTPS_CERT_DIR}:/https:ro
         restart: unless-stopped

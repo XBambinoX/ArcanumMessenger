@@ -9,9 +9,10 @@ namespace ArcanumMessenger.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-public class AuthController(AppDbContext db, RegistrationSessionService registrationSession) : ControllerBase
+public class AuthController(AppDbContext db, RegistrationSessionService registrationSession, EmailService emailService) : ControllerBase
 {
     private static readonly Regex UsernameRegex = new("^[a-zA-Z0-9_]{3,32}$", RegexOptions.Compiled);
+    private static readonly Random Rng = Random.Shared;
 
     [HttpGet("check-username")]
 
@@ -51,8 +52,8 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
 
     [HttpPost("register/email")]
     public async Task<ActionResult<SubmitEmailResponse>> SubmitEmail(
-    [FromBody] SubmitEmailRequest request,
-    CancellationToken ct)
+        [FromBody] SubmitEmailRequest request,
+        CancellationToken ct)
     {
         var session = await registrationSession.GetAsync(request.SessionId, ct);
         if (session is null)
@@ -77,12 +78,26 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
         if (emailExists)
             return Ok(new SubmitEmailResponse(false, "email_taken"));
 
-        // Update Redis session
+        var code = Rng.Next(0, 1_000_000).ToString("D6");
+
         session.EmailHash = emailHash;
         session.EmailVisibilityConsent = request.EmailVisibilityConsent;
+        session.PlainEmail = request.Email.Trim();
+        session.VerificationCode = code;
+        session.CodeExpiresAt = DateTime.UtcNow.AddMinutes(10);
+        session.CodeAttempts = 0;
         session.Step = 1;
 
         await registrationSession.UpdateAsync(request.SessionId, session, ct);
+
+        try
+        {
+            await emailService.SendVerificationCodeAsync(session.PlainEmail, code, ct);
+        }
+        catch
+        {
+            return Ok(new SubmitEmailResponse(false, "email_send_failed"));
+        }
 
         return Ok(new SubmitEmailResponse(true));
     }
