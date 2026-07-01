@@ -27,3 +27,16 @@ export async function submitEmail(
     if (!res.ok) throw new Error("Network error");
     return res.json();
 }
+
+export async function verifyCode(
+    sessionId: string,
+    code: string
+): Promise<{ success: boolean; reason?: string }> {
+    const res = await fetch(`${API_BASE}/api/auth/register/verify-code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, code }),
+    });
+    if (!res.ok) throw new Error("Network error");
+    return res.json();
+}

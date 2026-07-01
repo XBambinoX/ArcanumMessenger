@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import styles from "./RegisterPage.module.css";
-import { startRegistration, submitEmail } from "../api/auth";
+import { startRegistration, submitEmail, verifyCode } from "../api/auth";
 import { useNavigate } from "react-router-dom";
 
 type Step = 0 | 1 | 2 | 3;
@@ -122,12 +122,23 @@ export default function RegisterPage() {
             return;
         }
         setLoading(true);
-        // TODO: call API to verify code
-        // const res = await fetch("/api/auth/verify-code", { method: "POST", body: JSON.stringify({ email, code: code.join("") }) });
-        await fakeDelay();
-        setLoading(false);
-        // if (!res.ok) { setError("Invalid code"); return; }
-        goNext();
+        try {
+            const { success, reason } = await verifyCode(sessionId!, code.join(""));
+            if (!success) {
+                setError(
+                    reason === "code_expired" ? "Code expired, request a new one" :
+                        reason === "too_many_attempts" ? "Too many attempts, request a new code" :
+                            reason === "session_expired" ? "Session expired, please start over" :
+                                "Invalid code"
+                );
+                return;
+            }
+            goNext();
+        } catch {
+            setError("Something went wrong, try again");
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handlePasswordSubmit = async () => {

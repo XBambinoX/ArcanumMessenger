@@ -13,6 +13,7 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
 {
     private static readonly Regex UsernameRegex = new("^[a-zA-Z0-9_]{3,32}$", RegexOptions.Compiled);
     private static readonly Random Rng = Random.Shared;
+    private const int AttemptsLimit = 3;
 
     [HttpGet("check-username")]
 
@@ -100,5 +101,38 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
         }
 
         return Ok(new SubmitEmailResponse(true));
+    }
+
+    [HttpPost("register/verify-code")]
+    public async Task<ActionResult<VerifyCodeResponse>> VerifyCode(
+        [FromBody] VerifyCodeRequest request,
+        CancellationToken ct)
+    {
+        var session = await registrationSession.GetAsync(request.SessionId, ct);
+        if (session is null)
+            return Ok(new VerifyCodeResponse(false, "session_expired"));
+
+        if (session.Step != 1)
+            return Ok(new VerifyCodeResponse(false, "invalid_step"));
+
+        if (session.CodeExpiresAt is null || session.CodeExpiresAt < DateTime.UtcNow)
+            return Ok(new VerifyCodeResponse(false, "code_expired"));
+
+        if (session.CodeAttempts >= AttemptsLimit)
+            return Ok(new VerifyCodeResponse(false, "too_many_attempts"));
+
+        session.CodeAttempts++;
+
+        if (string.IsNullOrWhiteSpace(request.Code) || session.VerificationCode != request.Code)
+        {
+            await registrationSession.UpdateAsync(request.SessionId, session, ct);
+            return Ok(new VerifyCodeResponse(false, "invalid_code"));
+        }
+
+        session.Step = 2;
+        session.VerificationCode = null;
+        await registrationSession.UpdateAsync(request.SessionId, session, ct);
+
+        return Ok(new VerifyCodeResponse(true));
     }
 }
