@@ -1,6 +1,7 @@
-
 using ArcanumMessenger.Data;
 using Microsoft.EntityFrameworkCore;
+using ArcanumMessenger.Contracts.Auth;
+using ArcanumMessenger.Services;
 
 namespace ArcanumMessenger
 {
@@ -22,9 +23,18 @@ namespace ArcanumMessenger
                           .AllowAnyHeader()
                           .AllowAnyMethod());
             });
+
+            builder.Services.AddStackExchangeRedisCache(options =>
+            {
+                options.Configuration = builder.Configuration.GetConnectionString("Redis");
+            });
+
             builder.Services.AddControllers();
             builder.Services.AddHealthChecks();
             builder.Services.AddSwaggerGen();
+
+            // Scope
+            builder.Services.AddScoped<RegistrationSessionService>();
 
             var app = builder.Build();
 

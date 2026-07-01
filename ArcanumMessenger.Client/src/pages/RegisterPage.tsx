@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import styles from "./RegisterPage.module.css";
-import { checkUsername } from "../api/auth";
+import { startRegistration } from "../api/auth";
 import { useNavigate } from "react-router-dom";
 
 type Step = 0 | 1 | 2 | 3;
@@ -31,6 +31,8 @@ export default function RegisterPage() {
     const [emailInfoSeen, setEmailInfoSeen] = useState(false);
     const [emailInfoCountdown, setEmailInfoCountdown] = useState(5);
     const [emailVisibilityConsent, setEmailVisibilityConsent] = useState(false);
+
+    const [sessionId, setSessionId] = useState<string | null>(null);
 
     useEffect(() => {
         if (step === 1 && !emailInfoSeen) {
@@ -75,14 +77,12 @@ export default function RegisterPage() {
         }
         setLoading(true);
         try {
-            const { available, reason } = await checkUsername(username);
-            if (!available) {
+            const { success, sessionId, reason } = await startRegistration(username);
+            if (!success) {
                 setError(reason === "taken" ? "This username is already taken" : "Invalid username format");
                 return;
             }
-            if (emailVisibilityConsent === null) {
-                setEmailInfoShown(true);
-            }
+            setSessionId(sessionId!);
             goNext();
         } catch {
             setError("Something went wrong, try again");
