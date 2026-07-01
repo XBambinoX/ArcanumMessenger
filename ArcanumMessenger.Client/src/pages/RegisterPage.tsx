@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import styles from "./RegisterPage.module.css";
-import { startRegistration } from "../api/auth";
+import { startRegistration, submitEmail } from "../api/auth";
 import { useNavigate } from "react-router-dom";
 
 type Step = 0 | 1 | 2 | 3;
@@ -97,12 +97,23 @@ export default function RegisterPage() {
             return;
         }
         setLoading(true);
-        // TODO: call API to send verification code
-        // await fetch("/api/auth/send-code", { method: "POST", body: JSON.stringify({ email }) });
-        await fakeDelay();
-        setLoading(false);
-        setResendCooldown(RESEND_COOLDOWN);
-        goNext();
+        try {
+            const { success, reason } = await submitEmail(sessionId!, email, emailVisibilityConsent);
+            if (!success) {
+                setError(
+                    reason === "session_expired" ? "Session expired, please start over" :
+                        reason === "email_taken" ? "This email is already registered" :
+                            "Invalid email address"
+                );
+                return;
+            }
+            setResendCooldown(RESEND_COOLDOWN);
+            goNext();
+        } catch {
+            setError("Something went wrong, try again");
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleCodeSubmit = async () => {

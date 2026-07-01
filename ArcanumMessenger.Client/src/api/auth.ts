@@ -13,3 +13,17 @@ export async function startRegistration(username: string): Promise<{
     if (!res.ok) throw new Error("Network error");
     return res.json();
 }
+
+export async function submitEmail(
+    sessionId: string,
+    email: string,
+    emailVisibilityConsent: boolean
+): Promise<{ success: boolean; reason?: string }> {
+    const res = await fetch(`${API_BASE}/api/auth/register/email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, email, emailVisibilityConsent }),
+    });
+    if (!res.ok) throw new Error("Network error");
+    return res.json();
+}

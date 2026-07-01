@@ -48,4 +48,42 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
         var sessionId = await registrationSession.CreateAsync(request.Username, ct);
         return Ok(new StartRegistrationResponse(true, sessionId));
     }
+
+    [HttpPost("register/email")]
+    public async Task<ActionResult<SubmitEmailResponse>> SubmitEmail(
+    [FromBody] SubmitEmailRequest request,
+    CancellationToken ct)
+    {
+        var session = await registrationSession.GetAsync(request.SessionId, ct);
+        if (session is null)
+            return Ok(new SubmitEmailResponse(false, "session_expired"));
+
+        if (session.Step != 0)
+            return Ok(new SubmitEmailResponse(false, "invalid_step"));
+
+        if (string.IsNullOrWhiteSpace(request.Email) || !request.Email.Contains('@'))
+            return Ok(new SubmitEmailResponse(false, "invalid_email"));
+
+        var emailHash = Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes(request.Email.ToLowerInvariant().Trim())
+            )
+        ).ToLower();
+
+        var emailExists = await db.Users
+            .AsNoTracking()
+            .AnyAsync(u => u.EmailHash == emailHash && !u.IsDeleted, ct);
+
+        if (emailExists)
+            return Ok(new SubmitEmailResponse(false, "email_taken"));
+
+        // Update Redis session
+        session.EmailHash = emailHash;
+        session.EmailVisibilityConsent = request.EmailVisibilityConsent;
+        session.Step = 1;
+
+        await registrationSession.UpdateAsync(request.SessionId, session, ct);
+
+        return Ok(new SubmitEmailResponse(true));
+    }
 }
