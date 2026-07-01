@@ -456,3 +456,28 @@
     color: #ef4444;
     font-weight: 600;
 }
+
+/* ── Email consent checkbox ── */
+.consentRow {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: rgba(148, 163, 184, 0.7);
+    cursor: pointer;
+}
+
+.consentCheckbox {
+    margin-top: 2px;
+    flex-shrink: 0;
+    accent-color: #7c3aed;
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+}
+
+.consentWarn {
+    color: rgba(248, 113, 113, 0.75);
+}

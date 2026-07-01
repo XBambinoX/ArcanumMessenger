@@ -265,6 +265,18 @@ export default function RegisterPage() {
                                     autoFocus={step === 1}
                                 />
                                 {error && step === 1 && <p className={styles.errorText}>{error}</p>}
+                                <label className={styles.consentRow}>
+                                    <input
+                                        type="checkbox"
+                                        className={styles.consentCheckbox}
+                                        checked={emailVisibilityConsent}
+                                        onChange={(e) => setEmailVisibilityConsent(e.target.checked)}
+                                    />
+                                    <span>
+                                        Allow Arcanum to know my email so I can show it on my profile later
+                                        {" "}<span className={styles.consentWarn}>(cannot be changed afterward)</span>
+                                    </span>
+                                </label>
                             </div>
 
                             <div className={styles.actions}>
