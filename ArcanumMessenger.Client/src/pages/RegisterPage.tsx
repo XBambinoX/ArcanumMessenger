@@ -131,6 +131,8 @@ export default function RegisterPage() {
                             reason === "session_expired" ? "Session expired, please start over" :
                                 "Invalid code"
                 );
+                setCode(Array(CODE_LENGTH).fill(""));
+                codeInputs.current[0]?.focus();
                 return;
             }
             goNext();
