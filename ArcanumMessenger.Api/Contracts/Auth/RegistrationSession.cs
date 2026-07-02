@@ -14,7 +14,11 @@ public class RegistrationSession
     public string? PlainEmail { get; set; }
 
     public int ResendCount { get; set; }
-    public DateTime? LastCodeSentAt { get; set; }
+    public DateTime? LastCodeSentAt { get; set; }                  
 
     public string? PasswordHash { get; set; }
+
+    public string? RecoveryPhrase1 { get; set; }
+    public string? RecoveryPhrase2 { get; set; }
+    public bool RecoveryConfirmed { get; set; }
 }

@@ -205,4 +205,49 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
 
         return Ok(new SubmitPasswordResponse(true));
     }
+
+    [HttpPost("register/recovery/generate")]
+    public async Task<ActionResult<GenerateRecoveryResponse>> GenerateRecovery(
+            [FromBody] ConfirmRecoveryRequest request,
+            CancellationToken ct)
+    {
+        var session = await registrationSession.GetAsync(request.SessionId, ct);
+        if (session is null)
+            return Ok(new GenerateRecoveryResponse(false, null, null, "session_expired"));
+
+        if (session.Step != 3)
+            return Ok(new GenerateRecoveryResponse(false, null, null, "invalid_step"));
+
+        // If the phrases have already been generated (the user reloaded the page), we return the same ones
+        if (string.IsNullOrEmpty(session.RecoveryPhrase1))
+        {
+            session.RecoveryPhrase1 = RecoveryPhraseService.Generate();
+            session.RecoveryPhrase2 = RecoveryPhraseService.Generate();
+            await registrationSession.UpdateAsync(request.SessionId, session, ct);
+        }
+
+        return Ok(new GenerateRecoveryResponse(true, session.RecoveryPhrase1, session.RecoveryPhrase2));
+    }
+
+    [HttpPost("register/recovery/confirm")]
+    public async Task<ActionResult<ConfirmRecoveryResponse>> ConfirmRecovery(
+        [FromBody] ConfirmRecoveryRequest request,
+        CancellationToken ct)
+    {
+        var session = await registrationSession.GetAsync(request.SessionId, ct);
+        if (session is null)
+            return Ok(new ConfirmRecoveryResponse(false, "session_expired"));
+
+        if (session.Step != 3)
+            return Ok(new ConfirmRecoveryResponse(false, "invalid_step"));
+
+        if (string.IsNullOrEmpty(session.RecoveryPhrase1) || string.IsNullOrEmpty(session.RecoveryPhrase2))
+            return Ok(new ConfirmRecoveryResponse(false, "not_generated"));
+
+        session.RecoveryConfirmed = true;
+        session.Step = 4;
+        await registrationSession.UpdateAsync(request.SessionId, session, ct);
+
+        return Ok(new ConfirmRecoveryResponse(true));
+    }
 }

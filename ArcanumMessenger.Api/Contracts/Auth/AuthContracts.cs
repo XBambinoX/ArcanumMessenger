@@ -16,4 +16,8 @@
 
     public record SubmitPasswordRequest(string SessionId, string Password);
     public record SubmitPasswordResponse(bool Success, string? Reason = null);
+
+    public record GenerateRecoveryResponse(bool Success, string? Phrase1, string? Phrase2, string? Reason = null);
+    public record ConfirmRecoveryRequest(string SessionId);
+    public record ConfirmRecoveryResponse(bool Success, string? Reason = null);
 }

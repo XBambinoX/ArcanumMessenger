@@ -1,12 +1,21 @@
 import { useState, useRef, useEffect } from "react";
 import styles from "./RegisterPage.module.css";
-import { startRegistration, submitEmail, verifyCode, resendCode, submitPassword } from "../api/auth";
+import {
+    startRegistration,
+    submitEmail,
+    verifyCode,
+    resendCode,
+    submitPassword,
+    generateRecovery,
+    confirmRecovery,
+} from "../api/auth";
+
 import { useNavigate } from "react-router-dom";
 import zxcvbn from "zxcvbn";
 
-type Step = 0 | 1 | 2 | 3;
+type Step = 0 | 1 | 2 | 3 | 4;
 
-const STEP_COUNT = 4;
+const STEP_COUNT = 5;
 const CODE_LENGTH = 6;
 const RESEND_COOLDOWN = 30; // seconds
 
@@ -38,6 +47,11 @@ export default function RegisterPage() {
     const [resendCount, setResendCount] = useState(0);
     const RESEND_LIMIT = 2;
 
+    const [recoveryPhrase1, setRecoveryPhrase1] = useState<string | null>(null);
+    const [recoveryPhrase2, setRecoveryPhrase2] = useState<string | null>(null);
+    const [recoveryConfirmChecked, setRecoveryConfirmChecked] = useState(false);
+    const [recoveryLoaded, setRecoveryLoaded] = useState(false);
+
     useEffect(() => {
         if (step === 1 && !emailInfoSeen) {
             setEmailInfoShown(true);
@@ -56,6 +70,25 @@ export default function RegisterPage() {
         const t = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
         return () => clearTimeout(t);
     }, [resendCooldown]);
+
+    useEffect(() => {
+        if (step === 4 && !recoveryLoaded && sessionId) {
+            (async () => {
+                try {
+                    const { success, phrase1, phrase2 } = await generateRecovery(sessionId);
+                    if (success) {
+                        setRecoveryPhrase1(phrase1!);
+                        setRecoveryPhrase2(phrase2!);
+                        setRecoveryLoaded(true);
+                    } else {
+                        setError("Failed to generate recovery phrases, please start over");
+                    }
+                } catch {
+                    setError("Something went wrong, try again");
+                }
+            })();
+        }
+    }, [step, recoveryLoaded, sessionId]);
 
     const handleEmailInfoAck = () => {
         setEmailInfoShown(false);
@@ -174,7 +207,6 @@ export default function RegisterPage() {
                 );
                 return;
             }
-            // TODO: next step — register/complete (recovery phrases, user creation in Postgres)
             goNext();
         } catch {
             setError("Something went wrong, try again");
@@ -206,6 +238,32 @@ export default function RegisterPage() {
         }
     };
 
+    const handleRecoverySubmit = async () => {
+        if (!recoveryConfirmChecked) {
+            setError("Please confirm you've saved your recovery phrases");
+            return;
+        }
+        setLoading(true);
+        try {
+            const confirmRes = await confirmRecovery(sessionId!);
+            if (!confirmRes.success) {
+                setError(
+                    confirmRes.reason === "session_expired" ? "Session expired, please start over" :
+                        "Something went wrong, please start over"
+                );
+                return;
+            }
+
+            //TODO: final step registration. From Redis session to Postgres data transfering.
+
+            navigate("/welcome");
+        } catch {
+            setError("Something went wrong, try again");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleCodeChange = (index: number, value: string) => {
         if (!/^[0-9]?$/.test(value)) return;
         const next = [...code];
@@ -227,6 +285,7 @@ export default function RegisterPage() {
         { title: "Confirm your email", subtitle: <>We'll send a verification code to <b>{email || "your email"}</b></> },
         { title: "Enter verification code", subtitle: <>Check <b>{email}</b> for a 6-digit code</> },
         { title: "Set a password", subtitle: "Make it strong — this protects your encrypted messages" },
+        { title: "Save your recovery phrases", subtitle: "Write these down — they're the only way to recover your account" },
     ];
 
     return (
@@ -475,6 +534,69 @@ export default function RegisterPage() {
                                     onClick={handlePasswordSubmit}
                                     disabled={loading}
                                 >
+                                    {loading ? "Checking…" : "Continue"}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* ── STEP 4: Recovery phrases ── */}
+                        <div className={styles.slide}>
+                            <h2 className={styles.stepTitle}>{stepTitles[4].title}</h2>
+                            <p className={styles.stepSubtitle}>{stepTitles[4].subtitle}</p>
+
+                            {!recoveryLoaded ? (
+                                <p className={styles.stepSubtitle}>Generating your recovery phrases…</p>
+                            ) : (
+                                <>
+                                        <div className={styles.recoveryBlock}>
+                                            <span className={styles.label}>Recovery phrase 1</span>
+                                            <textarea
+                                                className={styles.recoveryTextarea}
+                                                readOnly
+                                                value={recoveryPhrase1 ?? ""}
+                                                rows={3}
+                                                onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+                                            />
+                                        </div>
+
+                                        <div className={styles.recoveryBlock}>
+                                            <span className={styles.label}>Recovery phrase 2</span>
+                                            <textarea
+                                                className={styles.recoveryTextarea}
+                                                readOnly
+                                                value={recoveryPhrase2 ?? ""}
+                                                rows={3}
+                                                onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+                                            />
+                                        </div>
+
+                                    <p className={styles.recoveryWarning}>
+                                        Anyone with access to either phrase can recover your account. Store them
+                                        somewhere safe and offline — we cannot show them to you again.
+                                    </p>
+
+                                    <label className={styles.consentRow}>
+                                        <input
+                                            type="checkbox"
+                                            className={styles.consentCheckbox}
+                                            checked={recoveryConfirmChecked}
+                                            onChange={(e) => setRecoveryConfirmChecked(e.target.checked)}
+                                        />
+                                        <span>I've saved both recovery phrases somewhere safe</span>
+                                    </label>
+                                </>
+                            )}
+
+                            {error && step === 4 && (
+                                <p className={styles.errorText} style={{ textAlign: "center" }}>{error}</p>
+                            )}
+
+                            <div className={styles.actions}>
+                                <button
+                                    className={styles.btnPrimary}
+                                    onClick={handleRecoverySubmit}
+                                    disabled={loading || !recoveryLoaded}
+                                >
                                     {loading ? "Creating account…" : "Create account"}
                                 </button>
                             </div>
@@ -512,12 +634,6 @@ export default function RegisterPage() {
             )}
         </div>
     );
-}
-
-// ── Helpers ──
-
-function fakeDelay(ms = 700) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // Returns a strength score from 0 to 4

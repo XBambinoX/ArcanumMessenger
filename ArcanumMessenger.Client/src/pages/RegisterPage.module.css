@@ -498,3 +498,32 @@
     color: rgba(248, 113, 113, 0.85);
     line-height: 1.4;
 }
+
+.recoveryWarning {
+    font-size: 12px;
+    line-height: 1.5;
+    color: rgba(248, 113, 113, 0.8);
+    margin: 4px 0 16px;
+}
+
+.recoveryTextarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(124, 58, 237, 0.25);
+    background: rgba(124, 58, 237, 0.05);
+    color: rgba(226, 232, 240, 0.9);
+    font-family: monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    resize: none;
+    outline: none;
+    cursor: text;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+    .recoveryTextarea:focus {
+        border-color: rgba(167, 139, 250, 0.5);
+        box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+    }
