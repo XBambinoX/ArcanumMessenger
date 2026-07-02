@@ -13,4 +13,7 @@
 
     public record ResendCodeRequest(string SessionId);
     public record ResendCodeResponse(bool Success, string? Reason = null);
+
+    public record SubmitPasswordRequest(string SessionId, string Password);
+    public record SubmitPasswordResponse(bool Success, string? Reason = null);
 }

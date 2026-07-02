@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import styles from "./RegisterPage.module.css";
-import { startRegistration, submitEmail, verifyCode, resendCode } from "../api/auth";
+import { startRegistration, submitEmail, verifyCode, resendCode, submitPassword } from "../api/auth";
 import { useNavigate } from "react-router-dom";
 
 type Step = 0 | 1 | 2 | 3;
@@ -162,11 +162,23 @@ export default function RegisterPage() {
             return;
         }
         setLoading(true);
-        // TODO: call API to finalize registration
-        // await fetch("/api/auth/register", { method: "POST", body: JSON.stringify({ username, email, password }) });
-        await fakeDelay();
-        setLoading(false);
-        // navigate("/welcome") or show success state
+        try {
+            const { success, reason } = await submitPassword(sessionId!, password);
+            if (!success) {
+                setError(
+                    reason === "session_expired" ? "Session expired, please start over" :
+                        reason === "invalid_step" ? "Something went wrong, please start over" :
+                            "Password does not meet requirements"
+                );
+                return;
+            }
+            // TODO: next step — register/complete (recovery phrases, user creation in Postgres)
+            goNext();
+        } catch {
+            setError("Something went wrong, try again");
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleResend = async () => {

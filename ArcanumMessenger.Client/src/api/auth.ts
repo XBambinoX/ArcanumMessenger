@@ -52,3 +52,16 @@ export async function resendCode(
     if (!res.ok) throw new Error("Network error");
     return res.json();
 }
+
+export async function submitPassword(
+    sessionId: string,
+    password: string
+): Promise<{ success: boolean; reason?: string }> {
+    const res = await fetch(`${API_BASE}/api/auth/register/password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, password }),
+    });
+    if (!res.ok) throw new Error("Network error");
+    return res.json();
+}

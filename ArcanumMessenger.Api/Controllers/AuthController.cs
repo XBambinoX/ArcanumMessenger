@@ -19,6 +19,8 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
     private const int ResendCodeCooldownSeconds = 30;
     private const int ResendCountMax = 2;
 
+    private const int MinPasswordLength = 8;
+
     [HttpGet("check-username")]
 
     public async Task<ActionResult<CheckUsernameResponse>> CheckUsername(
@@ -179,5 +181,28 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
         }
 
         return Ok(new ResendCodeResponse(true));
+    }
+
+    [HttpPost("register/password")]
+    public async Task<ActionResult<SubmitPasswordResponse>> SubmitPassword(
+            [FromBody] SubmitPasswordRequest request,
+            CancellationToken ct)
+    {
+        var session = await registrationSession.GetAsync(request.SessionId, ct);
+        if (session is null)
+            return Ok(new SubmitPasswordResponse(false, "session_expired"));
+
+        if (session.Step != 2)
+            return Ok(new SubmitPasswordResponse(false, "invalid_step"));
+
+        if (string.IsNullOrWhiteSpace(request.Password) || request.Password.Length < MinPasswordLength)
+            return Ok(new SubmitPasswordResponse(false, "weak_password"));
+
+        session.PasswordHash = PasswordHasher.Hash(request.Password);
+        session.Step = 3;
+
+        await registrationSession.UpdateAsync(request.SessionId, session, ct);
+
+        return Ok(new SubmitPasswordResponse(true));
     }
 }

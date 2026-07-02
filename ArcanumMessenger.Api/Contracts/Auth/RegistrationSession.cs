@@ -15,4 +15,6 @@ public class RegistrationSession
 
     public int ResendCount { get; set; }
     public DateTime? LastCodeSentAt { get; set; }
+
+    public string? PasswordHash { get; set; }
 }
