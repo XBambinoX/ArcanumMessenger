@@ -8,7 +8,6 @@ public class User
     public string PasswordHash { get; set; } = null!;
     public string RecoveryPhrase1Hash { get; set; } = null!;
     public string RecoveryPhrase2Hash { get; set; } = null!;
-    public string? RecoveryPhrase3Hash { get; set; }
     public string? PublicEmailEnc { get; set; }
     public string? PublicPhoneEnc { get; set; }
     public string? Bio { get; set; }
