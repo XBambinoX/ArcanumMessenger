@@ -40,3 +40,15 @@ export async function verifyCode(
     if (!res.ok) throw new Error("Network error");
     return res.json();
 }
+
+export async function resendCode(
+    sessionId: string
+): Promise<{ success: boolean; reason?: string }> {
+    const res = await fetch(`${API_BASE}/api/auth/register/resend-code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId }),
+    });
+    if (!res.ok) throw new Error("Network error");
+    return res.json();
+}

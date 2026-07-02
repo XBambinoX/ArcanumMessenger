@@ -57,7 +57,7 @@ namespace ArcanumMessenger.Services
             <div class="sub">Messenger</div>
             <h1>Your verification code</h1>
             <div class="code">{{code}}</div>
-            <div class="expires">Expires in 10 minutes</div>
+            <div class="expires">Expires in 3 minutes</div>
             <div class="footer">If you didn't request this, you can safely ignore this email.</div>
           </div>
         </body>

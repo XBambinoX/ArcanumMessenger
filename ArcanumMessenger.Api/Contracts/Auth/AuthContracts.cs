@@ -10,4 +10,7 @@
 
     public record VerifyCodeRequest(string SessionId, string Code);
     public record VerifyCodeResponse(bool Success, string? Reason = null);
+
+    public record ResendCodeRequest(string SessionId);
+    public record ResendCodeResponse(bool Success, string? Reason = null);
 }

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import styles from "./RegisterPage.module.css";
-import { startRegistration, submitEmail, verifyCode } from "../api/auth";
+import { startRegistration, submitEmail, verifyCode, resendCode } from "../api/auth";
 import { useNavigate } from "react-router-dom";
 
 type Step = 0 | 1 | 2 | 3;
@@ -34,6 +34,9 @@ export default function RegisterPage() {
 
     const [sessionId, setSessionId] = useState<string | null>(null);
 
+    const [resendCount, setResendCount] = useState(0);
+    const RESEND_LIMIT = 2;
+
     useEffect(() => {
         if (step === 1 && !emailInfoSeen) {
             setEmailInfoShown(true);
@@ -46,6 +49,12 @@ export default function RegisterPage() {
         const t = setTimeout(() => setEmailInfoCountdown((c) => c - 1), 1000);
         return () => clearTimeout(t);
     }, [emailInfoShown, emailInfoCountdown]);
+
+    useEffect(() => {
+        if (resendCooldown <= 0) return;
+        const t = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+        return () => clearTimeout(t);
+    }, [resendCooldown]);
 
     const handleEmailInfoAck = () => {
         setEmailInfoShown(false);
@@ -161,12 +170,26 @@ export default function RegisterPage() {
     };
 
     const handleResend = async () => {
-        if (resendCooldown > 0) return;
+        if (resendCooldown > 0 || resendCount >= RESEND_LIMIT) return;
         setLoading(true);
-        // TODO: call API to resend code
-        await fakeDelay();
-        setLoading(false);
-        setResendCooldown(RESEND_COOLDOWN);
+        try {
+            const { success, reason } = await resendCode(sessionId!);
+            if (success) {
+                setResendCooldown(RESEND_COOLDOWN);
+                setResendCount((c) => c + 1);
+            } else {
+                setError(
+                    reason === "resend_limit_reached" ? "Resend limit reached, please start over" :
+                        reason === "cooldown_active" ? "Please wait before requesting a new code" :
+                            reason === "email_send_failed" ? "Failed to send code, try again" :
+                                "Failed to resend code"
+                );
+            }
+        } catch {
+            setError("Something went wrong, try again");
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleCodeChange = (index: number, value: string) => {
@@ -345,7 +368,9 @@ export default function RegisterPage() {
                             )}
 
                             <div className={styles.resendRow}>
-                                {resendCooldown > 0 ? (
+                                {resendCount >= RESEND_LIMIT ? (
+                                    <span>Resend limit reached</span>
+                                ) : resendCooldown > 0 ? (
                                     <span>Resend code in {resendCooldown}s</span>
                                 ) : (
                                     <>

@@ -3,8 +3,6 @@
 public class RegistrationSession
 {
     public string Username { get; set; } = null!;
-    public string? EmailHash { get; set; }
-    public string? PublicEmailEnc { get; set; }
     public bool EmailVisibilityConsent { get; set; }
     public bool EmailVerified { get; set; }
     public int Step { get; set; }
@@ -14,4 +12,7 @@ public class RegistrationSession
     public DateTime? CodeExpiresAt { get; set; }
     public int CodeAttempts { get; set; }
     public string? PlainEmail { get; set; }
+
+    public int ResendCount { get; set; }
+    public DateTime? LastCodeSentAt { get; set; }
 }
