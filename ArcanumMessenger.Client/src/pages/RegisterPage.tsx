@@ -13,6 +13,7 @@ import {
 
 import { useNavigate } from "react-router-dom";
 import zxcvbn from "zxcvbn";
+import { downloadRecoveryPdf } from "../utils/recoveryPdf";
 
 type Step = 0 | 1 | 2 | 3 | 4;
 
@@ -585,6 +586,25 @@ export default function RegisterPage() {
                                         somewhere safe and offline — we cannot show them to you again.
                                     </p>
 
+                                    <button
+                                        type="button"
+                                        className={styles.btnDownloadPdf}
+                                        onClick={() =>
+                                            downloadRecoveryPdf({
+                                                username,
+                                                phrase1: recoveryPhrase1!,
+                                                phrase2: recoveryPhrase2!,
+                                            })
+                                        }
+                                    >
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                            <path d="M7 10l5 5 5-5" />
+                                            <path d="M12 15V3" />
+                                        </svg>
+                                        Download recovery kit (PDF)
+                                    </button>
+                                    
                                     <label className={styles.consentRow}>
                                         <input
                                             type="checkbox"
