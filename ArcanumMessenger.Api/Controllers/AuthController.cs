@@ -4,12 +4,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 using ArcanumMessenger.Services;
+using ArcanumMessenger.Entities;
 
 namespace ArcanumMessenger.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-public class AuthController(AppDbContext db, RegistrationSessionService registrationSession, EmailService emailService) : ControllerBase
+public class AuthController(AppDbContext db, RegistrationSessionService registrationSession, EmailService emailService, EncryptionService encryption) : ControllerBase
 {
     private static readonly Regex UsernameRegex = new("^[a-zA-Z0-9_]{3,32}$", RegexOptions.Compiled);
     private static readonly Random Rng = Random.Shared;
@@ -249,5 +250,68 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
         await registrationSession.UpdateAsync(request.SessionId, session, ct);
 
         return Ok(new ConfirmRecoveryResponse(true));
+    }
+
+    [HttpPost("register/finalize")]
+    public async Task<ActionResult<FinalizeRegistrationResponse>> FinalizeRegistration(
+            [FromBody] FinalizeRegistrationRequest request,
+            CancellationToken ct)
+    {
+        var session = await registrationSession.GetAsync(request.SessionId, ct);
+        if (session is null)
+            return Ok(new FinalizeRegistrationResponse(false, "session_expired"));
+
+        if (!session.RecoveryConfirmed)
+            return Ok(new FinalizeRegistrationResponse(false, "recovery_not_confirmed"));
+
+        if (session.PasswordHash is null || session.PlainEmail is null ||
+            session.RecoveryPhrase1 is null || session.RecoveryPhrase2 is null)
+            return Ok(new FinalizeRegistrationResponse(false, "incomplete_session"));
+
+        var emailHash = Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes(session.PlainEmail.ToLowerInvariant().Trim())
+            )
+        ).ToLower();
+
+        var usernameExists = await db.Users
+            .AnyAsync(u => u.Username == session.Username && !u.IsDeleted, ct);
+        if (usernameExists)
+            return Ok(new FinalizeRegistrationResponse(false, "username_taken"));
+
+        var emailExists = await db.Users
+            .AnyAsync(u => u.EmailHash == emailHash && !u.IsDeleted, ct);
+        if (emailExists)
+            return Ok(new FinalizeRegistrationResponse(false, "email_taken"));
+
+        var phrase1Hash = PasswordHasher.Hash(session.RecoveryPhrase1);
+        var phrase2Hash = PasswordHasher.Hash(session.RecoveryPhrase2);
+
+        string? publicEmailEnc = null;
+        if (session.EmailVisibilityConsent)
+        {
+            publicEmailEnc = encryption.Encrypt(session.PlainEmail);
+        }
+
+        var now = DateTime.UtcNow;
+        var user = new User
+        {
+            Username = session.Username,
+            EmailHash = emailHash,
+            PasswordHash = session.PasswordHash,
+            RecoveryPhrase1Hash = phrase1Hash,
+            RecoveryPhrase2Hash = phrase2Hash,
+            PublicEmailEnc = publicEmailEnc,
+            LastSeen = now,
+            CreatedAt = now,
+            IsDeleted = false,
+        };
+
+        db.Users.Add(user);
+        await db.SaveChangesAsync(ct);
+
+        await registrationSession.DeleteAsync(request.SessionId, ct);
+
+        return Ok(new FinalizeRegistrationResponse(true));
     }
 }

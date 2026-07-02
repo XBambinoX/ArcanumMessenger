@@ -36,6 +36,7 @@ namespace ArcanumMessenger
             // Scope
             builder.Services.AddScoped<RegistrationSessionService>();
             builder.Services.AddScoped<EmailService>();
+            builder.Services.AddSingleton<EncryptionService>();
 
             var app = builder.Build();
 

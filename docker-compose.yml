@@ -21,6 +21,8 @@ services:
             Smtp__Password: ${SMTP_PASSWORD}
             Smtp__FromName: Arcanum Messenger
 
+            Encryption__EmailKey: ${EMAIL_ENCRYPTION_KEY}
+
         volumes:
             - ${HTTPS_CERT_DIR}:/https:ro
         restart: unless-stopped

@@ -20,4 +20,7 @@
     public record GenerateRecoveryResponse(bool Success, string? Phrase1, string? Phrase2, string? Reason = null);
     public record ConfirmRecoveryRequest(string SessionId);
     public record ConfirmRecoveryResponse(bool Success, string? Reason = null);
+
+    public record FinalizeRegistrationRequest(string SessionId);
+    public record FinalizeRegistrationResponse(bool Success, string? Reason = null);
 }

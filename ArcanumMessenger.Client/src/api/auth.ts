@@ -89,3 +89,15 @@ export async function confirmRecovery(
     if (!res.ok) throw new Error("Network error");
     return res.json();
 }
+
+export async function finalizeRegistration(
+    sessionId: string
+): Promise<{ success: boolean; reason?: string }> {
+    const res = await fetch(`${API_BASE}/api/auth/register/finalize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId }),
+    });
+    if (!res.ok) throw new Error("Network error");
+    return res.json();
+}

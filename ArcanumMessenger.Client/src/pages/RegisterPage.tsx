@@ -8,6 +8,7 @@ import {
     submitPassword,
     generateRecovery,
     confirmRecovery,
+    finalizeRegistration
 } from "../api/auth";
 
 import { useNavigate } from "react-router-dom";
@@ -254,7 +255,16 @@ export default function RegisterPage() {
                 return;
             }
 
-            //TODO: final step registration. From Redis session to Postgres data transfering.
+            const { success, reason } = await finalizeRegistration(sessionId!);
+            if (!success) {
+                setError(
+                    reason === "username_taken" ? "Username was taken, please start over" :
+                        reason === "email_taken" ? "Email was taken, please start over" :
+                            reason === "session_expired" ? "Session expired, please start over" :
+                                "Something went wrong, please start over"
+                );
+                return;
+            }
 
             navigate("/welcome");
         } catch {
