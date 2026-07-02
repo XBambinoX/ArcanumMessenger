@@ -481,3 +481,20 @@
 .consentWarn {
     color: rgba(248, 113, 113, 0.75);
 }
+
+.strengthBlock {
+    margin-top: 6px;
+}
+
+.strengthLabel {
+    font-size: 12px;
+    margin: 6px 0 0;
+    color: rgba(148, 163, 184, 0.6);
+}
+
+.strengthWarning {
+    font-size: 12px;
+    margin: 4px 0 0;
+    color: rgba(248, 113, 113, 0.85);
+    line-height: 1.4;
+}

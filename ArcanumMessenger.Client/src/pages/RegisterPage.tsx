@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import styles from "./RegisterPage.module.css";
 import { startRegistration, submitEmail, verifyCode, resendCode, submitPassword } from "../api/auth";
 import { useNavigate } from "react-router-dom";
+import zxcvbn from "zxcvbn";
 
 type Step = 0 | 1 | 2 | 3;
 
@@ -77,6 +78,7 @@ export default function RegisterPage() {
     const passwordStrength = getPasswordStrength(password);
     const isPasswordValid = password.length >= 8 && passwordStrength >= 2;
     const doPasswordsMatch = password === confirmPassword && confirmPassword.length > 0;
+    const passwordFeedback = password ? zxcvbn(password).feedback : null;
 
     // ── Step handlers (stubs — wire up to your API later) ──
     const handleUsernameSubmit = async () => {
@@ -426,7 +428,7 @@ export default function RegisterPage() {
                                     autoFocus={step === 3}
                                 />
                                 {password.length > 0 && (
-                                    <>
+                                    <div className={styles.strengthBlock}>
                                         <div className={styles.strengthRow}>
                                             {[0, 1, 2, 3].map((i) => (
                                                 <div
@@ -441,7 +443,10 @@ export default function RegisterPage() {
                                             ))}
                                         </div>
                                         <p className={styles.strengthLabel}>{strengthLabel(passwordStrength)}</p>
-                                    </>
+                                        {passwordFeedback?.warning && (
+                                            <p className={styles.strengthWarning}>{passwordFeedback.warning}</p>
+                                        )}
+                                    </div>
                                 )}
                             </div>
 
@@ -518,12 +523,8 @@ function fakeDelay(ms = 700) {
 // Returns a strength score from 0 to 4
 function getPasswordStrength(pwd: string): number {
     if (!pwd) return 0;
-    let score = 0;
-    if (pwd.length >= 8) score++;
-    if (/[A-Z]/.test(pwd) && /[a-z]/.test(pwd)) score++;
-    if (/[0-9]/.test(pwd)) score++;
-    if (/[^A-Za-z0-9]/.test(pwd)) score++;
-    return score;
+    const result = zxcvbn(pwd);
+    return result.score;
 }
 
 function strengthColor(score: number): string {
