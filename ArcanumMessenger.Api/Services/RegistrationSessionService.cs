@@ -6,7 +6,9 @@ namespace ArcanumMessenger.Services;
 
 public class RegistrationSessionService(IDistributedCache cache)
 {
-    private static readonly TimeSpan SessionTtl = TimeSpan.FromMinutes(30);
+    private const int RedisSessionDurationMinutes = 10;
+
+    private static readonly TimeSpan SessionTtl = TimeSpan.FromMinutes(RedisSessionDurationMinutes);
     private static string Key(string sessionId) => $"reg:{sessionId}";
 
     public async Task<string> CreateAsync(string username, CancellationToken ct)
