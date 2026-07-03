@@ -53,41 +53,32 @@ export async function resendCode(
     return res.json();
 }
 
+// The plain password never leaves the client: we send an Argon2id-derived
+// authKey plus the salt used to derive it (the server needs it again at login).
 export async function submitPassword(
     sessionId: string,
-    password: string,
+    authKey: string,
+    kdfSalt: string,
 ): Promise<{ success: boolean; reason?: string }> {
     const res = await fetch(`${API_BASE}/api/auth/register/password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, password }),
+        body: JSON.stringify({ sessionId, authKey, kdfSalt }),
     });
     if (res.status >= 500) throw new Error("Server error, try again later");
     return res.json();
 }
 
-export async function generateRecovery(sessionId: string): Promise<{
-    success: boolean;
-    phrase1?: string;
-    phrase2?: string;
-    reason?: string;
-}> {
-    const res = await fetch(`${API_BASE}/api/auth/register/recovery/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId }),
-    });
-    if (res.status >= 500) throw new Error("Server error, try again later");
-    return res.json();
-}
-
+// Recovery phrases are generated on the client; only their SHA-256 hashes are sent.
 export async function confirmRecovery(
     sessionId: string,
+    phrase1Auth: string,
+    phrase2Auth: string,
 ): Promise<{ success: boolean; reason?: string }> {
     const res = await fetch(`${API_BASE}/api/auth/register/recovery/confirm`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId }),
+        body: JSON.stringify({ sessionId, phrase1Auth, phrase2Auth }),
     });
     if (res.status >= 500) throw new Error("Server error, try again later");
     return res.json();

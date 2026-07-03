@@ -6,10 +6,11 @@ import {
     verifyCode,
     resendCode,
     submitPassword,
-    generateRecovery,
     confirmRecovery,
     finalizeRegistration,
 } from "../api/auth";
+import { deriveKeys, generateKdfSalt } from "../crypto/kdf";
+import { generateRecoveryPhrase, hashPhrase } from "../crypto/phrases";
 
 import { useNavigate } from "react-router-dom";
 import zxcvbn from "zxcvbn";
@@ -73,27 +74,15 @@ export default function RegisterPage() {
         return () => clearTimeout(t);
     }, [resendCooldown]);
 
+    // Phrases are generated right here in the browser and never sent to the
+    // server in plain form — only their hashes go out at the confirm step.
     useEffect(() => {
-        if (step === 4 && !recoveryLoaded && sessionId) {
-            (async () => {
-                try {
-                    const { success, phrase1, phrase2 } =
-                        await generateRecovery(sessionId);
-                    if (success) {
-                        setRecoveryPhrase1(phrase1!);
-                        setRecoveryPhrase2(phrase2!);
-                        setRecoveryLoaded(true);
-                    } else {
-                        setError(
-                            "Failed to generate recovery phrases, please start over",
-                        );
-                    }
-                } catch {
-                    setError("Something went wrong, try again");
-                }
-            })();
+        if (step === 4 && !recoveryLoaded) {
+            setRecoveryPhrase1(generateRecoveryPhrase());
+            setRecoveryPhrase2(generateRecoveryPhrase());
+            setRecoveryLoaded(true);
         }
-    }, [step, recoveryLoaded, sessionId]);
+    }, [step, recoveryLoaded]);
 
     const handleEmailInfoAck = () => {
         setEmailInfoShown(false);
@@ -223,17 +212,22 @@ export default function RegisterPage() {
         }
         setLoading(true);
         try {
+            // The password itself never leaves the browser: we derive authKey
+            // from it (Argon2id, ~0.5s) and send only the key + its salt.
+            // encKey from the same derivation stays local for future E2EE.
+            const kdfSalt = generateKdfSalt();
+            const { authKey } = await deriveKeys(password, kdfSalt);
+
             const { success, reason } = await submitPassword(
                 sessionId!,
-                password,
+                authKey,
+                kdfSalt,
             );
             if (!success) {
                 setError(
                     reason === "session_expired"
                         ? "Session expired, please start over"
-                        : reason === "invalid_step"
-                          ? "Something went wrong, please start over"
-                          : "Password does not meet requirements",
+                        : "Something went wrong, please start over",
                 );
                 return;
             }
@@ -278,7 +272,17 @@ export default function RegisterPage() {
         }
         setLoading(true);
         try {
-            const confirmRes = await confirmRecovery(sessionId!);
+            // The server receives only SHA-256 hashes of the phrases
+            const [phrase1Auth, phrase2Auth] = await Promise.all([
+                hashPhrase(recoveryPhrase1!),
+                hashPhrase(recoveryPhrase2!),
+            ]);
+
+            const confirmRes = await confirmRecovery(
+                sessionId!,
+                phrase1Auth,
+                phrase2Auth,
+            );
             if (!confirmRes.success) {
                 setError(
                     confirmRes.reason === "session_expired"

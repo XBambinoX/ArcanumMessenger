@@ -1,4 +1,4 @@
-﻿namespace ArcanumMessenger.Contracts.Auth;
+namespace ArcanumMessenger.Contracts.Auth;
 
 public class RegistrationSession
 {
@@ -14,11 +14,15 @@ public class RegistrationSession
     public string? PlainEmail { get; set; }
 
     public int ResendCount { get; set; }
-    public DateTime? LastCodeSentAt { get; set; }                  
+    public DateTime? LastCodeSentAt { get; set; }
 
+    // Argon2id over the client-derived authKey; the plain password never reaches the server
     public string? PasswordHash { get; set; }
+    // Salt the client used to derive authKey from the password; needed again at login
+    public string? KdfSalt { get; set; }
 
-    public string? RecoveryPhrase1 { get; set; }
-    public string? RecoveryPhrase2 { get; set; }
+    // Argon2id over the client-side phrase hashes; plaintext phrases never reach the server
+    public string? RecoveryPhrase1Hash { get; set; }
+    public string? RecoveryPhrase2Hash { get; set; }
     public bool RecoveryConfirmed { get; set; }
 }

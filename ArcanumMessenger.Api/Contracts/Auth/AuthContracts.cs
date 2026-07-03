@@ -14,11 +14,14 @@
     public record ResendCodeRequest(string SessionId);
     public record ResendCodeResponse(bool Success, string? Reason = null);
 
-    public record SubmitPasswordRequest(string SessionId, string Password);
+    // AuthKey is derived from the password on the client (Argon2id + HKDF).
+    // The server never sees the plain password.
+    public record SubmitPasswordRequest(string SessionId, string AuthKey, string KdfSalt);
     public record SubmitPasswordResponse(bool Success, string? Reason = null);
 
-    public record GenerateRecoveryResponse(bool Success, string? Phrase1, string? Phrase2, string? Reason = null);
-    public record ConfirmRecoveryRequest(string SessionId);
+    // Phrase auths are SHA-256 hashes of the recovery phrases.
+    // The phrases themselves are generated on the client and never sent.
+    public record ConfirmRecoveryRequest(string SessionId, string Phrase1Auth, string Phrase2Auth);
     public record ConfirmRecoveryResponse(bool Success, string? Reason = null);
 
     public record FinalizeRegistrationRequest(string SessionId);

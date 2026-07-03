@@ -13,6 +13,7 @@ namespace ArcanumMessenger.Controllers;
 public class AuthController(AppDbContext db, RegistrationSessionService registrationSession, EmailService emailService, EncryptionService encryption, EmailHasher emailHasher) : ControllerBase
 {
     private static readonly Regex UsernameRegex = new("^[a-zA-Z0-9_]{3,32}$", RegexOptions.Compiled);
+    private static readonly Regex PhraseAuthRegex = new("^[0-9a-f]{64}$", RegexOptions.Compiled);
     private static readonly Random Rng = Random.Shared;
 
     private const int AttemptsLimit = 3;
@@ -20,7 +21,17 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
     private const int ResendCodeCooldownSeconds = 30;
     private const int ResendCountMax = 2;
 
-    private const int MinPasswordLength = 8;
+    private const int AuthKeySize = 32;
+    private const int KdfSaltSize = 16;
+
+    private static bool IsBase64OfLength(string? value, int expectedBytes)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        Span<byte> buffer = stackalloc byte[expectedBytes];
+        return Convert.TryFromBase64String(value, buffer, out var written) && written == expectedBytes;
+    }
 
 
 
@@ -178,40 +189,20 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
         if (session.Step != 2)
             return BadRequest(new SubmitPasswordResponse(Success: false, Reason: "invalid_step"));
 
-        if (string.IsNullOrWhiteSpace(request.Password) || request.Password.Length < MinPasswordLength)
-            return StatusCode(StatusCodes.Status422UnprocessableEntity, new SubmitPasswordResponse(Success: false, Reason: "weak_password"));
+        // The client sends an Argon2id-derived authKey instead of the password,
+        // so password strength can only be checked on the client. Here we can
+        // only check the key format.
+        if (!IsBase64OfLength(request.AuthKey, AuthKeySize) || !IsBase64OfLength(request.KdfSalt, KdfSaltSize))
+            return StatusCode(StatusCodes.Status422UnprocessableEntity, new SubmitPasswordResponse(Success: false, Reason: "invalid_key_format"));
 
-        session.PasswordHash = PasswordHasher.Hash(request.Password);
+        // Argon2id again on the server: a DB dump must not contain ready-to-use login keys
+        session.PasswordHash = PasswordHasher.Hash(request.AuthKey);
+        session.KdfSalt = request.KdfSalt;
         session.Step = 3;
 
         await registrationSession.UpdateAsync(request.SessionId, session, ct);
 
         return Ok(new SubmitPasswordResponse(Success: true));
-    }
-
-
-
-    [HttpPost("register/recovery/generate")]
-    public async Task<ActionResult<GenerateRecoveryResponse>> GenerateRecovery(
-            [FromBody] ConfirmRecoveryRequest request,
-            CancellationToken ct)
-    {
-        var session = await registrationSession.GetAsync(request.SessionId, ct);
-        if (session is null)
-            return StatusCode(StatusCodes.Status410Gone, new GenerateRecoveryResponse(Success: false, Phrase1: null, Phrase2: null, Reason: "session_expired"));
-
-        if (session.Step != 3)
-            return BadRequest(new GenerateRecoveryResponse(Success: false, Phrase1: null, Phrase2: null, Reason: "invalid_step"));
-
-        // If the phrases have already been generated (the user reloaded the page), we return the same ones
-        if (string.IsNullOrEmpty(session.RecoveryPhrase1))
-        {
-            session.RecoveryPhrase1 = RecoveryPhraseService.Generate();
-            session.RecoveryPhrase2 = RecoveryPhraseService.Generate();
-            await registrationSession.UpdateAsync(request.SessionId, session, ct);
-        }
-
-        return Ok(new GenerateRecoveryResponse(Success: true, Phrase1: session.RecoveryPhrase1, Phrase2: session.RecoveryPhrase2));
     }
 
 
@@ -228,9 +219,12 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
         if (session.Step != 3)
             return BadRequest(new ConfirmRecoveryResponse(Success: false, Reason: "invalid_step"));
 
-        if (string.IsNullOrEmpty(session.RecoveryPhrase1) || string.IsNullOrEmpty(session.RecoveryPhrase2))
-            return BadRequest(new ConfirmRecoveryResponse(Success: false, Reason: "not_generated"));
+        // The phrases are generated on the client; we only receive their SHA-256 hashes
+        if (!PhraseAuthRegex.IsMatch(request.Phrase1Auth ?? "") || !PhraseAuthRegex.IsMatch(request.Phrase2Auth ?? ""))
+            return StatusCode(StatusCodes.Status422UnprocessableEntity, new ConfirmRecoveryResponse(Success: false, Reason: "invalid_phrase_format"));
 
+        session.RecoveryPhrase1Hash = PasswordHasher.Hash(request.Phrase1Auth!);
+        session.RecoveryPhrase2Hash = PasswordHasher.Hash(request.Phrase2Auth!);
         session.RecoveryConfirmed = true;
         session.Step = 4;
         await registrationSession.UpdateAsync(request.SessionId, session, ct);
@@ -252,8 +246,8 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
         if (!session.RecoveryConfirmed)
             return Conflict(new FinalizeRegistrationResponse(Success: false, Reason: "recovery_not_confirmed"));
 
-        if (session.PasswordHash is null || session.PlainEmail is null ||
-            session.RecoveryPhrase1 is null || session.RecoveryPhrase2 is null)
+        if (session.PasswordHash is null || session.KdfSalt is null || session.PlainEmail is null ||
+            session.RecoveryPhrase1Hash is null || session.RecoveryPhrase2Hash is null)
             return Conflict(new FinalizeRegistrationResponse(Success: false, Reason: "incomplete_session"));
 
         var emailHash = emailHasher.Hash(session.PlainEmail);
@@ -262,9 +256,6 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
             .AnyAsync(u => u.EmailHash == emailHash && !u.IsDeleted, ct);
         if (emailExists)
             return Conflict(new FinalizeRegistrationResponse(Success: false, Reason: "email_taken"));
-
-        var phrase1Hash = PasswordHasher.Hash(session.RecoveryPhrase1);
-        var phrase2Hash = PasswordHasher.Hash(session.RecoveryPhrase2);
 
         string? publicEmailEnc = null;
         if (session.EmailVisibilityConsent)
@@ -278,8 +269,9 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
             Username = session.Username,
             EmailHash = emailHash,
             PasswordHash = session.PasswordHash,
-            RecoveryPhrase1Hash = phrase1Hash,
-            RecoveryPhrase2Hash = phrase2Hash,
+            KdfSalt = session.KdfSalt,
+            RecoveryPhrase1Hash = session.RecoveryPhrase1Hash,
+            RecoveryPhrase2Hash = session.RecoveryPhrase2Hash,
             PublicEmailEnc = publicEmailEnc,
             LastSeen = now,
             CreatedAt = now,
