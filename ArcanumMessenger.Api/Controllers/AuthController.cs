@@ -10,7 +10,7 @@ namespace ArcanumMessenger.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-public class AuthController(AppDbContext db, RegistrationSessionService registrationSession, EmailService emailService, EncryptionService encryption) : ControllerBase
+public class AuthController(AppDbContext db, RegistrationSessionService registrationSession, EmailService emailService, EncryptionService encryption, EmailHasher emailHasher) : ControllerBase
 {
     private static readonly Regex UsernameRegex = new("^[a-zA-Z0-9_]{3,32}$", RegexOptions.Compiled);
     private static readonly Random Rng = Random.Shared;
@@ -53,11 +53,7 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
         if (string.IsNullOrWhiteSpace(request.Email) || !request.Email.Contains('@'))
             return BadRequest(new SubmitEmailResponse(Success: false, Reason: "invalid_email"));
 
-        var emailHash = Convert.ToHexString(
-            System.Security.Cryptography.SHA256.HashData(
-                System.Text.Encoding.UTF8.GetBytes(request.Email.ToLowerInvariant().Trim())
-            )
-        ).ToLower();
+        var emailHash = emailHasher.Hash(request.Email);
 
         var emailExists = await db.Users
             .AsNoTracking()
@@ -260,11 +256,7 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
             session.RecoveryPhrase1 is null || session.RecoveryPhrase2 is null)
             return Conflict(new FinalizeRegistrationResponse(Success: false, Reason: "incomplete_session"));
 
-        var emailHash = Convert.ToHexString(
-            System.Security.Cryptography.SHA256.HashData(
-                System.Text.Encoding.UTF8.GetBytes(session.PlainEmail.ToLowerInvariant().Trim())
-            )
-        ).ToLower();
+        var emailHash = emailHasher.Hash(session.PlainEmail);
 
         var emailExists = await db.Users
             .AnyAsync(u => u.EmailHash == emailHash && !u.IsDeleted, ct);

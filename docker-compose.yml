@@ -22,6 +22,7 @@ services:
             Smtp__FromName: Arcanum Messenger
 
             Encryption__EmailKey: ${EMAIL_ENCRYPTION_KEY}
+            Hashing__EmailPepper: ${EMAIL_HASH_PEPPER}
 
         volumes:
             - ${HTTPS_CERT_DIR}:/https:ro
