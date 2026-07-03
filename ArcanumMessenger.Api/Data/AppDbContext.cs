@@ -14,7 +14,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasKey(u => u.Id);
             e.Property(u => u.Id).HasDefaultValueSql("gen_random_uuid()");
             e.Property(u => u.CreatedAt).HasDefaultValueSql("NOW()");
-            e.HasIndex(u => u.Username);
             e.HasIndex(u => u.EmailHash).IsUnique();
         });
     }

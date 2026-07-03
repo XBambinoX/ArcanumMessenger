@@ -21,7 +21,7 @@ services:
             Smtp__Password: ${SMTP_PASSWORD}
             Smtp__FromName: Arcanum Messenger
 
-            Encryption__EmailKey: ${EMAIL_ENCRYPTION_KEY}
+            Encryption__Kek: ${ENCRYPTION_KEK}
             Hashing__EmailPepper: ${EMAIL_HASH_PEPPER}
 
         volumes:

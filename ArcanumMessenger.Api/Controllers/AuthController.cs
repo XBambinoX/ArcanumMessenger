@@ -257,21 +257,29 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
         if (emailExists)
             return Conflict(new FinalizeRegistrationResponse(Success: false, Reason: "email_taken"));
 
+        // One DEK per user encrypts all of their profile fields. It is stored
+        // only in its wrapped (KEK-encrypted) form — the KEK itself never
+        // enters the database.
+        var dek = encryption.GenerateDek();
+        var wrappedDek = encryption.WrapDek(dek);
+        var usernameEnc = encryption.Encrypt(session.Username, dek);
+
         string? publicEmailEnc = null;
         if (session.EmailVisibilityConsent)
         {
-            publicEmailEnc = encryption.Encrypt(session.PlainEmail);
+            publicEmailEnc = encryption.Encrypt(session.PlainEmail, dek);
         }
 
         var now = DateTime.UtcNow;
         var user = new User
         {
-            Username = session.Username,
+            UsernameEnc = usernameEnc,
             EmailHash = emailHash,
             PasswordHash = session.PasswordHash,
             KdfSalt = session.KdfSalt,
             RecoveryPhrase1Hash = session.RecoveryPhrase1Hash,
             RecoveryPhrase2Hash = session.RecoveryPhrase2Hash,
+            WrappedDek = wrappedDek,
             PublicEmailEnc = publicEmailEnc,
             LastSeen = now,
             CreatedAt = now,
