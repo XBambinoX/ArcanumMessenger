@@ -8,7 +8,7 @@ import {
     submitPassword,
     generateRecovery,
     confirmRecovery,
-    finalizeRegistration
+    finalizeRegistration,
 } from "../api/auth";
 
 import { useNavigate } from "react-router-dom";
@@ -77,13 +77,16 @@ export default function RegisterPage() {
         if (step === 4 && !recoveryLoaded && sessionId) {
             (async () => {
                 try {
-                    const { success, phrase1, phrase2 } = await generateRecovery(sessionId);
+                    const { success, phrase1, phrase2 } =
+                        await generateRecovery(sessionId);
                     if (success) {
                         setRecoveryPhrase1(phrase1!);
                         setRecoveryPhrase2(phrase2!);
                         setRecoveryLoaded(true);
                     } else {
-                        setError("Failed to generate recovery phrases, please start over");
+                        setError(
+                            "Failed to generate recovery phrases, please start over",
+                        );
                     }
                 } catch {
                     setError("Something went wrong, try again");
@@ -99,33 +102,39 @@ export default function RegisterPage() {
 
     const goNext = () => {
         setError("");
-        setStep((s) => (Math.min(s + 1, STEP_COUNT - 1) as Step));
+        setStep((s) => Math.min(s + 1, STEP_COUNT - 1) as Step);
     };
     const goBack = () => {
         setError("");
-        setStep((s) => (Math.max(s - 1, 0) as Step));
+        setStep((s) => Math.max(s - 1, 0) as Step);
     };
 
     // ── Validation helpers ──
-    const isUsernameValid = username.trim().length >= 3 && /^[a-zA-Z0-9_]+$/.test(username);
+    const isUsernameValid =
+        username.trim().length >= 3 &&
+        username.trim().length <= 32 &&
+        /^[a-zA-Z0-9_]+$/.test(username);
     const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     const isCodeComplete = code.every((d) => d !== "");
     const passwordStrength = getPasswordStrength(password);
     const isPasswordValid = password.length >= 8 && passwordStrength >= 2;
-    const doPasswordsMatch = password === confirmPassword && confirmPassword.length > 0;
+    const doPasswordsMatch =
+        password === confirmPassword && confirmPassword.length > 0;
     const passwordFeedback = password ? zxcvbn(password).feedback : null;
 
     // ── Step handlers (stubs — wire up to your API later) ──
     const handleUsernameSubmit = async () => {
         if (!isUsernameValid) {
-            setError("Username must be at least 3 characters (letters, digits, underscore only)");
+            setError(
+                "Username must be at least 3 characters – Latin letters, digits, and underscores only",
+            );
             return;
         }
         setLoading(true);
         try {
-            const { success, sessionId, reason } = await startRegistration(username);
+            const { success, sessionId } = await startRegistration(username);
             if (!success) {
-                setError(reason === "taken" ? "This username is already taken" : "Invalid username format");
+                setError("Invalid username format");
                 return;
             }
             setSessionId(sessionId!);
@@ -144,12 +153,18 @@ export default function RegisterPage() {
         }
         setLoading(true);
         try {
-            const { success, reason } = await submitEmail(sessionId!, email, emailVisibilityConsent);
+            const { success, reason } = await submitEmail(
+                sessionId!,
+                email,
+                emailVisibilityConsent,
+            );
             if (!success) {
                 setError(
-                    reason === "session_expired" ? "Session expired, please start over" :
-                        reason === "email_taken" ? "This email is already registered" :
-                            "Invalid email address"
+                    reason === "session_expired"
+                        ? "Session expired, please start over"
+                        : reason === "email_taken"
+                          ? "This email is already registered"
+                          : "Invalid email address",
                 );
                 return;
             }
@@ -169,13 +184,19 @@ export default function RegisterPage() {
         }
         setLoading(true);
         try {
-            const { success, reason } = await verifyCode(sessionId!, code.join(""));
+            const { success, reason } = await verifyCode(
+                sessionId!,
+                code.join(""),
+            );
             if (!success) {
                 setError(
-                    reason === "code_expired" ? "Code expired, request a new one" :
-                        reason === "too_many_attempts" ? "Too many attempts, request a new code" :
-                            reason === "session_expired" ? "Session expired, please start over" :
-                                "Invalid code"
+                    reason === "code_expired"
+                        ? "Code expired, request a new one"
+                        : reason === "too_many_attempts"
+                          ? "Too many attempts, request a new code"
+                          : reason === "session_expired"
+                            ? "Session expired, please start over"
+                            : "Invalid code",
                 );
                 setCode(Array(CODE_LENGTH).fill(""));
                 codeInputs.current[0]?.focus();
@@ -191,7 +212,9 @@ export default function RegisterPage() {
 
     const handlePasswordSubmit = async () => {
         if (!isPasswordValid) {
-            setError("Password must be at least 8 characters and reasonably strong");
+            setError(
+                "Password must be at least 8 characters and reasonably strong",
+            );
             return;
         }
         if (!doPasswordsMatch) {
@@ -200,12 +223,17 @@ export default function RegisterPage() {
         }
         setLoading(true);
         try {
-            const { success, reason } = await submitPassword(sessionId!, password);
+            const { success, reason } = await submitPassword(
+                sessionId!,
+                password,
+            );
             if (!success) {
                 setError(
-                    reason === "session_expired" ? "Session expired, please start over" :
-                        reason === "invalid_step" ? "Something went wrong, please start over" :
-                            "Password does not meet requirements"
+                    reason === "session_expired"
+                        ? "Session expired, please start over"
+                        : reason === "invalid_step"
+                          ? "Something went wrong, please start over"
+                          : "Password does not meet requirements",
                 );
                 return;
             }
@@ -227,10 +255,13 @@ export default function RegisterPage() {
                 setResendCount((c) => c + 1);
             } else {
                 setError(
-                    reason === "resend_limit_reached" ? "Resend limit reached, please start over" :
-                        reason === "cooldown_active" ? "Please wait before requesting a new code" :
-                            reason === "email_send_failed" ? "Failed to send code, try again" :
-                                "Failed to resend code"
+                    reason === "resend_limit_reached"
+                        ? "Resend limit reached, please start over"
+                        : reason === "cooldown_active"
+                          ? "Please wait before requesting a new code"
+                          : reason === "email_send_failed"
+                            ? "Failed to send code, try again"
+                            : "Failed to resend code",
                 );
             }
         } catch {
@@ -250,8 +281,9 @@ export default function RegisterPage() {
             const confirmRes = await confirmRecovery(sessionId!);
             if (!confirmRes.success) {
                 setError(
-                    confirmRes.reason === "session_expired" ? "Session expired, please start over" :
-                        "Something went wrong, please start over"
+                    confirmRes.reason === "session_expired"
+                        ? "Session expired, please start over"
+                        : "Something went wrong, please start over",
                 );
                 return;
             }
@@ -259,10 +291,12 @@ export default function RegisterPage() {
             const { success, reason } = await finalizeRegistration(sessionId!);
             if (!success) {
                 setError(
-                    reason === "username_taken" ? "Username was taken, please start over" :
-                        reason === "email_taken" ? "Email was taken, please start over" :
-                            reason === "session_expired" ? "Session expired, please start over" :
-                                "Something went wrong, please start over"
+                    //reason === "username_taken" ? "Username was taken, please start over" :
+                    reason === "email_taken"
+                        ? "Email was taken, please start over"
+                        : reason === "session_expired"
+                          ? "Session expired, please start over"
+                          : "Something went wrong, please start over",
                 );
                 return;
             }
@@ -285,18 +319,46 @@ export default function RegisterPage() {
         }
     };
 
-    const handleCodeKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    const handleCodeKeyDown = (
+        index: number,
+        e: React.KeyboardEvent<HTMLInputElement>,
+    ) => {
         if (e.key === "Backspace" && !code[index] && index > 0) {
             codeInputs.current[index - 1]?.focus();
         }
     };
 
     const stepTitles = [
-        { title: "Create your account", subtitle: "Choose a unique username for Arcanum" },
-        { title: "Confirm your email", subtitle: <>We'll send a verification code to <b>{email || "your email"}</b></> },
-        { title: "Enter verification code", subtitle: <>Check <b>{email}</b> for a 6-digit code</> },
-        { title: "Set a password", subtitle: "Make it strong — this protects your encrypted messages" },
-        { title: "Save your recovery phrases", subtitle: "Write these down — they're the only way to recover your account" },
+        {
+            title: "Create your account",
+            subtitle: "Choose a unique username for Arcanum",
+        },
+        {
+            title: "Confirm your email",
+            subtitle: (
+                <>
+                    We'll send a verification code to{" "}
+                    <b>{email || "your email"}</b>
+                </>
+            ),
+        },
+        {
+            title: "Enter verification code",
+            subtitle: (
+                <>
+                    Check <b>{email}</b> for a 6-digit code
+                </>
+            ),
+        },
+        {
+            title: "Set a password",
+            subtitle: "Make it strong — this protects your encrypted messages",
+        },
+        {
+            title: "Save your recovery phrases",
+            subtitle:
+                "Write these down — they're the only way to recover your account",
+        },
     ];
 
     return (
@@ -308,15 +370,36 @@ export default function RegisterPage() {
             <div className={styles.card}>
                 {/* Header */}
                 <div className={styles.header}>
-                    <button className={styles.backHome} onClick={() => navigate("/welcome")} aria-label="Back to welcome" style={{ visibility: step === 0 ? "visible" : "hidden" }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <button
+                        className={styles.backHome}
+                        onClick={() => navigate("/welcome")}
+                        aria-label="Back to welcome"
+                        style={{
+                            visibility: step === 0 ? "visible" : "hidden",
+                        }}
+                    >
+                        <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        >
                             <path d="M19 12H5M12 19l-7-7 7-7" />
                         </svg>
                     </button>
 
                     <div className={styles.logoBox}>
                         <div className={styles.logoBox}>
-                            <svg width="60" height="60" viewBox="0 0 48 48" fill="none">
+                            <svg
+                                width="60"
+                                height="60"
+                                viewBox="0 0 48 48"
+                                fill="none"
+                            >
                                 <path
                                     d="M16 12H32a6 6 0 0 1 6 6v10a6 6 0 0 1-6 6H20l-6 5v-5a6 6 0 0 1-6-6V18a6 6 0 0 1 6-6z"
                                     stroke="url(#rg)"
@@ -325,8 +408,16 @@ export default function RegisterPage() {
                                     strokeLinejoin="round"
                                 />
                                 <defs>
-                                    <linearGradient id="rg" x1="6" y1="4" x2="42" y2="44" gradientUnits="userSpaceOnUse">
-                                        <stop stopColor="#a78bfa" /><stop offset="1" stopColor="#22d3ee" />
+                                    <linearGradient
+                                        id="rg"
+                                        x1="6"
+                                        y1="4"
+                                        x2="42"
+                                        y2="44"
+                                        gradientUnits="userSpaceOnUse"
+                                    >
+                                        <stop stopColor="#a78bfa" />
+                                        <stop offset="1" stopColor="#22d3ee" />
                                     </linearGradient>
                                 </defs>
                             </svg>
@@ -353,8 +444,12 @@ export default function RegisterPage() {
                     >
                         {/* ── STEP 0: Username ── */}
                         <div className={styles.slide}>
-                            <h2 className={styles.stepTitle}>{stepTitles[0].title}</h2>
-                            <p className={styles.stepSubtitle}>{stepTitles[0].subtitle}</p>
+                            <h2 className={styles.stepTitle}>
+                                {stepTitles[0].title}
+                            </h2>
+                            <p className={styles.stepSubtitle}>
+                                {stepTitles[0].subtitle}
+                            </p>
 
                             <div className={styles.field}>
                                 <label className={styles.label}>Username</label>
@@ -363,11 +458,18 @@ export default function RegisterPage() {
                                     type="text"
                                     placeholder="your_username"
                                     value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
-                                    onKeyDown={(e) => e.key === "Enter" && handleUsernameSubmit()}
+                                    onChange={(e) =>
+                                        setUsername(e.target.value)
+                                    }
+                                    onKeyDown={(e) =>
+                                        e.key === "Enter" &&
+                                        handleUsernameSubmit()
+                                    }
                                     autoFocus
                                 />
-                                {error && step === 0 && <p className={styles.errorText}>{error}</p>}
+                                {error && step === 0 && (
+                                    <p className={styles.errorText}>{error}</p>
+                                )}
                             </div>
 
                             <div className={styles.actions}>
@@ -382,14 +484,20 @@ export default function RegisterPage() {
 
                             <p className={styles.footerNote}>
                                 Already have an account?{" "}
-                                <button className={styles.footerLink}>Sign in</button>
+                                <button className={styles.footerLink}>
+                                    Sign in
+                                </button>
                             </p>
                         </div>
 
                         {/* ── STEP 1: Email ── */}
                         <div className={styles.slide}>
-                            <h2 className={styles.stepTitle}>{stepTitles[1].title}</h2>
-                            <p className={styles.stepSubtitle}>{stepTitles[1].subtitle}</p>
+                            <h2 className={styles.stepTitle}>
+                                {stepTitles[1].title}
+                            </h2>
+                            <p className={styles.stepSubtitle}>
+                                {stepTitles[1].subtitle}
+                            </p>
 
                             <div className={styles.field}>
                                 <label className={styles.label}>Email</label>
@@ -399,27 +507,51 @@ export default function RegisterPage() {
                                     placeholder="you@example.com"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    onKeyDown={(e) => e.key === "Enter" && handleEmailSubmit()}
+                                    onKeyDown={(e) =>
+                                        e.key === "Enter" && handleEmailSubmit()
+                                    }
                                     autoFocus={step === 1}
                                 />
-                                {error && step === 1 && <p className={styles.errorText}>{error}</p>}
+                                {error && step === 1 && (
+                                    <p className={styles.errorText}>{error}</p>
+                                )}
                                 <label className={styles.consentRow}>
                                     <input
                                         type="checkbox"
                                         className={styles.consentCheckbox}
                                         checked={emailVisibilityConsent}
-                                        onChange={(e) => setEmailVisibilityConsent(e.target.checked)}
+                                        onChange={(e) =>
+                                            setEmailVisibilityConsent(
+                                                e.target.checked,
+                                            )
+                                        }
                                     />
                                     <span>
-                                        Allow Arcanum to know my email so I can show it on my profile later
-                                        {" "}<span className={styles.consentWarn}>(cannot be changed afterward)</span>
+                                        Allow Arcanum to know my email so I can
+                                        show it on my profile later{" "}
+                                        <span className={styles.consentWarn}>
+                                            (cannot be changed afterward)
+                                        </span>
                                     </span>
                                 </label>
                             </div>
 
                             <div className={styles.actions}>
-                                <button className={styles.btnBack} onClick={goBack} aria-label="Back">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                <button
+                                    className={styles.btnBack}
+                                    onClick={goBack}
+                                    aria-label="Back"
+                                >
+                                    <svg
+                                        width="18"
+                                        height="18"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2.2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    >
                                         <path d="M19 12H5M12 19l-7-7 7-7" />
                                     </svg>
                                 </button>
@@ -435,38 +567,58 @@ export default function RegisterPage() {
 
                         {/* ── STEP 2: Email code ── */}
                         <div className={styles.slide}>
-                            <h2 className={styles.stepTitle}>{stepTitles[2].title}</h2>
-                            <p className={styles.stepSubtitle}>{stepTitles[2].subtitle}</p>
+                            <h2 className={styles.stepTitle}>
+                                {stepTitles[2].title}
+                            </h2>
+                            <p className={styles.stepSubtitle}>
+                                {stepTitles[2].subtitle}
+                            </p>
 
                             <div className={styles.codeRow}>
                                 {code.map((digit, i) => (
                                     <input
                                         key={i}
-                                        ref={(el) => { codeInputs.current[i] = el; }}
+                                        ref={(el) => {
+                                            codeInputs.current[i] = el;
+                                        }}
                                         className={styles.codeDigit}
                                         type="text"
                                         inputMode="numeric"
                                         maxLength={1}
                                         value={digit}
-                                        onChange={(e) => handleCodeChange(i, e.target.value)}
-                                        onKeyDown={(e) => handleCodeKeyDown(i, e)}
+                                        onChange={(e) =>
+                                            handleCodeChange(i, e.target.value)
+                                        }
+                                        onKeyDown={(e) =>
+                                            handleCodeKeyDown(i, e)
+                                        }
                                         autoFocus={step === 2 && i === 0}
                                     />
                                 ))}
                             </div>
                             {error && step === 2 && (
-                                <p className={styles.errorText} style={{ textAlign: "center" }}>{error}</p>
+                                <p
+                                    className={styles.errorText}
+                                    style={{ textAlign: "center" }}
+                                >
+                                    {error}
+                                </p>
                             )}
 
                             <div className={styles.resendRow}>
                                 {resendCount >= RESEND_LIMIT ? (
                                     <span>Resend limit reached</span>
                                 ) : resendCooldown > 0 ? (
-                                    <span>Resend code in {resendCooldown}s</span>
+                                    <span>
+                                        Resend code in {resendCooldown}s
+                                    </span>
                                 ) : (
                                     <>
                                         Didn't get it?{" "}
-                                        <button className={styles.resendLink} onClick={handleResend}>
+                                        <button
+                                            className={styles.resendLink}
+                                            onClick={handleResend}
+                                        >
                                             Resend code
                                         </button>
                                     </>
@@ -474,8 +626,21 @@ export default function RegisterPage() {
                             </div>
 
                             <div className={styles.actions}>
-                                <button className={styles.btnBack} onClick={goBack} aria-label="Back">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                <button
+                                    className={styles.btnBack}
+                                    onClick={goBack}
+                                    aria-label="Back"
+                                >
+                                    <svg
+                                        width="18"
+                                        height="18"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2.2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    >
                                         <path d="M19 12H5M12 19l-7-7 7-7" />
                                     </svg>
                                 </button>
@@ -491,8 +656,12 @@ export default function RegisterPage() {
 
                         {/* ── STEP 3: Password ── */}
                         <div className={styles.slide}>
-                            <h2 className={styles.stepTitle}>{stepTitles[3].title}</h2>
-                            <p className={styles.stepSubtitle}>{stepTitles[3].subtitle}</p>
+                            <h2 className={styles.stepTitle}>
+                                {stepTitles[3].title}
+                            </h2>
+                            <p className={styles.stepSubtitle}>
+                                {stepTitles[3].subtitle}
+                            </p>
 
                             <div className={styles.field}>
                                 <label className={styles.label}>Password</label>
@@ -501,7 +670,9 @@ export default function RegisterPage() {
                                     type="password"
                                     placeholder="••••••••"
                                     value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
+                                    onChange={(e) =>
+                                        setPassword(e.target.value)
+                                    }
                                     autoFocus={step === 3}
                                 />
                                 {password.length > 0 && (
@@ -510,40 +681,67 @@ export default function RegisterPage() {
                                             {[0, 1, 2, 3].map((i) => (
                                                 <div
                                                     key={i}
-                                                    className={styles.strengthBar}
+                                                    className={
+                                                        styles.strengthBar
+                                                    }
                                                     style={{
-                                                        background: i < passwordStrength
-                                                            ? strengthColor(passwordStrength)
-                                                            : undefined,
+                                                        background:
+                                                            i < passwordStrength
+                                                                ? strengthColor(
+                                                                      passwordStrength,
+                                                                  )
+                                                                : undefined,
                                                     }}
                                                 />
                                             ))}
                                         </div>
-                                        <p className={styles.strengthLabel}>{strengthLabel(passwordStrength)}</p>
+                                        <p className={styles.strengthLabel}>
+                                            {strengthLabel(passwordStrength)}
+                                        </p>
                                         {passwordFeedback?.warning && (
-                                            <p className={styles.strengthWarning}>{passwordFeedback.warning}</p>
+                                            <p
+                                                className={
+                                                    styles.strengthWarning
+                                                }
+                                            >
+                                                {passwordFeedback.warning}
+                                            </p>
                                         )}
                                     </div>
                                 )}
                             </div>
 
                             <div className={styles.field}>
-                                <label className={styles.label}>Confirm password</label>
+                                <label className={styles.label}>
+                                    Confirm password
+                                </label>
                                 <input
                                     className={`${styles.input} ${confirmPassword && !doPasswordsMatch ? styles.error : ""}`}
                                     type="password"
                                     placeholder="••••••••"
                                     value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                    onKeyDown={(e) => e.key === "Enter" && handlePasswordSubmit()}
+                                    onChange={(e) =>
+                                        setConfirmPassword(e.target.value)
+                                    }
+                                    onKeyDown={(e) =>
+                                        e.key === "Enter" &&
+                                        handlePasswordSubmit()
+                                    }
                                 />
                                 {confirmPassword && !doPasswordsMatch && (
-                                    <p className={styles.errorText}>Passwords do not match</p>
+                                    <p className={styles.errorText}>
+                                        Passwords do not match
+                                    </p>
                                 )}
                             </div>
 
                             {error && (
-                                <p className={styles.errorText} style={{ textAlign: "center" }}>{error}</p>
+                                <p
+                                    className={styles.errorText}
+                                    style={{ textAlign: "center" }}
+                                >
+                                    {error}
+                                </p>
                             )}
 
                             <div className={styles.actions}>
@@ -559,38 +757,58 @@ export default function RegisterPage() {
 
                         {/* ── STEP 4: Recovery phrases ── */}
                         <div className={styles.slide}>
-                            <h2 className={styles.stepTitle}>{stepTitles[4].title}</h2>
-                            <p className={styles.stepSubtitle}>{stepTitles[4].subtitle}</p>
+                            <h2 className={styles.stepTitle}>
+                                {stepTitles[4].title}
+                            </h2>
+                            <p className={styles.stepSubtitle}>
+                                {stepTitles[4].subtitle}
+                            </p>
 
                             {!recoveryLoaded ? (
-                                <p className={styles.stepSubtitle}>Generating your recovery phrases…</p>
+                                <p className={styles.stepSubtitle}>
+                                    Generating your recovery phrases…
+                                </p>
                             ) : (
                                 <>
-                                        <div className={styles.recoveryBlock}>
-                                            <span className={styles.label}>Recovery phrase 1</span>
-                                            <textarea
-                                                className={styles.recoveryTextarea}
-                                                readOnly
-                                                value={recoveryPhrase1 ?? ""}
-                                                rows={3}
-                                                onClick={(e) => (e.target as HTMLTextAreaElement).select()}
-                                            />
-                                        </div>
+                                    <div className={styles.recoveryBlock}>
+                                        <span className={styles.label}>
+                                            Recovery phrase 1
+                                        </span>
+                                        <textarea
+                                            className={styles.recoveryTextarea}
+                                            readOnly
+                                            value={recoveryPhrase1 ?? ""}
+                                            rows={3}
+                                            onClick={(e) =>
+                                                (
+                                                    e.target as HTMLTextAreaElement
+                                                ).select()
+                                            }
+                                        />
+                                    </div>
 
-                                        <div className={styles.recoveryBlock}>
-                                            <span className={styles.label}>Recovery phrase 2</span>
-                                            <textarea
-                                                className={styles.recoveryTextarea}
-                                                readOnly
-                                                value={recoveryPhrase2 ?? ""}
-                                                rows={3}
-                                                onClick={(e) => (e.target as HTMLTextAreaElement).select()}
-                                            />
-                                        </div>
+                                    <div className={styles.recoveryBlock}>
+                                        <span className={styles.label}>
+                                            Recovery phrase 2
+                                        </span>
+                                        <textarea
+                                            className={styles.recoveryTextarea}
+                                            readOnly
+                                            value={recoveryPhrase2 ?? ""}
+                                            rows={3}
+                                            onClick={(e) =>
+                                                (
+                                                    e.target as HTMLTextAreaElement
+                                                ).select()
+                                            }
+                                        />
+                                    </div>
 
                                     <p className={styles.recoveryWarning}>
-                                        Anyone with access to either phrase can recover your account. Store them
-                                        somewhere safe and offline — we cannot show them to you again.
+                                        Anyone with access to either phrase can
+                                        recover your account. Store them
+                                        somewhere safe and offline — we cannot
+                                        show them to you again.
                                     </p>
 
                                     <button
@@ -604,28 +822,49 @@ export default function RegisterPage() {
                                             })
                                         }
                                     >
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <svg
+                                            width="16"
+                                            height="16"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        >
                                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                                             <path d="M7 10l5 5 5-5" />
                                             <path d="M12 15V3" />
                                         </svg>
                                         Download recovery kit (PDF)
                                     </button>
-                                    
+
                                     <label className={styles.consentRow}>
                                         <input
                                             type="checkbox"
                                             className={styles.consentCheckbox}
                                             checked={recoveryConfirmChecked}
-                                            onChange={(e) => setRecoveryConfirmChecked(e.target.checked)}
+                                            onChange={(e) =>
+                                                setRecoveryConfirmChecked(
+                                                    e.target.checked,
+                                                )
+                                            }
                                         />
-                                        <span>I've saved both recovery phrases somewhere safe</span>
+                                        <span>
+                                            I've saved both recovery phrases
+                                            somewhere safe
+                                        </span>
                                     </label>
                                 </>
                             )}
 
                             {error && step === 4 && (
-                                <p className={styles.errorText} style={{ textAlign: "center" }}>{error}</p>
+                                <p
+                                    className={styles.errorText}
+                                    style={{ textAlign: "center" }}
+                                >
+                                    {error}
+                                </p>
                             )}
 
                             <div className={styles.actions}>
@@ -634,7 +873,9 @@ export default function RegisterPage() {
                                     onClick={handleRecoverySubmit}
                                     disabled={loading || !recoveryLoaded}
                                 >
-                                    {loading ? "Creating account…" : "Create account"}
+                                    {loading
+                                        ? "Creating account…"
+                                        : "Create account"}
                                 </button>
                             </div>
                         </div>
@@ -647,14 +888,17 @@ export default function RegisterPage() {
                         <div className={styles.modalIcon}>🔒</div>
                         <h3 className={styles.modalTitle}>About your email</h3>
                         <p className={styles.modalText}>
-                            Your email is private and not even developers can read or recover it. If you'd like to show your email on your public profile later, we need your
+                            Your email is private and not even developers can
+                            read or recover it. If you'd like to show your email
+                            on your public profile later, we need your
                             permission to know it in plain form.
                         </p>
                         <p className={styles.modalText}>
                             <br />
                             <span className={styles.modalWarning}>
-                                Without this, your email stays hashed forever — and you won't be able
-                                to add it to your profile, even afterward.
+                                Without this, your email stays hashed forever —
+                                and you won't be able to add it to your profile,
+                                even afterward.
                             </span>
                         </p>
                         <button

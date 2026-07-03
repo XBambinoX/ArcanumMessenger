@@ -17,7 +17,7 @@ export async function startRegistration(username: string): Promise<{
 export async function submitEmail(
     sessionId: string,
     email: string,
-    emailVisibilityConsent: boolean
+    emailVisibilityConsent: boolean,
 ): Promise<{ success: boolean; reason?: string }> {
     const res = await fetch(`${API_BASE}/api/auth/register/email`, {
         method: "POST",
@@ -30,7 +30,7 @@ export async function submitEmail(
 
 export async function verifyCode(
     sessionId: string,
-    code: string
+    code: string,
 ): Promise<{ success: boolean; reason?: string }> {
     const res = await fetch(`${API_BASE}/api/auth/register/verify-code`, {
         method: "POST",
@@ -42,7 +42,7 @@ export async function verifyCode(
 }
 
 export async function resendCode(
-    sessionId: string
+    sessionId: string,
 ): Promise<{ success: boolean; reason?: string }> {
     const res = await fetch(`${API_BASE}/api/auth/register/resend-code`, {
         method: "POST",
@@ -55,7 +55,7 @@ export async function resendCode(
 
 export async function submitPassword(
     sessionId: string,
-    password: string
+    password: string,
 ): Promise<{ success: boolean; reason?: string }> {
     const res = await fetch(`${API_BASE}/api/auth/register/password`, {
         method: "POST",
@@ -66,9 +66,12 @@ export async function submitPassword(
     return res.json();
 }
 
-export async function generateRecovery(
-    sessionId: string
-): Promise<{ success: boolean; phrase1?: string; phrase2?: string; reason?: string }> {
+export async function generateRecovery(sessionId: string): Promise<{
+    success: boolean;
+    phrase1?: string;
+    phrase2?: string;
+    reason?: string;
+}> {
     const res = await fetch(`${API_BASE}/api/auth/register/recovery/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -79,7 +82,7 @@ export async function generateRecovery(
 }
 
 export async function confirmRecovery(
-    sessionId: string
+    sessionId: string,
 ): Promise<{ success: boolean; reason?: string }> {
     const res = await fetch(`${API_BASE}/api/auth/register/recovery/confirm`, {
         method: "POST",
@@ -91,7 +94,7 @@ export async function confirmRecovery(
 }
 
 export async function finalizeRegistration(
-    sessionId: string
+    sessionId: string,
 ): Promise<{ success: boolean; reason?: string }> {
     const res = await fetch(`${API_BASE}/api/auth/register/finalize`, {
         method: "POST",

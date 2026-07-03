@@ -22,41 +22,21 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
 
     private const int MinPasswordLength = 8;
 
-    [HttpGet("check-username")]
 
-    public async Task<ActionResult<CheckUsernameResponse>> CheckUsername(
-        [FromQuery] string username,
-        CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(username) || !UsernameRegex.IsMatch(username))
-            return Ok(new CheckUsernameResponse(false, "invalid_format"));
-
-        var exists = await db.Users
-            .AsNoTracking()
-            .AnyAsync(u => u.Username == username && !u.IsDeleted, ct);
-
-        return Ok(new CheckUsernameResponse(!exists, exists ? "taken" : null));
-    }
 
     [HttpPost("register/start")]
-
     public async Task<ActionResult<StartRegistrationResponse>> StartRegistration(
         [FromBody] StartRegistrationRequest request,
         CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.Username) || !UsernameRegex.IsMatch(request.Username))
-            return Ok(new StartRegistrationResponse(false, null, "invalid_format"));
-
-        var exists = await db.Users
-            .AsNoTracking()
-            .AnyAsync(u => u.Username == request.Username && !u.IsDeleted, ct);
-
-        if (exists)
-            return Ok(new StartRegistrationResponse(false, null, "taken"));
+            return BadRequest(new StartRegistrationResponse(Success: false, SessionId: null, Reason: "invalid_format"));
 
         var sessionId = await registrationSession.CreateAsync(request.Username, ct);
-        return Ok(new StartRegistrationResponse(true, sessionId));
+        return Ok(new StartRegistrationResponse(Success: true, SessionId: sessionId));
     }
+
+
 
     [HttpPost("register/email")]
     public async Task<ActionResult<SubmitEmailResponse>> SubmitEmail(
@@ -65,13 +45,13 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
     {
         var session = await registrationSession.GetAsync(request.SessionId, ct);
         if (session is null)
-            return Ok(new SubmitEmailResponse(false, "session_expired"));
+            return StatusCode(StatusCodes.Status410Gone, new SubmitEmailResponse(Success: false, Reason: "session_expired"));
 
         if (session.Step != 0)
-            return Ok(new SubmitEmailResponse(false, "invalid_step"));
+            return BadRequest(new SubmitEmailResponse(Success: false, Reason: "invalid_step"));
 
         if (string.IsNullOrWhiteSpace(request.Email) || !request.Email.Contains('@'))
-            return Ok(new SubmitEmailResponse(false, "invalid_email"));
+            return BadRequest(new SubmitEmailResponse(Success: false, Reason: "invalid_email"));
 
         var emailHash = Convert.ToHexString(
             System.Security.Cryptography.SHA256.HashData(
@@ -84,7 +64,7 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
             .AnyAsync(u => u.EmailHash == emailHash && !u.IsDeleted, ct);
 
         if (emailExists)
-            return Ok(new SubmitEmailResponse(false, "email_taken"));
+            return Conflict(new SubmitEmailResponse(Success: false, Reason: "email_taken"));
 
         var code = Rng.Next(0, 1_000_000).ToString("D6");
 
@@ -104,11 +84,13 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
         }
         catch
         {
-            return Ok(new SubmitEmailResponse(false, "email_send_failed"));
+            return StatusCode(StatusCodes.Status502BadGateway, new SubmitEmailResponse(Success: false, Reason: "email_send_failed"));
         }
 
-        return Ok(new SubmitEmailResponse(true));
+        return Ok(new SubmitEmailResponse(Success: true));
     }
+
+
 
     [HttpPost("register/verify-code")]
     public async Task<ActionResult<VerifyCodeResponse>> VerifyCode(
@@ -117,23 +99,23 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
     {
         var session = await registrationSession.GetAsync(request.SessionId, ct);
         if (session is null)
-            return Ok(new VerifyCodeResponse(false, "session_expired"));
+            return StatusCode(StatusCodes.Status410Gone, new VerifyCodeResponse(Success: false, Reason: "session_expired"));
 
         if (session.Step != 1)
-            return Ok(new VerifyCodeResponse(false, "invalid_step"));
+            return BadRequest(new VerifyCodeResponse(Success: false, Reason: "invalid_step"));
 
         if (session.CodeExpiresAt is null || session.CodeExpiresAt < DateTime.UtcNow)
-            return Ok(new VerifyCodeResponse(false, "code_expired"));
+            return StatusCode(StatusCodes.Status410Gone, new VerifyCodeResponse(Success: false, Reason: "code_expired"));
 
         if (session.CodeAttempts >= AttemptsLimit)
-            return Ok(new VerifyCodeResponse(false, "too_many_attempts"));
+            return StatusCode(StatusCodes.Status429TooManyRequests, new VerifyCodeResponse(Success: false, Reason: "too_many_attempts"));
 
         session.CodeAttempts++;
 
         if (string.IsNullOrWhiteSpace(request.Code) || session.VerificationCode != request.Code)
         {
             await registrationSession.UpdateAsync(request.SessionId, session, ct);
-            return Ok(new VerifyCodeResponse(false, "invalid_code"));
+            return StatusCode(StatusCodes.Status422UnprocessableEntity, new VerifyCodeResponse(Success: false, Reason: "invalid_code"));
         }
 
         session.Step = 2;
@@ -141,8 +123,10 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
         session.EmailVerified = true;
         await registrationSession.UpdateAsync(request.SessionId, session, ct);
 
-        return Ok(new VerifyCodeResponse(true));
+        return Ok(new VerifyCodeResponse(Success: true));
     }
+
+
 
     [HttpPost("register/resend-code")]
     public async Task<ActionResult<ResendCodeResponse>> ResendCode(
@@ -151,17 +135,17 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
     {
         var session = await registrationSession.GetAsync(request.SessionId, ct);
         if (session is null)
-            return Ok(new ResendCodeResponse(false, "session_expired"));
+            return StatusCode(StatusCodes.Status410Gone, new ResendCodeResponse(Success: false, Reason: "session_expired"));
 
         if (session.Step != 1 || string.IsNullOrEmpty(session.PlainEmail))
-            return Ok(new ResendCodeResponse(false, "invalid_step"));
+            return BadRequest(new ResendCodeResponse(Success: false, Reason: "invalid_step"));
 
         if (session.ResendCount >= ResendCountMax)
-            return Ok(new ResendCodeResponse(false, "resend_limit_reached"));
+            return StatusCode(StatusCodes.Status429TooManyRequests, new ResendCodeResponse(Success: false, Reason: "resend_limit_reached"));
 
         if (session.LastCodeSentAt is not null &&
             DateTime.UtcNow < session.LastCodeSentAt.Value.AddSeconds(ResendCodeCooldownSeconds))
-            return Ok(new ResendCodeResponse(false, "cooldown_active"));
+            return StatusCode(StatusCodes.Status429TooManyRequests, new ResendCodeResponse(Success: false, Reason: "cooldown_active"));
 
         var code = Rng.Next(0, 1_000_000).ToString("D6");
         session.VerificationCode = code;
@@ -178,11 +162,13 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
         }
         catch
         {
-            return Ok(new ResendCodeResponse(false, "email_send_failed"));
+            return StatusCode(StatusCodes.Status502BadGateway, new ResendCodeResponse(Success: false, Reason: "email_send_failed"));
         }
 
-        return Ok(new ResendCodeResponse(true));
+        return Ok(new ResendCodeResponse(Success: true));
     }
+
+
 
     [HttpPost("register/password")]
     public async Task<ActionResult<SubmitPasswordResponse>> SubmitPassword(
@@ -191,21 +177,23 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
     {
         var session = await registrationSession.GetAsync(request.SessionId, ct);
         if (session is null)
-            return Ok(new SubmitPasswordResponse(false, "session_expired"));
+            return StatusCode(StatusCodes.Status410Gone, new SubmitPasswordResponse(Success: false, Reason: "session_expired"));
 
         if (session.Step != 2)
-            return Ok(new SubmitPasswordResponse(false, "invalid_step"));
+            return BadRequest(new SubmitPasswordResponse(Success: false, Reason: "invalid_step"));
 
         if (string.IsNullOrWhiteSpace(request.Password) || request.Password.Length < MinPasswordLength)
-            return Ok(new SubmitPasswordResponse(false, "weak_password"));
+            return StatusCode(StatusCodes.Status422UnprocessableEntity, new SubmitPasswordResponse(Success: false, Reason: "weak_password"));
 
         session.PasswordHash = PasswordHasher.Hash(request.Password);
         session.Step = 3;
 
         await registrationSession.UpdateAsync(request.SessionId, session, ct);
 
-        return Ok(new SubmitPasswordResponse(true));
+        return Ok(new SubmitPasswordResponse(Success: true));
     }
+
+
 
     [HttpPost("register/recovery/generate")]
     public async Task<ActionResult<GenerateRecoveryResponse>> GenerateRecovery(
@@ -214,10 +202,10 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
     {
         var session = await registrationSession.GetAsync(request.SessionId, ct);
         if (session is null)
-            return Ok(new GenerateRecoveryResponse(false, null, null, "session_expired"));
+            return StatusCode(StatusCodes.Status410Gone, new GenerateRecoveryResponse(Success: false, Phrase1: null, Phrase2: null, Reason: "session_expired"));
 
         if (session.Step != 3)
-            return Ok(new GenerateRecoveryResponse(false, null, null, "invalid_step"));
+            return BadRequest(new GenerateRecoveryResponse(Success: false, Phrase1: null, Phrase2: null, Reason: "invalid_step"));
 
         // If the phrases have already been generated (the user reloaded the page), we return the same ones
         if (string.IsNullOrEmpty(session.RecoveryPhrase1))
@@ -227,8 +215,10 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
             await registrationSession.UpdateAsync(request.SessionId, session, ct);
         }
 
-        return Ok(new GenerateRecoveryResponse(true, session.RecoveryPhrase1, session.RecoveryPhrase2));
+        return Ok(new GenerateRecoveryResponse(Success: true, Phrase1: session.RecoveryPhrase1, Phrase2: session.RecoveryPhrase2));
     }
+
+
 
     [HttpPost("register/recovery/confirm")]
     public async Task<ActionResult<ConfirmRecoveryResponse>> ConfirmRecovery(
@@ -237,20 +227,22 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
     {
         var session = await registrationSession.GetAsync(request.SessionId, ct);
         if (session is null)
-            return Ok(new ConfirmRecoveryResponse(false, "session_expired"));
+            return StatusCode(StatusCodes.Status410Gone, new ConfirmRecoveryResponse(Success: false, Reason: "session_expired"));
 
         if (session.Step != 3)
-            return Ok(new ConfirmRecoveryResponse(false, "invalid_step"));
+            return BadRequest(new ConfirmRecoveryResponse(Success: false, Reason: "invalid_step"));
 
         if (string.IsNullOrEmpty(session.RecoveryPhrase1) || string.IsNullOrEmpty(session.RecoveryPhrase2))
-            return Ok(new ConfirmRecoveryResponse(false, "not_generated"));
+            return BadRequest(new ConfirmRecoveryResponse(Success: false, Reason: "not_generated"));
 
         session.RecoveryConfirmed = true;
         session.Step = 4;
         await registrationSession.UpdateAsync(request.SessionId, session, ct);
 
-        return Ok(new ConfirmRecoveryResponse(true));
+        return Ok(new ConfirmRecoveryResponse(Success: true));
     }
+
+
 
     [HttpPost("register/finalize")]
     public async Task<ActionResult<FinalizeRegistrationResponse>> FinalizeRegistration(
@@ -259,14 +251,14 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
     {
         var session = await registrationSession.GetAsync(request.SessionId, ct);
         if (session is null)
-            return Ok(new FinalizeRegistrationResponse(false, "session_expired"));
+            return StatusCode(StatusCodes.Status410Gone, new FinalizeRegistrationResponse(Success: false, Reason: "session_expired"));
 
         if (!session.RecoveryConfirmed)
-            return Ok(new FinalizeRegistrationResponse(false, "recovery_not_confirmed"));
+            return Conflict(new FinalizeRegistrationResponse(Success: false, Reason: "recovery_not_confirmed"));
 
         if (session.PasswordHash is null || session.PlainEmail is null ||
             session.RecoveryPhrase1 is null || session.RecoveryPhrase2 is null)
-            return Ok(new FinalizeRegistrationResponse(false, "incomplete_session"));
+            return Conflict(new FinalizeRegistrationResponse(Success: false, Reason: "incomplete_session"));
 
         var emailHash = Convert.ToHexString(
             System.Security.Cryptography.SHA256.HashData(
@@ -274,15 +266,10 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
             )
         ).ToLower();
 
-        var usernameExists = await db.Users
-            .AnyAsync(u => u.Username == session.Username && !u.IsDeleted, ct);
-        if (usernameExists)
-            return Ok(new FinalizeRegistrationResponse(false, "username_taken"));
-
         var emailExists = await db.Users
             .AnyAsync(u => u.EmailHash == emailHash && !u.IsDeleted, ct);
         if (emailExists)
-            return Ok(new FinalizeRegistrationResponse(false, "email_taken"));
+            return Conflict(new FinalizeRegistrationResponse(Success: false, Reason: "email_taken"));
 
         var phrase1Hash = PasswordHasher.Hash(session.RecoveryPhrase1);
         var phrase2Hash = PasswordHasher.Hash(session.RecoveryPhrase2);
@@ -312,6 +299,6 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
 
         await registrationSession.DeleteAsync(request.SessionId, ct);
 
-        return Ok(new FinalizeRegistrationResponse(true));
+        return Ok(new FinalizeRegistrationResponse(Success: true));
     }
 }
