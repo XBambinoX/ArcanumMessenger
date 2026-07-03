@@ -122,7 +122,7 @@ export default function RegisterPage() {
         password === confirmPassword && confirmPassword.length > 0;
     const passwordFeedback = password ? zxcvbn(password).feedback : null;
 
-    // ── Step handlers (stubs — wire up to your API later) ──
+    // ── Step handlers (stubs – wire up to your API later) ──
     const handleUsernameSubmit = async () => {
         if (!isUsernameValid) {
             setError(
@@ -291,7 +291,6 @@ export default function RegisterPage() {
             const { success, reason } = await finalizeRegistration(sessionId!);
             if (!success) {
                 setError(
-                    //reason === "username_taken" ? "Username was taken, please start over" :
                     reason === "email_taken"
                         ? "Email was taken, please start over"
                         : reason === "session_expired"
@@ -331,7 +330,7 @@ export default function RegisterPage() {
     const stepTitles = [
         {
             title: "Create your account",
-            subtitle: "Choose a unique username for Arcanum",
+            subtitle: "Choose a username for Arcanum",
         },
         {
             title: "Confirm your email",
@@ -352,12 +351,12 @@ export default function RegisterPage() {
         },
         {
             title: "Set a password",
-            subtitle: "Make it strong — this protects your encrypted messages",
+            subtitle: "Make it strong – this protects your encrypted messages",
         },
         {
             title: "Save your recovery phrases",
             subtitle:
-                "Write these down — they're the only way to recover your account",
+                "Write these down – they're the only way to recover your account",
         },
     ];
 
@@ -529,9 +528,6 @@ export default function RegisterPage() {
                                     <span>
                                         Allow Arcanum to know my email so I can
                                         show it on my profile later{" "}
-                                        <span className={styles.consentWarn}>
-                                            (cannot be changed afterward)
-                                        </span>
                                     </span>
                                 </label>
                             </div>
@@ -807,7 +803,7 @@ export default function RegisterPage() {
                                     <p className={styles.recoveryWarning}>
                                         Anyone with access to either phrase can
                                         recover your account. Store them
-                                        somewhere safe and offline — we cannot
+                                        somewhere safe and offline – we cannot
                                         show them to you again.
                                     </p>
 
@@ -896,7 +892,7 @@ export default function RegisterPage() {
                         <p className={styles.modalText}>
                             <br />
                             <span className={styles.modalWarning}>
-                                Without this, your email stays hashed forever —
+                                Without this, your email stays hashed forever –
                                 and you won't be able to add it to your profile,
                                 even afterward.
                             </span>

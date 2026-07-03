@@ -10,7 +10,7 @@ export async function startRegistration(username: string): Promise<{
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username }),
     });
-    if (!res.ok) throw new Error("Network error");
+    if (res.status >= 500) throw new Error("Server error, try again later");
     return res.json();
 }
 
@@ -24,7 +24,7 @@ export async function submitEmail(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId, email, emailVisibilityConsent }),
     });
-    if (!res.ok) throw new Error("Network error");
+    if (res.status >= 500) throw new Error("Server error, try again later");
     return res.json();
 }
 
@@ -37,7 +37,7 @@ export async function verifyCode(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId, code }),
     });
-    if (!res.ok) throw new Error("Network error");
+    if (res.status >= 500) throw new Error("Server error, try again later");
     return res.json();
 }
 
@@ -49,7 +49,7 @@ export async function resendCode(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId }),
     });
-    if (!res.ok) throw new Error("Network error");
+    if (res.status >= 500) throw new Error("Server error, try again later");
     return res.json();
 }
 
@@ -62,7 +62,7 @@ export async function submitPassword(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId, password }),
     });
-    if (!res.ok) throw new Error("Network error");
+    if (res.status >= 500) throw new Error("Server error, try again later");
     return res.json();
 }
 
@@ -77,7 +77,7 @@ export async function generateRecovery(sessionId: string): Promise<{
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId }),
     });
-    if (!res.ok) throw new Error("Network error");
+    if (res.status >= 500) throw new Error("Server error, try again later");
     return res.json();
 }
 
@@ -89,7 +89,7 @@ export async function confirmRecovery(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId }),
     });
-    if (!res.ok) throw new Error("Network error");
+    if (res.status >= 500) throw new Error("Server error, try again later");
     return res.json();
 }
 
@@ -101,6 +101,6 @@ export async function finalizeRegistration(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId }),
     });
-    if (!res.ok) throw new Error("Network error");
+    if (res.status >= 500) throw new Error("Server error, try again later");
     return res.json();
 }
