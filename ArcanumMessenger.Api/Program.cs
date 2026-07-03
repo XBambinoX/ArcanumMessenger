@@ -1,6 +1,7 @@
-
 using ArcanumMessenger.Data;
 using Microsoft.EntityFrameworkCore;
+using ArcanumMessenger.Contracts.Auth;
+using ArcanumMessenger.Services;
 
 namespace ArcanumMessenger
 {
@@ -18,13 +19,29 @@ namespace ArcanumMessenger
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("DevClient", policy =>
-                    policy.WithOrigins("http://localhost:5173")
-                          .AllowAnyHeader()
-                          .AllowAnyMethod());
+                    policy.SetIsOriginAllowed(origin =>
+                    {
+                        var uri = new Uri(origin);
+                        return uri.Port == 5173;
+                    })
+                        .AllowAnyHeader()
+                        .AllowAnyMethod());
             });
+
+            builder.Services.AddStackExchangeRedisCache(options =>
+            {
+                options.Configuration = builder.Configuration.GetConnectionString("Redis");
+            });
+
             builder.Services.AddControllers();
             builder.Services.AddHealthChecks();
             builder.Services.AddSwaggerGen();
+
+            // Scope
+            builder.Services.AddScoped<RegistrationSessionService>();
+            builder.Services.AddScoped<EmailService>();
+            builder.Services.AddSingleton<EncryptionService>();
+            builder.Services.AddSingleton<EmailHasher>();
 
             var app = builder.Build();
 
@@ -35,10 +52,10 @@ namespace ArcanumMessenger
                 app.UseSwaggerUI();
             }
 
-            app.UseHttpsRedirection();
+            //app.UseHttpsRedirection(); TEMPORARY DURING LOCALHOST DEVELOPMENT
             app.UseCors("DevClient");
 
-            app.UseAuthorization();
+            app.UseAuthorization();     
 
 
             app.MapControllers();

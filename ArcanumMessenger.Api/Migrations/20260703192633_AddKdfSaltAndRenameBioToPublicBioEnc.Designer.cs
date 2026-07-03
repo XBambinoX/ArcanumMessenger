@@ -3,6 +3,7 @@ using System;
 using ArcanumMessenger.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ArcanumMessenger.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260703192633_AddKdfSaltAndRenameBioToPublicBioEnc")]
+    partial class AddKdfSaltAndRenameBioToPublicBioEnc
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -69,11 +72,7 @@ namespace ArcanumMessenger.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("UsernameEnc")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("WrappedDek")
+                    b.Property<string>("Username")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -81,6 +80,8 @@ namespace ArcanumMessenger.Migrations
 
                     b.HasIndex("EmailHash")
                         .IsUnique();
+
+                    b.HasIndex("Username");
 
                     b.ToTable("Users");
                 });

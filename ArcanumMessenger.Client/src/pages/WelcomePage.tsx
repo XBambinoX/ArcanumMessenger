@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type RefObject } from "react";
 import styles from "./WelcomePage.module.css";
+import { useNavigate } from "react-router-dom";
 
 /* ── mouse glow ── */
 function useMouseGlow(ref: RefObject<HTMLDivElement | null>) {
@@ -58,7 +59,7 @@ function useParticles(ref: RefObject<HTMLCanvasElement | null>) {
 /* ══════════════════════════════════════
    Card: Welcome (main)
 ══════════════════════════════════════ */
-function WelcomeCard() {
+function WelcomeCard({ onCreateAccount }: { onCreateAccount: () => void }) {
     return (
         <div className={styles.cardWelcome}>
             <div className={styles.wcLogo}>
@@ -92,7 +93,7 @@ function WelcomeCard() {
                     </svg>
                     Sign in
                 </button>
-                <button className={styles.btnSecondary}>
+                <button className={styles.btnSecondary} onClick={onCreateAccount}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
                         <circle cx="9" cy="7" r="4" />
@@ -272,8 +273,8 @@ const CARDS = [
     { id: "security", label: "Passphrase recovery",  sub: "Your keys. Your control." },
 ];
 
-function CardContent({ id }: { id: string }) {
-    if (id === "welcome")  return <WelcomeCard />;
+function CardContent({ id, onCreateAccount }: { id: string; onCreateAccount: () => void }) {
+    if (id === "welcome") return <WelcomeCard onCreateAccount={onCreateAccount} />;
     if (id === "chat")     return <ChatCard />;
     if (id === "privacy")  return <PrivacyCard />;
     if (id === "speed")    return <SpeedCard />;
@@ -305,6 +306,7 @@ function slideStyle(pos: number): CSSProperties {
    Page
 ══════════════════════════════════════ */
 export default function WelcomePage() {
+    const navigate = useNavigate();
     const N = CARDS.length;
     const [active, setActive] = useState(0);
     const [paused, setPaused] = useState(false);
@@ -357,7 +359,7 @@ export default function WelcomePage() {
                             style={slideStyle(pos)}
                             onClick={() => pos !== 0 && setActive(i)}
                         >
-                            <CardContent id={card.id} />
+                            <CardContent id={card.id} onCreateAccount={() => navigate("/register")} />
                             {pos !== 0 && <div className={styles.slideOverlay} />}
                         </div>
                     );
