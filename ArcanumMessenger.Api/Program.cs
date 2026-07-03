@@ -19,9 +19,13 @@ namespace ArcanumMessenger
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("DevClient", policy =>
-                    policy.WithOrigins("http://localhost:5173")
-                          .AllowAnyHeader()
-                          .AllowAnyMethod());
+                    policy.SetIsOriginAllowed(origin =>
+                    {
+                        var uri = new Uri(origin);
+                        return uri.Port == 5173;
+                    })
+                        .AllowAnyHeader()
+                        .AllowAnyMethod());
             });
 
             builder.Services.AddStackExchangeRedisCache(options =>
@@ -50,7 +54,7 @@ namespace ArcanumMessenger
             //app.UseHttpsRedirection(); TEMPORARY DURING LOCALHOST DEVELOPMENT
             app.UseCors("DevClient");
 
-            app.UseAuthorization();
+            app.UseAuthorization();     
 
 
             app.MapControllers();

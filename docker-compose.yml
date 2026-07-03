@@ -45,8 +45,6 @@ services:
         container_name: arcanum-client
         ports:
             - "5173:5173"
-        environment:
-            API_URL: http://api:8080
         volumes:
             - ./ArcanumMessenger.Client:/app
             - /app/node_modules

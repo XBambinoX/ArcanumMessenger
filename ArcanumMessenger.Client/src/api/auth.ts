@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:5173";
+const API_BASE = `${window.location.protocol}//${window.location.hostname}:5135`;
 
 export async function startRegistration(username: string): Promise<{
     success: boolean;
