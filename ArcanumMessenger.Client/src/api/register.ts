@@ -5,7 +5,7 @@ export async function startRegistration(username: string): Promise<{
     sessionId?: string;
     reason?: string;
 }> {
-    const res = await fetch(`${API_BASE}/api/auth/register/start`, {
+    const res = await fetch(`${API_BASE}/api/register/start`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username }),
@@ -19,7 +19,7 @@ export async function submitEmail(
     email: string,
     emailVisibilityConsent: boolean,
 ): Promise<{ success: boolean; reason?: string }> {
-    const res = await fetch(`${API_BASE}/api/auth/register/email`, {
+    const res = await fetch(`${API_BASE}/api/register/email`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId, email, emailVisibilityConsent }),
@@ -32,7 +32,7 @@ export async function verifyCode(
     sessionId: string,
     code: string,
 ): Promise<{ success: boolean; reason?: string }> {
-    const res = await fetch(`${API_BASE}/api/auth/register/verify-code`, {
+    const res = await fetch(`${API_BASE}/api/register/verify-code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId, code }),
@@ -44,7 +44,7 @@ export async function verifyCode(
 export async function resendCode(
     sessionId: string,
 ): Promise<{ success: boolean; reason?: string }> {
-    const res = await fetch(`${API_BASE}/api/auth/register/resend-code`, {
+    const res = await fetch(`${API_BASE}/api/register/resend-code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId }),
@@ -60,7 +60,7 @@ export async function submitPassword(
     authKey: string,
     kdfSalt: string,
 ): Promise<{ success: boolean; reason?: string }> {
-    const res = await fetch(`${API_BASE}/api/auth/register/password`, {
+    const res = await fetch(`${API_BASE}/api/register/password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId, authKey, kdfSalt }),
@@ -75,7 +75,7 @@ export async function confirmRecovery(
     phrase1Auth: string,
     phrase2Auth: string,
 ): Promise<{ success: boolean; reason?: string }> {
-    const res = await fetch(`${API_BASE}/api/auth/register/recovery/confirm`, {
+    const res = await fetch(`${API_BASE}/api/register/recovery/confirm`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId, phrase1Auth, phrase2Auth }),
@@ -87,7 +87,7 @@ export async function confirmRecovery(
 export async function finalizeRegistration(
     sessionId: string,
 ): Promise<{ success: boolean; reason?: string }> {
-    const res = await fetch(`${API_BASE}/api/auth/register/finalize`, {
+    const res = await fetch(`${API_BASE}/api/register/finalize`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId }),

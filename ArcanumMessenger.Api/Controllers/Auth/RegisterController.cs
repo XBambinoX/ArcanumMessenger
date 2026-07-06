@@ -1,16 +1,17 @@
-﻿using ArcanumMessenger.Contracts.Auth;
+﻿using ArcanumMessenger.Contracts.Auth.Register;
 using ArcanumMessenger.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
-using ArcanumMessenger.Services;
+using ArcanumMessenger.Services.AuthServices;
+using ArcanumMessenger.Services.AuthServices.RegisterServices;
 using ArcanumMessenger.Entities;
 
-namespace ArcanumMessenger.Controllers;
+namespace ArcanumMessenger.Controllers.Auth;
 
 [ApiController]
-[Route("api/auth")]
-public class AuthController(AppDbContext db, RegistrationSessionService registrationSession, EmailService emailService, EncryptionService encryption, EmailHasher emailHasher) : ControllerBase
+[Route("api/register")]
+public class RegisterController(AppDbContext db, RegistrationSessionService registrationSession, EmailService emailService, EncryptionService encryption, EmailHasher emailHasher) : ControllerBase
 {
     private static readonly Regex UsernameRegex = new("^[a-zA-Z0-9_]{3,32}$", RegexOptions.Compiled);
     private static readonly Regex PhraseAuthRegex = new("^[0-9a-f]{64}$", RegexOptions.Compiled);
@@ -25,7 +26,7 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
     private const int KdfSaltSize = 16;
 
 
-    [HttpPost("register/start")]
+    [HttpPost("start")]
     public async Task<ActionResult<StartRegistrationResponse>> StartRegistration(
         [FromBody] StartRegistrationRequest request,
         CancellationToken ct)
@@ -39,7 +40,7 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
 
 
 
-    [HttpPost("register/email")]
+    [HttpPost("email")]
     public async Task<ActionResult<SubmitEmailResponse>> SubmitEmail(
     [FromBody] SubmitEmailRequest request,
     CancellationToken ct)
@@ -89,7 +90,7 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
 
 
 
-    [HttpPost("register/verify-code")]
+    [HttpPost("verify-code")]
     public async Task<ActionResult<VerifyCodeResponse>> VerifyCode(
         [FromBody] VerifyCodeRequest request,
         CancellationToken ct)
@@ -125,7 +126,7 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
 
 
 
-    [HttpPost("register/resend-code")]
+    [HttpPost("resend-code")]
     public async Task<ActionResult<ResendCodeResponse>> ResendCode(
             [FromBody] ResendCodeRequest request,
             CancellationToken ct)
@@ -167,7 +168,7 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
 
 
 
-    [HttpPost("register/password")]
+    [HttpPost("password")]
     public async Task<ActionResult<SubmitPasswordResponse>> SubmitPassword(
             [FromBody] SubmitPasswordRequest request,
             CancellationToken ct)
@@ -197,7 +198,7 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
 
 
 
-    [HttpPost("register/recovery/confirm")]
+    [HttpPost("recovery/confirm")]
     public async Task<ActionResult<ConfirmRecoveryResponse>> ConfirmRecovery(
         [FromBody] ConfirmRecoveryRequest request,
         CancellationToken ct)
@@ -224,7 +225,7 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
 
 
 
-    [HttpPost("register/finalize")]
+    [HttpPost("finalize")]
     public async Task<ActionResult<FinalizeRegistrationResponse>> FinalizeRegistration(
             [FromBody] FinalizeRegistrationRequest request,
             CancellationToken ct)

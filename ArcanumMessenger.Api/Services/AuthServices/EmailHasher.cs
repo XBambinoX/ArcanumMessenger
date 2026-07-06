@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace ArcanumMessenger.Services;
+namespace ArcanumMessenger.Services.AuthServices;
 
 public class EmailHasher(IConfiguration config)
 {

@@ -1,4 +1,4 @@
-namespace ArcanumMessenger.Contracts.Login;
+namespace ArcanumMessenger.Contracts.Auth.Login;
 
 public class LoginSession
 {

@@ -1,10 +1,9 @@
 using ArcanumMessenger.Data;
-using Isopoh.Cryptography.Argon2;
 using Microsoft.EntityFrameworkCore;
 
-namespace ArcanumMessenger.Services;
+namespace ArcanumMessenger.Services.AuthServices;
 
-public class LoginService(AppDbContext db)
+public class AuthService(AppDbContext db)
 {
     public async Task<string?> GetKdfSaltAsync(string emailHash, CancellationToken ct)
     {

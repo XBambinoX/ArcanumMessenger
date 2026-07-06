@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
-using ArcanumMessenger.Contracts.Login;
-using ArcanumMessenger.Services;
-namespace ArcanumMessenger.Controllers;
+using ArcanumMessenger.Contracts.Auth.Login;
+using ArcanumMessenger.Services.AuthServices;
+using ArcanumMessenger.Services.AuthServices.LoginServices;
+namespace ArcanumMessenger.Controllers.Auth;
 
 
 [ApiController]
 [Route("api/login")]
-public class LoginController(LoginSessionService loginSession, EmailHasher emailHasher, LoginService loginService) : ControllerBase
+public class LoginController(LoginSessionService loginSession, EmailHasher emailHasher, AuthService authService) : ControllerBase
 {
 
     private const int AuthKeySize = 32;
@@ -21,7 +22,7 @@ public class LoginController(LoginSessionService loginSession, EmailHasher email
             return BadRequest(new StartLoginResponse(Success: false, SessionId: null, KdfSalt: null, Reason: "invalid_format"));
 
         var emailHash = emailHasher.Hash(request.Email);
-        var kdfSalt = await loginService.GetKdfSaltAsync(emailHash, ct);
+        var kdfSalt = await authService.GetKdfSaltAsync(emailHash, ct);
 
         var sessionId = await loginSession.CreateAsync(emailHash, kdfSalt, ct);
 
@@ -53,7 +54,7 @@ public class LoginController(LoginSessionService loginSession, EmailHasher email
         if (request.AuthKey == null || !PasswordHasher.IsBase64OfLength(request.AuthKey, AuthKeySize))
             return BadRequest(new SubmitLoginPasswordResponse(Success: false, RequiresTotp: false, Reason: "invalid_format"));
 
-        bool isPassCorrect = await loginService.CheckPassAsync(session.EmailHash!, request.AuthKey, ct);
+        bool isPassCorrect = await authService.CheckPassAsync(session.EmailHash!, request.AuthKey, ct);
 
         if (isPassCorrect)
         {

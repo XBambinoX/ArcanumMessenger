@@ -1,8 +1,8 @@
 ﻿using System.Text.Json;
-using ArcanumMessenger.Contracts.Login;
+using ArcanumMessenger.Contracts.Auth.Login;
 using Microsoft.Extensions.Caching.Distributed;
 
-namespace ArcanumMessenger.Services;
+namespace ArcanumMessenger.Services.AuthServices.LoginServices;
 
 public class LoginSessionService(IDistributedCache cache)
 {

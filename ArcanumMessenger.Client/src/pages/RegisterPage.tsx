@@ -8,7 +8,7 @@ import {
     submitPassword,
     confirmRecovery,
     finalizeRegistration,
-} from "../api/auth";
+} from "../api/register";
 import { deriveKeys, generateKdfSalt } from "../crypto/kdf";
 import { generateRecoveryPhrase, hashPhrase } from "../crypto/phrases";
 
