@@ -24,16 +24,6 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
     private const int AuthKeySize = 32;
     private const int KdfSaltSize = 16;
 
-    private static bool IsBase64OfLength(string? value, int expectedBytes)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return false;
-
-        Span<byte> buffer = stackalloc byte[expectedBytes];
-        return Convert.TryFromBase64String(value, buffer, out var written) && written == expectedBytes;
-    }
-
-
 
     [HttpPost("register/start")]
     public async Task<ActionResult<StartRegistrationResponse>> StartRegistration(
@@ -192,7 +182,7 @@ public class AuthController(AppDbContext db, RegistrationSessionService registra
         // The client sends an Argon2id-derived authKey instead of the password,
         // so password strength can only be checked on the client. Here we can
         // only check the key format.
-        if (!IsBase64OfLength(request.AuthKey, AuthKeySize) || !IsBase64OfLength(request.KdfSalt, KdfSaltSize))
+        if (!PasswordHasher.IsBase64OfLength(request.AuthKey, AuthKeySize) || !PasswordHasher.IsBase64OfLength(request.KdfSalt, KdfSaltSize))
             return StatusCode(StatusCodes.Status422UnprocessableEntity, new SubmitPasswordResponse(Success: false, Reason: "invalid_key_format"));
 
         // Argon2id again on the server: a DB dump must not contain ready-to-use login keys

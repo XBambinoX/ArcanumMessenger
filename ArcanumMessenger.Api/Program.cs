@@ -2,7 +2,6 @@ using ArcanumMessenger.Data;
 using Microsoft.EntityFrameworkCore;
 using ArcanumMessenger.Contracts.Auth;
 using ArcanumMessenger.Services;
-
 namespace ArcanumMessenger
 {
     public class Program
@@ -42,6 +41,8 @@ namespace ArcanumMessenger
             builder.Services.AddScoped<EmailService>();
             builder.Services.AddSingleton<EncryptionService>();
             builder.Services.AddSingleton<EmailHasher>();
+            builder.Services.AddSingleton<LoginSessionService>();
+            builder.Services.AddScoped<LoginService>();
 
             var app = builder.Build();
 
@@ -55,7 +56,7 @@ namespace ArcanumMessenger
             //app.UseHttpsRedirection(); TEMPORARY DURING LOCALHOST DEVELOPMENT
             app.UseCors("DevClient");
 
-            app.UseAuthorization();     
+            app.UseAuthorization();
 
 
             app.MapControllers();

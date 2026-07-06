@@ -63,9 +63,11 @@ export default function LoginPage() {
                 await startLogin(email);
             if (!success || !sessionId || !kdfSalt) {
                 setError(
-                    reason === "too_many_attempts"
-                        ? "Too many attempts, try again later"
-                        : "Something went wrong, try again",
+                    reason === "invalid_format"
+                        ? "Enter a valid email address"
+                        : reason === "too_many_attempts"
+                          ? "Too many attempts, try again later"
+                          : "Something went wrong, try again",
                 );
                 return;
             }

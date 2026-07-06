@@ -121,9 +121,14 @@ export default function RegisterPage() {
         }
         setLoading(true);
         try {
-            const { success, sessionId } = await startRegistration(username);
+            const { success, sessionId, reason } =
+                await startRegistration(username);
             if (!success) {
-                setError("Invalid username format");
+                setError(
+                    reason === "invalid_format"
+                        ? "Username must be at least 3 characters – Latin letters, digits, and underscores only"
+                        : "Something went wrong, try again",
+                );
                 return;
             }
             setSessionId(sessionId!);
@@ -153,7 +158,13 @@ export default function RegisterPage() {
                         ? "Session expired, please start over"
                         : reason === "email_taken"
                           ? "This email is already registered"
-                          : "Invalid email address",
+                          : reason === "email_send_failed"
+                            ? "Failed to send verification email, try again"
+                            : reason === "invalid_step"
+                              ? "Something went wrong, please start over"
+                              : reason === "invalid_email"
+                                ? "Enter a valid email address"
+                                : "Something went wrong, please start over",
                 );
                 return;
             }
@@ -185,7 +196,11 @@ export default function RegisterPage() {
                           ? "Too many attempts, request a new code"
                           : reason === "session_expired"
                             ? "Session expired, please start over"
-                            : "Invalid code",
+                            : reason === "invalid_step"
+                              ? "Something went wrong, please start over"
+                              : reason === "invalid_code"
+                                ? "Invalid code"
+                                : "Something went wrong, try again",
                 );
                 setCode(Array(CODE_LENGTH).fill(""));
                 codeInputs.current[0]?.focus();
@@ -255,7 +270,11 @@ export default function RegisterPage() {
                           ? "Please wait before requesting a new code"
                           : reason === "email_send_failed"
                             ? "Failed to send code, try again"
-                            : "Failed to resend code",
+                            : reason === "session_expired"
+                              ? "Session expired, please start over"
+                              : reason === "invalid_step"
+                                ? "Something went wrong, please start over"
+                                : "Failed to resend code",
                 );
             }
         } catch {

@@ -6,7 +6,7 @@ export async function startLogin(email: string): Promise<{
     kdfSalt?: string;
     reason?: string;
 }> {
-    const res = await fetch(`${API_BASE}/api/login/startLogin`, {
+    const res = await fetch(`${API_BASE}/api/login/start`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
@@ -20,7 +20,7 @@ export async function submitLoginPassword(
     authKey: string,
 ): Promise<{
     success: boolean;
-    requiresTotp?: boolean;
+    requiresTotp: boolean;
     reason?: string;
 }> {
     const res = await fetch(`${API_BASE}/api/login/loginPassword`, {
