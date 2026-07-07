@@ -1,4 +1,8 @@
-const API_BASE = `${window.location.protocol}//${window.location.hostname}:5135`;
+// Kestrel serves HTTP on 5135 and HTTPS on 7039. If the page itself was
+// loaded over HTTPS, the browser blocks plain-HTTP fetches from it (mixed
+// content), so we have to follow the same protocol for the API too.
+const API_PORT = window.location.protocol === "https:" ? 7039 : 5135;
+const API_BASE = `${window.location.protocol}//${window.location.hostname}:${API_PORT}`;
 
 export async function startLogin(email: string): Promise<{
     success: boolean;

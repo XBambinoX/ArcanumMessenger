@@ -46,9 +46,13 @@ services:
         container_name: arcanum-client
         ports:
             - "5173:5173"
+        environment:
+            VITE_CERT_PATH: /https/arcanum-lan.crt
+            VITE_KEY_PATH: /https/arcanum-lan.key
         volumes:
             - ./ArcanumMessenger.Client:/app
             - /app/node_modules
+            - ${HTTPS_CERT_DIR}:/https:ro
         depends_on:
             - api
 
