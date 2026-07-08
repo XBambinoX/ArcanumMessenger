@@ -4,7 +4,7 @@ import QRCode from "qrcode";
 import styles from "./TotpSetupPage.module.css";
 import { startTotpSetup, confirmTotpSetup } from "../api/totp";
 
-type Step = 0 | 1 | 2; // 0: fetching secret/QR, 1: enter code, 2: done
+type Step = 0 | 1 | 2; // 0: show QR + secret (covers loading too), 1: enter code, 2: done
 const CODE_LENGTH = 6;
 
 export default function TotpSetupPage() {
@@ -13,6 +13,7 @@ export default function TotpSetupPage() {
     // comment in api/totp.ts for why the server currently trusts this.
     const { userId } = useParams<{ userId: string }>();
     const [step, setStep] = useState<Step>(0);
+    const [initializing, setInitializing] = useState(true);
 
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [secret, setSecret] = useState<string | null>(null);
@@ -25,9 +26,15 @@ export default function TotpSetupPage() {
     const codeInputs = useRef<(HTMLInputElement | null)[]>([]);
     const isCodeComplete = code.every((d) => d !== "");
 
+    const goBack = () => {
+        setError("");
+        setStep((s) => Math.max(s - 1, 0) as Step);
+    };
+
     useEffect(() => {
         if (!userId) {
             setError("Missing user id in URL");
+            setInitializing(false);
             return;
         }
         (async () => {
@@ -45,11 +52,15 @@ export default function TotpSetupPage() {
                 setSessionId(sessionId);
                 setSecret(secret);
                 setQrDataUrl(
-                    await QRCode.toDataURL(otpauthUri, { margin: 1, width: 220 }),
+                    await QRCode.toDataURL(otpauthUri, {
+                        margin: 1,
+                        width: 220,
+                    }),
                 );
-                setStep(1);
             } catch {
                 setError("Something went wrong, try again");
+            } finally {
+                setInitializing(false);
             }
         })();
     }, [userId]);
@@ -116,7 +127,39 @@ export default function TotpSetupPage() {
 
             <div className={styles.card}>
                 <div className={styles.header}>
-                    <p className={styles.brand}>Two-factor authentication</p>
+                    <div className={styles.logoBox}>
+                        <svg
+                            width="28"
+                            height="28"
+                            viewBox="0 0 48 48"
+                            fill="none"
+                        >
+                            <path
+                                d="M16 12H32a6 6 0 0 1 6 6v10a6 6 0 0 1-6 6H20l-6 5v-5a6 6 0 0 1-6-6V18a6 6 0 0 1 6-6z"
+                                stroke="url(#rg)"
+                                strokeWidth="2.2"
+                                fill="none"
+                                strokeLinejoin="round"
+                            />
+                            <defs>
+                                <linearGradient
+                                    id="rg"
+                                    x1="6"
+                                    y1="4"
+                                    x2="42"
+                                    y2="44"
+                                    gradientUnits="userSpaceOnUse"
+                                >
+                                    <stop stopColor="#a78bfa" />
+                                    <stop offset="1" stopColor="#22d3ee" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                    <p className={styles.brand}>Arcanum</p>
+                    <span className={styles.label}>
+                        Two-factor authentication
+                    </span>
                 </div>
 
                 <div className={styles.dots}>
@@ -128,22 +171,29 @@ export default function TotpSetupPage() {
                     ))}
                 </div>
 
-                {step === 0 && (
+                {step === 0 && initializing && (
                     <p className={styles.stepSubtitle}>Setting things up…</p>
                 )}
 
-                {step === 1 && (
+                {step === 0 && !initializing && error && !qrDataUrl && (
+                    <p
+                        className={styles.errorText}
+                        style={{ textAlign: "center" }}
+                    >
+                        {error}
+                    </p>
+                )}
+
+                {step === 0 && !initializing && qrDataUrl && (
                     <>
                         <h2 className={styles.stepTitle}>Scan this QR code</h2>
                         <p className={styles.stepSubtitle}>
                             Use Google Authenticator, Authy, or any TOTP app
                         </p>
 
-                        {qrDataUrl && (
-                            <div className={styles.qrBox}>
-                                <img src={qrDataUrl} alt="TOTP QR code" />
-                            </div>
-                        )}
+                        <div className={styles.qrBox}>
+                            <img src={qrDataUrl} alt="TOTP QR code" />
+                        </div>
 
                         <div className={styles.secretBlock}>
                             <span className={styles.label}>
@@ -152,10 +202,27 @@ export default function TotpSetupPage() {
                             <code className={styles.secretText}>{secret}</code>
                         </div>
 
+                        <div className={styles.actions}>
+                            <button
+                                className={styles.btnPrimary}
+                                onClick={() => setStep(1)}
+                            >
+                                Continue
+                            </button>
+                        </div>
+                    </>
+                )}
+
+                {step === 1 && (
+                    <>
+                        <h2 className={styles.stepTitle}>
+                            Enter the 6-digit code
+                        </h2>
+                        <p className={styles.stepSubtitle}>
+                            From the app you just scanned the QR code with
+                        </p>
+
                         <div className={styles.field}>
-                            <label className={styles.label}>
-                                Enter the 6-digit code from your app
-                            </label>
                             <div className={styles.codeRow}>
                                 {code.map((digit, i) => (
                                     <input
@@ -190,6 +257,24 @@ export default function TotpSetupPage() {
 
                         <div className={styles.actions}>
                             <button
+                                className={styles.btnBack}
+                                onClick={goBack}
+                                aria-label="Back"
+                            >
+                                <svg
+                                    width="18"
+                                    height="18"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2.2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                >
+                                    <path d="M19 12H5M12 19l-7-7 7-7" />
+                                </svg>
+                            </button>
+                            <button
                                 className={styles.btnPrimary}
                                 onClick={handleConfirm}
                                 disabled={loading}
@@ -218,12 +303,6 @@ export default function TotpSetupPage() {
                             </button>
                         </div>
                     </>
-                )}
-
-                {error && step === 0 && (
-                    <p className={styles.errorText} style={{ textAlign: "center" }}>
-                        {error}
-                    </p>
                 )}
             </div>
         </div>
