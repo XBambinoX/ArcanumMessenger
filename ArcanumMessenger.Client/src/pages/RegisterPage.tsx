@@ -415,35 +415,33 @@ export default function RegisterPage() {
                     </button>
 
                     <div className={styles.logoBox}>
-                        <div className={styles.logoBox}>
-                            <svg
-                                width="60"
-                                height="60"
-                                viewBox="0 0 48 48"
+                        <svg
+                            width="28"
+                            height="28"
+                            viewBox="0 0 48 48"
+                            fill="none"
+                        >
+                            <path
+                                d="M16 12H32a6 6 0 0 1 6 6v10a6 6 0 0 1-6 6H20l-6 5v-5a6 6 0 0 1-6-6V18a6 6 0 0 1 6-6z"
+                                stroke="url(#rg)"
+                                strokeWidth="2.2"
                                 fill="none"
-                            >
-                                <path
-                                    d="M16 12H32a6 6 0 0 1 6 6v10a6 6 0 0 1-6 6H20l-6 5v-5a6 6 0 0 1-6-6V18a6 6 0 0 1 6-6z"
-                                    stroke="url(#rg)"
-                                    strokeWidth="2.2"
-                                    fill="none"
-                                    strokeLinejoin="round"
-                                />
-                                <defs>
-                                    <linearGradient
-                                        id="rg"
-                                        x1="6"
-                                        y1="4"
-                                        x2="42"
-                                        y2="44"
-                                        gradientUnits="userSpaceOnUse"
-                                    >
-                                        <stop stopColor="#a78bfa" />
-                                        <stop offset="1" stopColor="#22d3ee" />
-                                    </linearGradient>
-                                </defs>
-                            </svg>
-                        </div>
+                                strokeLinejoin="round"
+                            />
+                            <defs>
+                                <linearGradient
+                                    id="rg"
+                                    x1="6"
+                                    y1="4"
+                                    x2="42"
+                                    y2="44"
+                                    gradientUnits="userSpaceOnUse"
+                                >
+                                    <stop stopColor="#a78bfa" />
+                                    <stop offset="1" stopColor="#22d3ee" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
                     </div>
                     <p className={styles.brand}>Arcanum</p>
                 </div>
