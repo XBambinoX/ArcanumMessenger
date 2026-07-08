@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import styles from "./RecoveryPage.module.css";
 import zxcvbn from "zxcvbn";
@@ -17,17 +17,6 @@ export default function RecoveryPage() {
 
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
-
-    // Dynamic viewport height
-    const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
-    const [viewportHeight, setViewportHeight] = useState<number | "auto">("auto");
-
-    useEffect(() => {
-        const activeSlide = slideRefs.current[step];
-        if (activeSlide) {
-            setViewportHeight(activeSlide.offsetHeight);
-        }
-    }, [step, password, confirmPassword]); // re-measure when password fields change height
 
     const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     const isPhraseValid = phrase.trim().split(/\s+/).length >= 6;
@@ -166,17 +155,12 @@ export default function RecoveryPage() {
                 {/* Carousel */}
                 <div
                     className={styles.viewport}
-                    style={{ height: viewportHeight }}
                 >
                     <div
                         className={styles.track}
-                        style={{ transform: `translateX(-${step * 100}%)` }}
                     >
                         {/* ── STEP 0: Email ── */}
-                        <div
-                            ref={(el) => { slideRefs.current[0] = el; }}
-                            className={styles.slide}
-                        >
+                        <div className={`${styles.slide} ${step === 0 ? styles.activeSlide : ""}`}>
                             <h2 className={styles.stepTitle}>{stepTitles[0].title}</h2>
                             <p className={styles.stepSubtitle}>{stepTitles[0].subtitle}</p>
 
@@ -217,10 +201,7 @@ export default function RecoveryPage() {
                         </div>
 
                         {/* ── STEP 1: Recovery phrase ── */}
-                        <div
-                            ref={(el) => { slideRefs.current[1] = el; }}
-                            className={styles.slide}
-                        >
+                        <div className={`${styles.slide} ${step === 1 ? styles.activeSlide : ""}`}>
                             <h2 className={styles.stepTitle}>{stepTitles[1].title}</h2>
                             <p className={styles.stepSubtitle}>{stepTitles[1].subtitle}</p>
 
@@ -270,10 +251,7 @@ export default function RecoveryPage() {
                         </div>
 
                         {/* ── STEP 2: New password ── */}
-                        <div
-                            ref={(el) => { slideRefs.current[2] = el; }}
-                            className={styles.slide}
-                        >
+                        <div className={`${styles.slide} ${step === 2 ? styles.activeSlide : ""}`}>
                             <h2 className={styles.stepTitle}>{stepTitles[2].title}</h2>
                             <p className={styles.stepSubtitle}>{stepTitles[2].subtitle}</p>
 

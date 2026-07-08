@@ -2,12 +2,13 @@
     position: relative;
     min-height: 100vh;
     display: flex;
-    align-items: center;
     justify-content: center;
     background: #0d0b1e;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     overflow: hidden;
     padding: 24px;
+    align-items: flex-start;
+    padding-top: 60px;
 }
 
 .orb1, .orb2 {
@@ -24,6 +25,7 @@
     bottom: -150px; right: -150px;
     width: 550px; height: 550px;
     background: radial-gradient(circle, rgba(6, 182, 212, 0.13) 0%, transparent 65%);
+    pointer-events: none
 }
 .grid {
     pointer-events: none;
@@ -120,16 +122,36 @@
 .dot.done { background: rgba(167, 139, 250, 0.5); }
 
 /* Carousel */
-.viewport { position: relative; overflow: hidden; }
-.track {
-    display: flex;
-    transition: transform 0.4s cubic-bezier(0.65, 0, 0.35, 1);
+.viewport {
+    position: relative;
+    overflow: hidden;
 }
+
+.track {
+    display: block;
+}
+
 .slide {
-    flex: 0 0 100%;
+    display: none;
     width: 100%;
     box-sizing: border-box;
     padding: 2px;
+}
+
+.activeSlide {
+    display: block !important;
+    animation: slideIn 0.35s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 /* Step content */
