@@ -365,6 +365,16 @@ export default function LoginPage() {
                                     {loading ? "Signing in…" : "Sign in"}
                                 </button>
                             </div>
+
+                            <p className={styles.footerNote}>
+                                Forgot your password?{" "}
+                                <button
+                                    className={styles.footerLink}
+                                    onClick={() => navigate("/recovery")}
+                                >
+                                    Change it
+                                </button>
+                            </p>
                         </div>
 
                         {/* ── STEP 2: TOTP (only if enabled in settings) ── */}
