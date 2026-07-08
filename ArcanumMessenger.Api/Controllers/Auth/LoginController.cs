@@ -54,7 +54,7 @@ public class LoginController(LoginSessionService loginSession, EmailHasher email
         if (request.AuthKey == null || !PasswordHasher.IsBase64OfLength(request.AuthKey, AuthKeySize))
             return BadRequest(new SubmitLoginPasswordResponse(Success: false, RequiresTotp: false, Reason: "invalid_format"));
 
-        bool isPassCorrect = await authService.CheckPassAsync(session.EmailHash!, request.AuthKey, ct);
+        var (isPassCorrect, requiresTotp) = await authService.CheckPassAsync(session.EmailHash!, request.AuthKey, ct);
 
         if (isPassCorrect)
         {
@@ -62,7 +62,7 @@ public class LoginController(LoginSessionService loginSession, EmailHasher email
             await loginSession.UpdateAsync(request.SessionId, session, ct);
         }
 
-        return isPassCorrect ? Ok(new SubmitLoginPasswordResponse(Success: true, RequiresTotp: false, Reason: null))
+        return isPassCorrect ? Ok(new SubmitLoginPasswordResponse(Success: true, RequiresTotp: requiresTotp, Reason: null))
                              : BadRequest(new SubmitLoginPasswordResponse(Success: false, RequiresTotp: false, Reason: "pass_or_email_is_not_correct"));
     }
 
@@ -73,6 +73,29 @@ public class LoginController(LoginSessionService loginSession, EmailHasher email
         [FromBody] SubmitLoginTotpRequest request,
         CancellationToken ct)
     {
-        return Ok(new SubmitLoginTotpResponse(Success: true, Reason: null));
+        if (string.IsNullOrEmpty(request.SessionId))
+            return StatusCode(StatusCodes.Status410Gone, new SubmitLoginTotpResponse(Success: false, Reason: "session_expired"));
+
+        var session = await loginSession.GetAsync(request.SessionId, ct);
+
+        if (session is null)
+            return StatusCode(StatusCodes.Status410Gone, new SubmitLoginTotpResponse(Success: false, Reason: "session_expired"));
+
+        if (session.Step != 1)
+            return BadRequest(new SubmitLoginTotpResponse(Success: false, Reason: "invalid_step"));
+
+        if (string.IsNullOrEmpty(request.Code) || request.Code.Length != 6 || !request.Code.All(char.IsDigit))
+            return BadRequest(new SubmitLoginTotpResponse(Success: false, Reason: "invalid_format"));
+
+        var isCodeCorrect = await authService.CheckTotpAsync(session.EmailHash!, request.Code, ct);
+
+        if (isCodeCorrect)
+        {
+            session.Step++;
+            await loginSession.UpdateAsync(request.SessionId, session, ct);
+        }
+
+        return isCodeCorrect ? Ok(new SubmitLoginTotpResponse(Success: true, Reason: null))
+                             : BadRequest(new SubmitLoginTotpResponse(Success: false, Reason: "invalid_code"));
     }
 }
