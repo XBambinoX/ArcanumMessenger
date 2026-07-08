@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import QRCode from "qrcode";
 import styles from "./TotpSetupPage.module.css";
 import { startTotpSetup, confirmTotpSetup } from "../api/totp";
@@ -9,8 +9,12 @@ const CODE_LENGTH = 6;
 
 export default function TotpSetupPage() {
     const navigate = useNavigate();
+    // Stopgap: taken from the URL until real login sessions exist. See the
+    // comment in api/totp.ts for why the server currently trusts this.
+    const { userId } = useParams<{ userId: string }>();
     const [step, setStep] = useState<Step>(0);
 
+    const [sessionId, setSessionId] = useState<string | null>(null);
     const [secret, setSecret] = useState<string | null>(null);
     const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
     const [code, setCode] = useState<string[]>(Array(CODE_LENGTH).fill(""));
@@ -22,11 +26,15 @@ export default function TotpSetupPage() {
     const isCodeComplete = code.every((d) => d !== "");
 
     useEffect(() => {
+        if (!userId) {
+            setError("Missing user id in URL");
+            return;
+        }
         (async () => {
             try {
-                const { success, secret, otpauthUri, reason } =
-                    await startTotpSetup();
-                if (!success || !secret || !otpauthUri) {
+                const { success, sessionId, secret, otpauthUri, reason } =
+                    await startTotpSetup(userId);
+                if (!success || !sessionId || !secret || !otpauthUri) {
                     setError(
                         reason === "already_enabled"
                             ? "Two-factor authentication is already on"
@@ -34,6 +42,7 @@ export default function TotpSetupPage() {
                     );
                     return;
                 }
+                setSessionId(sessionId);
                 setSecret(secret);
                 setQrDataUrl(
                     await QRCode.toDataURL(otpauthUri, { margin: 1, width: 220 }),
@@ -43,7 +52,7 @@ export default function TotpSetupPage() {
                 setError("Something went wrong, try again");
             }
         })();
-    }, []);
+    }, [userId]);
 
     const handleCodeChange = (index: number, value: string) => {
         if (!/^[0-9]?$/.test(value)) return;
@@ -69,9 +78,16 @@ export default function TotpSetupPage() {
             setError("Enter the full 6-digit code");
             return;
         }
+        if (!sessionId) {
+            setError("Setup session expired, start over");
+            return;
+        }
         setLoading(true);
         try {
-            const { success, reason } = await confirmTotpSetup(code.join(""));
+            const { success, reason } = await confirmTotpSetup(
+                sessionId,
+                code.join(""),
+            );
             if (!success) {
                 setError(
                     reason === "invalid_code"
