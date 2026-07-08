@@ -504,7 +504,8 @@ export default function RegisterPage() {
 
                             <p className={styles.footerNote}>
                                 Already have an account?{" "}
-                                <button className={styles.footerLink}>
+                                <button className={styles.footerLink}
+                                    onClick={() => navigate("/login")}>
                                     Sign in
                                 </button>
                             </p>
