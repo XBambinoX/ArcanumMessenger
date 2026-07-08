@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using ArcanumMessenger.Services.AuthServices;
 using ArcanumMessenger.Services.AuthServices.LoginServices;
 using ArcanumMessenger.Services.AuthServices.RegisterServices;
+using ArcanumMessenger.Services.AuthServices.TotpServices;
 namespace ArcanumMessenger
 {
     public class Program
@@ -44,6 +45,8 @@ namespace ArcanumMessenger
             builder.Services.AddSingleton<EncryptionService>();
             builder.Services.AddSingleton<EmailHasher>();
             builder.Services.AddSingleton<LoginSessionService>();
+            builder.Services.AddSingleton<TotpService>();
+            builder.Services.AddSingleton<TotpSetupSessionService>();
 
 
             var app = builder.Build();
