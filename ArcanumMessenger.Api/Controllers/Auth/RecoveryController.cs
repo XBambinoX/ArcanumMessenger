@@ -14,6 +14,8 @@ public class RecoveryController(AppDbContext db, RecoverySessionService recovery
 {
     private static readonly Regex PhraseAuthRegex = new("^[0-9a-f]{64}$", RegexOptions.Compiled);
     private const int AttemptsLimit = 3;
+    private const int AuthKeySize = 32;
+    private const int KdfSaltSize = 16;
 
     [HttpPost("start")]
     public async Task<ActionResult<StartRecoveryResponse>> Start(CancellationToken ct)
@@ -68,7 +70,7 @@ public class RecoveryController(AppDbContext db, RecoverySessionService recovery
         var phraseMatches =
             PasswordHasher.Verify(request.PhraseAuth, user.RecoveryPhrase1Hash) ||
             PasswordHasher.Verify(request.PhraseAuth, user.RecoveryPhrase2Hash);
-            
+
         if (!phraseMatches)
         {
             await recoverySession.UpdateAsync(request.SessionId, session, ct);
@@ -80,5 +82,34 @@ public class RecoveryController(AppDbContext db, RecoverySessionService recovery
         await recoverySession.UpdateAsync(request.SessionId, session, ct);
 
         return Ok(new VerifyRecoveryResponse(true));
+    }
+
+    [HttpPost("reset-password")]
+    public async Task<ActionResult<ResetPasswordResponse>> ResetPassword(
+        [FromBody] ResetPasswordRequest request,
+        CancellationToken ct)
+    {
+        var session = await recoverySession.GetAsync(request.SessionId, ct);
+        if (session is null)
+            return StatusCode(StatusCodes.Status410Gone, new ResetPasswordResponse(false, "session_expired"));
+
+        if (session.Step != 1)
+            return BadRequest(new ResetPasswordResponse(false, "invalid_step"));
+
+        if (!PasswordHasher.IsBase64OfLength(request.AuthKey, AuthKeySize) ||
+            !PasswordHasher.IsBase64OfLength(request.KdfSalt, KdfSaltSize))
+            return StatusCode(StatusCodes.Status422UnprocessableEntity, new ResetPasswordResponse(false, "invalid_key_format"));
+
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == session.UserId && !u.IsDeleted, ct);
+        if (user is null)
+            return StatusCode(StatusCodes.Status410Gone, new ResetPasswordResponse(false, "session_expired"));
+
+        user.PasswordHash = PasswordHasher.Hash(request.AuthKey);
+        user.KdfSalt = request.KdfSalt;
+
+        await db.SaveChangesAsync(ct);
+        await recoverySession.DeleteAsync(request.SessionId, ct);
+
+        return Ok(new ResetPasswordResponse(true));
     }
 }

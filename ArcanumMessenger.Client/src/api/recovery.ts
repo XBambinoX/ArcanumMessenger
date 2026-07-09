@@ -29,3 +29,17 @@ export async function verifyRecovery(
     if (!res.ok) throw new Error("Network error");
     return res.json();
 }
+
+export async function resetPassword(
+    sessionId: string,
+    authKey: string,
+    kdfSalt: string
+): Promise<{ success: boolean; reason?: string }> {
+    const res = await fetch(`${API_BASE}/api/auth/recovery/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, authKey, kdfSalt }),
+    });
+    if (!res.ok) throw new Error("Network error");
+    return res.json();
+}

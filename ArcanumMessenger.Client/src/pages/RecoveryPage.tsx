@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { startRecovery, verifyRecovery } from "../api/recovery";
+import { startRecovery, verifyRecovery, resetPassword } from "../api/recovery";
 import { hashPhrase } from "../crypto/phrases";
+import { deriveKeys, generateKdfSalt } from "../crypto/kdf";
 import styles from "./RecoveryPage.module.css";
 import zxcvbn from "zxcvbn";
 
@@ -95,11 +96,17 @@ export default function RecoveryPage() {
         }
         setLoading(true);
         try {
-            // TODO: derive authKey + call API to reset password
-            // const kdfSalt = generateKdfSalt();
-            // const { authKey } = await deriveKeys(password, kdfSalt);
-            // const { success } = await submitNewPassword(sessionId!, authKey, kdfSalt);
-            await fakeDelay();
+            const kdfSalt = generateKdfSalt();
+            const { authKey } = await deriveKeys(password, kdfSalt);
+            const { success, reason } = await resetPassword(sessionId!, authKey, kdfSalt);
+            if (!success) {
+                setError(
+                    reason === "session_expired" ? "Session expired, please start over" :
+                    reason === "invalid_step" ? "Something went wrong, please start over" :
+                    "Failed to reset password, try again"
+                );
+                return;
+            }
             navigate("/login");
         } catch {
             setError("Something went wrong, try again");
