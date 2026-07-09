@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { startRecovery, verifyRecovery } from "../api/recovery";
+import { hashPhrase } from "../crypto/phrases";
 import styles from "./RecoveryPage.module.css";
 import zxcvbn from "zxcvbn";
 
@@ -8,6 +10,9 @@ const STEP_COUNT = 3;
 
 export default function RecoveryPage() {
     const navigate = useNavigate();
+
+    const [sessionId, setSessionId] = useState<string | null>(null);
+    
     const [step, setStep] = useState<Step>(0);
 
     const [email, setEmail] = useState("");
@@ -19,7 +24,7 @@ export default function RecoveryPage() {
     const [loading, setLoading] = useState(false);
 
     const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    const isPhraseValid = phrase.trim().split(/\s+/).length >= 6;
+    const isPhraseValid = phrase.trim().length >= 6;
     const passwordStrength = password ? zxcvbn(password).score : 0;
     const isPasswordValid = password.length >= 8 && passwordStrength >= 2;
     const doPasswordsMatch = password === confirmPassword && confirmPassword.length > 0;
@@ -34,12 +39,25 @@ export default function RecoveryPage() {
         setStep((s) => Math.max(s - 1, 0) as Step);
     };
 
-    const handleEmailSubmit = () => {
+    const handleEmailSubmit = async () => {
         if (!isEmailValid) {
             setError("Enter a valid email address");
             return;
         }
-        goNext();
+        setLoading(true);
+        try {
+            const { success, sessionId } = await startRecovery(email);
+            if (!success) {
+                setError("Something went wrong, try again");
+                return;
+            }
+            setSessionId(sessionId!);
+            goNext();
+        } catch {
+            setError("Something went wrong, try again");
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handlePhraseSubmit = async () => {
@@ -49,9 +67,15 @@ export default function RecoveryPage() {
         }
         setLoading(true);
         try {
-            // TODO: call API to verify phrase
-            // const { success, reason } = await verifyRecoveryPhrase(email, phrase);
-            await fakeDelay();
+            const { success, reason } = await verifyRecovery(sessionId!, email, await hashPhrase(phrase));
+            if (!success) {
+                setError(
+                    reason === "too_many_attempts" ? "Too many attempts, please start over" :
+                    reason === "session_expired" ? "Session expired, please start over" :
+                    "Email or recovery phrase is incorrect"
+                );
+                return;
+            }
             goNext();
         } catch {
             setError("Something went wrong, try again");
