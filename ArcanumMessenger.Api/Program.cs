@@ -1,7 +1,7 @@
 using ArcanumMessenger.Data;
 using Microsoft.EntityFrameworkCore;
+using ArcanumMessenger.Services;
 using ArcanumMessenger.Services.AuthServices;
-using ArcanumMessenger.Services.AuthServices.LoginServices;
 using ArcanumMessenger.Services.AuthServices.RegisterServices;
 using ArcanumMessenger.Services.AuthServices.TotpServices;
 namespace ArcanumMessenger
@@ -47,7 +47,7 @@ namespace ArcanumMessenger
             builder.Services.AddSingleton<LoginSessionService>();
             builder.Services.AddSingleton<TotpService>();
             builder.Services.AddSingleton<TotpSetupSessionService>();
-
+            builder.Services.AddSingleton<RecoverySessionService>();
 
             var app = builder.Build();
 
