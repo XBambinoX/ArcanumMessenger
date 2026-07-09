@@ -3,6 +3,7 @@ using ArcanumMessenger.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
+using ArcanumMessenger.Services;
 using ArcanumMessenger.Services.AuthServices;
 using ArcanumMessenger.Services.AuthServices.RegisterServices;
 using ArcanumMessenger.Entities;

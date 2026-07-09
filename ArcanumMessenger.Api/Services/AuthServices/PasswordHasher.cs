@@ -65,4 +65,17 @@ public static class PasswordHasher
 
         return argon2.GetBytes(HashSize);
     }
+
+    public static bool IsHexOfLength(string? value, int expectedChars)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length != expectedChars)
+            return false;
+
+        foreach (var c in value)
+        {
+            if (!Uri.IsHexDigit(c))
+                return false;
+        }
+        return true;
+    }
 }
