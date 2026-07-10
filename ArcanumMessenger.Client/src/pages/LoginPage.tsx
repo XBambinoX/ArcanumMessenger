@@ -22,7 +22,7 @@ import { deriveKeys } from "../crypto/kdf";
  *   submitLoginTotp(sessionId, code) -> { success, reason? }
  *     Verifies the 6-digit TOTP code and completes the login.
  */
-import { startLogin, submitLoginPassword, submitLoginTotp } from "../api/login";
+import { startLogin, submitLoginPassword, submitLoginTotp, completeLogin } from "../api/login";
 
 type Step = 0 | 1 | 2;
 const CODE_LENGTH = 6;
@@ -110,6 +110,13 @@ export default function LoginPage() {
                 setStep(2);
                 return;
             }
+
+            const completeRes = await completeLogin(sessionId!);
+            if (!completeRes.success) {
+                setError("Something went wrong with login completion, try again");
+                return;
+            }
+
             navigate("/welcome");
         } catch {
             setError("Something went wrong, try again");
@@ -139,6 +146,12 @@ export default function LoginPage() {
                 );
                 setCode(Array(CODE_LENGTH).fill(""));
                 codeInputs.current[0]?.focus();
+                return;
+            }
+
+            const completeRes = await completeLogin(sessionId!);
+            if (!completeRes.success) {
+                setError("Something went wrong, try again");
                 return;
             }
             navigate("/welcome");

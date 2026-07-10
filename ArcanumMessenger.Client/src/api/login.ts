@@ -51,3 +51,15 @@ export async function submitLoginTotp(
     if (res.status >= 500) throw new Error("Server error, try again later");
     return res.json();
 }
+
+export async function completeLogin(
+    sessionId: string
+): Promise<{ success: boolean; reason?: string }> {
+    const res = await fetch(`${API_BASE}/api/login/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ sessionId }),
+    });
+    return res.json();
+}

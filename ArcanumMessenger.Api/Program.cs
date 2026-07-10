@@ -33,7 +33,8 @@ namespace ArcanumMessenger
                         return uri.Port == 5173;
                     })
                         .AllowAnyHeader()
-                        .AllowAnyMethod());
+                        .AllowAnyMethod()
+                        .AllowCredentials());
             });
 
             builder.Services.AddStackExchangeRedisCache(options =>
@@ -78,6 +79,7 @@ namespace ArcanumMessenger
             builder.Services.AddScoped<EmailService>();
             builder.Services.AddScoped<AuthService>();
             builder.Services.AddScoped<RecoveryService>();
+            builder.Services.AddScoped<TokenIssuanceService>();
             builder.Services.AddSingleton<EncryptionService>();
             builder.Services.AddSingleton<EmailHasher>();
             builder.Services.AddSingleton<LoginSessionService>();
@@ -97,6 +99,7 @@ namespace ArcanumMessenger
             app.UseHttpsRedirection();
             app.UseCors("DevClient");
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
 
