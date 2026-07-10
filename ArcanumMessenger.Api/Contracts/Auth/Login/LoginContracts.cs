@@ -8,4 +8,7 @@ namespace ArcanumMessenger.Contracts.Auth.Login
 
     public record SubmitLoginTotpRequest(string? SessionId, string? Code);
     public record SubmitLoginTotpResponse(bool Success, string? Reason);
+
+    public record CompleteLoginRequest(string SessionId);
+    public record CompleteLoginResponse(bool Success, string? Reason = null);
 }

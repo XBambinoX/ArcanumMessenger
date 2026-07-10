@@ -1,6 +1,7 @@
 using ArcanumMessenger.Data;
 using Microsoft.EntityFrameworkCore;
 using ArcanumMessenger.Services.AuthServices.TotpServices;
+using ArcanumMessenger.Entities;
 
 namespace ArcanumMessenger.Services.AuthServices;
 
@@ -41,5 +42,18 @@ public class AuthService(AppDbContext db, EncryptionService encryption, TotpServ
         var secret = encryption.Decrypt(user.TwoFactorSecretEnc, dek);
 
         return totp.VerifyCode(secret, code);
+    }
+
+    public async Task<User?> GetUserByEmailHashAsync(string emailHash, CancellationToken ct)
+    {
+        return await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.EmailHash == emailHash && !u.IsDeleted, ct);
+    }
+
+    public async Task<bool> UserRequiresTotpAsync(string emailHash, CancellationToken ct)
+    {
+        return await db.Users
+            .Where(u => u.EmailHash == emailHash && !u.IsDeleted)
+            .Select(u => u.TwoFactorEnabled)
+            .FirstOrDefaultAsync(ct);
     }
 }
