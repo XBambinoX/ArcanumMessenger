@@ -1,4 +1,6 @@
 import type { NavigateFunction } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 let navigateRef: NavigateFunction | null = null;
 
@@ -12,4 +14,14 @@ export function navigateTo(path: string, options?: { replace?: boolean; state?: 
         return;
     }
     navigateRef(path, options);
+}
+
+export default function NavigationSetter() {
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        setNavigate(navigate);
+    }, [navigate]);
+
+    return null;
 }

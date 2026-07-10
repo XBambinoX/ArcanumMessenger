@@ -1,0 +1,162 @@
+.root {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0a0818;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    overflow: hidden;
+    padding: 24px;
+}
+
+.orb1, .orb2 {
+    pointer-events: none;
+    position: absolute;
+    border-radius: 50%;
+}
+
+.orb1 {
+    top: -150px;
+    left: -150px;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(239, 68, 68, 0.16) 0%, transparent 65%);
+}
+
+.orb2 {
+    bottom: -150px;
+    right: -150px;
+    width: 550px;
+    height: 550px;
+    background: radial-gradient(circle, rgba(251, 146, 60, 0.12) 0%, transparent 65%);
+}
+
+.grid {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    opacity: 0.03;
+    background-image: linear-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.15) 1px, transparent 1px);
+    background-size: 48px 48px;
+}
+
+.card {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    max-width: 440px;
+    border-radius: 24px;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.06), rgba(13, 11, 26, 0.95));
+    backdrop-filter: blur(20px);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    padding: 40px 36px 36px;
+    text-align: center;
+}
+
+.iconBox {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 18px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.22), rgba(251, 146, 60, 0.14));
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #f87171;
+}
+
+.statusLabel {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(248, 113, 113, 0.8);
+    margin: 0 0 8px;
+}
+
+.title {
+    font-size: 21px;
+    font-weight: 700;
+    color: rgba(226, 232, 240, 0.95);
+    margin: 0 0 10px;
+}
+
+.subtitle {
+    font-size: 14px;
+    line-height: 1.6;
+    color: rgba(148, 163, 184, 0.75);
+    margin: 0 0 20px;
+}
+
+.detailsBox {
+    text-align: left;
+    border-radius: 12px;
+    border: 1px solid rgba(124, 58, 237, 0.2);
+    background: rgba(124, 58, 237, 0.05);
+    padding: 12px 14px;
+    margin-bottom: 24px;
+}
+
+.detailsRow {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    font-family: ui-monospace, monospace;
+    color: rgba(148, 163, 184, 0.7);
+    padding: 4px 0;
+}
+
+    .detailsRow span:first-child {
+        color: rgba(167, 139, 250, 0.7);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        font-family: 'Inter', sans-serif;
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+.actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btnSecondary {
+    flex: 1;
+    padding: 13px 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(124, 58, 237, 0.25);
+    background: rgba(124, 58, 237, 0.05);
+    color: rgba(226, 232, 240, 0.85);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+    .btnSecondary:hover {
+        background: rgba(124, 58, 237, 0.12);
+    }
+
+.btnPrimary {
+    flex: 1;
+    padding: 13px 16px;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(135deg, #ef4444, #f97316);
+    color: #fff;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.25);
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+    .btnPrimary:hover {
+        transform: scale(1.02);
+        box-shadow: 0 0 26px rgba(239, 68, 68, 0.4);
+    }
