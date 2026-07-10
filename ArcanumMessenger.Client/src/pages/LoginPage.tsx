@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import styles from "./LoginPage.module.css";
 import { deriveKeys } from "../crypto/kdf";
+import { useAuth } from "../context/AuthContext";
 
 /**
  * Expected in ../api/auth (not implemented here — wire these up to your
@@ -46,6 +47,8 @@ export default function LoginPage() {
 
     const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     const isCodeComplete = code.every((d) => d !== "");
+
+    const { setAuthenticated } = useAuth();
 
     const goBack = () => {
         setError("");
@@ -117,7 +120,8 @@ export default function LoginPage() {
                 return;
             }
 
-            navigate("/welcome");
+            setAuthenticated(true);
+            navigate("/app");
         } catch {
             setError("Something went wrong, try again");
         } finally {
@@ -154,7 +158,8 @@ export default function LoginPage() {
                 setError("Something went wrong, try again");
                 return;
             }
-            navigate("/welcome");
+            setAuthenticated(true);
+            navigate("/app");
         } catch {
             setError("Something went wrong, try again");
         } finally {
