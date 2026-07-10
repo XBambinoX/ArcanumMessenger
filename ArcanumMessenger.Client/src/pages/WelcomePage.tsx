@@ -473,8 +473,7 @@ export default function WelcomePage() {
     useParticles(canvasRef);
     useMouseGlow(glowRef);
 
-    // Login page doesn't exist yet — wire it up when it does
-    const handleSignIn = () => {};
+    const handleSignIn = () => navigate("/login");
     const handleCreate = () => navigate("/register");
 
     useEffect(() => {

@@ -8,7 +8,7 @@ import {
     submitPassword,
     confirmRecovery,
     finalizeRegistration,
-} from "../api/auth";
+} from "../api/register";
 import { deriveKeys, generateKdfSalt } from "../crypto/kdf";
 import { generateRecoveryPhrase, hashPhrase } from "../crypto/phrases";
 
@@ -121,9 +121,14 @@ export default function RegisterPage() {
         }
         setLoading(true);
         try {
-            const { success, sessionId } = await startRegistration(username);
+            const { success, sessionId, reason } =
+                await startRegistration(username);
             if (!success) {
-                setError("Invalid username format");
+                setError(
+                    reason === "invalid_format"
+                        ? "Username must be at least 3 characters – Latin letters, digits, and underscores only"
+                        : "Something went wrong, try again",
+                );
                 return;
             }
             setSessionId(sessionId!);
@@ -153,7 +158,13 @@ export default function RegisterPage() {
                         ? "Session expired, please start over"
                         : reason === "email_taken"
                           ? "This email is already registered"
-                          : "Invalid email address",
+                          : reason === "email_send_failed"
+                            ? "Failed to send verification email, try again"
+                            : reason === "invalid_step"
+                              ? "Something went wrong, please start over"
+                              : reason === "invalid_email"
+                                ? "Enter a valid email address"
+                                : "Something went wrong, please start over",
                 );
                 return;
             }
@@ -185,7 +196,11 @@ export default function RegisterPage() {
                           ? "Too many attempts, request a new code"
                           : reason === "session_expired"
                             ? "Session expired, please start over"
-                            : "Invalid code",
+                            : reason === "invalid_step"
+                              ? "Something went wrong, please start over"
+                              : reason === "invalid_code"
+                                ? "Invalid code"
+                                : "Something went wrong, try again",
                 );
                 setCode(Array(CODE_LENGTH).fill(""));
                 codeInputs.current[0]?.focus();
@@ -255,7 +270,11 @@ export default function RegisterPage() {
                           ? "Please wait before requesting a new code"
                           : reason === "email_send_failed"
                             ? "Failed to send code, try again"
-                            : "Failed to resend code",
+                            : reason === "session_expired"
+                              ? "Session expired, please start over"
+                              : reason === "invalid_step"
+                                ? "Something went wrong, please start over"
+                                : "Failed to resend code",
                 );
             }
         } catch {
@@ -396,35 +415,33 @@ export default function RegisterPage() {
                     </button>
 
                     <div className={styles.logoBox}>
-                        <div className={styles.logoBox}>
-                            <svg
-                                width="60"
-                                height="60"
-                                viewBox="0 0 48 48"
+                        <svg
+                            width="28"
+                            height="28"
+                            viewBox="0 0 48 48"
+                            fill="none"
+                        >
+                            <path
+                                d="M16 12H32a6 6 0 0 1 6 6v10a6 6 0 0 1-6 6H20l-6 5v-5a6 6 0 0 1-6-6V18a6 6 0 0 1 6-6z"
+                                stroke="url(#rg)"
+                                strokeWidth="2.2"
                                 fill="none"
-                            >
-                                <path
-                                    d="M16 12H32a6 6 0 0 1 6 6v10a6 6 0 0 1-6 6H20l-6 5v-5a6 6 0 0 1-6-6V18a6 6 0 0 1 6-6z"
-                                    stroke="url(#rg)"
-                                    strokeWidth="2.2"
-                                    fill="none"
-                                    strokeLinejoin="round"
-                                />
-                                <defs>
-                                    <linearGradient
-                                        id="rg"
-                                        x1="6"
-                                        y1="4"
-                                        x2="42"
-                                        y2="44"
-                                        gradientUnits="userSpaceOnUse"
-                                    >
-                                        <stop stopColor="#a78bfa" />
-                                        <stop offset="1" stopColor="#22d3ee" />
-                                    </linearGradient>
-                                </defs>
-                            </svg>
-                        </div>
+                                strokeLinejoin="round"
+                            />
+                            <defs>
+                                <linearGradient
+                                    id="rg"
+                                    x1="6"
+                                    y1="4"
+                                    x2="42"
+                                    y2="44"
+                                    gradientUnits="userSpaceOnUse"
+                                >
+                                    <stop stopColor="#a78bfa" />
+                                    <stop offset="1" stopColor="#22d3ee" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
                     </div>
                     <p className={styles.brand}>Arcanum</p>
                 </div>
@@ -487,7 +504,8 @@ export default function RegisterPage() {
 
                             <p className={styles.footerNote}>
                                 Already have an account?{" "}
-                                <button className={styles.footerLink}>
+                                <button className={styles.footerLink}
+                                    onClick={() => navigate("/login")}>
                                     Sign in
                                 </button>
                             </p>

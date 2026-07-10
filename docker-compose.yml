@@ -12,7 +12,7 @@ services:
             ASPNETCORE_URLS: https://+:8081;http://+:8080
             ASPNETCORE_Kestrel__Certificates__Default__Path: ${KESTREL_CERT_PATH}
             ASPNETCORE_Kestrel__Certificates__Default__Password: ${KESTREL_CERT_PASSWORD}
-            ConnectionStrings__Postgres: Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+            ConnectionStrings__Postgres: Host=${POSTGRES_HOST};Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
             ConnectionStrings__Redis: redis:6379
 
             Smtp__Host: smtp.gmail.com
@@ -23,6 +23,9 @@ services:
 
             Encryption__Kek: ${ENCRYPTION_KEK}
             Hashing__EmailPepper: ${EMAIL_HASH_PEPPER}
+
+            Jwt__Secret: ${JWT_SECRET}
+            Jwt__Issuer: ArcanumMessenger
 
         volumes:
             - ${HTTPS_CERT_DIR}:/https:ro
@@ -46,9 +49,13 @@ services:
         container_name: arcanum-client
         ports:
             - "5173:5173"
+        environment:
+            VITE_CERT_PATH: /https/arcanum-lan.crt
+            VITE_KEY_PATH: /https/arcanum-lan.key
         volumes:
             - ./ArcanumMessenger.Client:/app
             - /app/node_modules
+            - ${HTTPS_CERT_DIR}:/https:ro
         depends_on:
             - api
 

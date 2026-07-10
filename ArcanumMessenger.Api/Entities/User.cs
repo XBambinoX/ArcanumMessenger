@@ -15,6 +15,11 @@ public class User
     public string? PublicEmailEnc { get; set; }
     public string? PublicPhoneEnc { get; set; }
     public string? PublicBioEnc { get; set; }
+    public bool TwoFactorEnabled { get; set; }
+    // Base32 TOTP secret, encrypted with this user's DEK (same pattern as
+    // the other *Enc fields). Unlike PasswordHash, this must be reversible —
+    // verifying a code means decrypting it back, not hashing and comparing.
+    public string? TwoFactorSecretEnc { get; set; }
     public DateTime? LastSeen { get; set; }
     public bool IsDeleted { get; set; }
     public DateTime CreatedAt { get; set; }

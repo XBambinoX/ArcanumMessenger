@@ -2,7 +2,7 @@
 using MailKit.Security;
 using MimeKit;
 
-namespace ArcanumMessenger.Services
+namespace ArcanumMessenger.Services.AuthServices.RegisterServices
 {
     public class EmailService(IConfiguration config)
     {

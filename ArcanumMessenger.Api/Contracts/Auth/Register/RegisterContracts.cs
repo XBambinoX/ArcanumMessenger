@@ -1,7 +1,5 @@
-﻿namespace ArcanumMessenger.Contracts.Auth
+﻿namespace ArcanumMessenger.Contracts.Auth.Register
 {
-    public record CheckUsernameResponse(bool Available, string? Reason = null);
-
     public record StartRegistrationRequest(string Username);
     public record StartRegistrationResponse(bool Success, string? SessionId, string? Reason = null);
 

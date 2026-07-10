@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace ArcanumMessenger.Services;
+namespace ArcanumMessenger.Services.AuthServices;
 
 /// <summary>
 /// Envelope encryption: one random DEK per user encrypts that user's profile

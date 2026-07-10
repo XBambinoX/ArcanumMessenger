@@ -1,4 +1,4 @@
-namespace ArcanumMessenger.Contracts.Auth;
+namespace ArcanumMessenger.Contracts.Auth.Register;
 
 public class RegistrationSession
 {

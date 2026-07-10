@@ -1,0 +1,453 @@
+import { useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import styles from "./LoginPage.module.css";
+import { deriveKeys } from "../crypto/kdf";
+import { useAuth } from "../context/AuthContext";
+
+/**
+ * Expected in ../api/auth (not implemented here — wire these up to your
+ * AuthController endpoints):
+ *
+ *   startLogin(email) -> { success, sessionId?, kdfSalt?, reason? }
+ *     Looks up the user by email and returns the KdfSalt needed to derive
+ *     authKey from the password. To avoid leaking which emails are
+ *     registered, an unknown email should still return a (fake but
+ *     stable) sessionId + kdfSalt rather than an immediate failure —
+ *     the real rejection happens at the password step.
+ *
+ *   submitLoginPassword(sessionId, authKey) -> { success, requiresTotp?, reason? }
+ *     Verifies authKey against PasswordHash. If the account has 2FA
+ *     enabled (UserSettings), requiresTotp is true and login isn't
+ *     complete yet — the TOTP step follows.
+ *
+ *   submitLoginTotp(sessionId, code) -> { success, reason? }
+ *     Verifies the 6-digit TOTP code and completes the login.
+ */
+import { startLogin, submitLoginPassword, submitLoginTotp, completeLogin } from "../api/login";
+
+type Step = 0 | 1 | 2;
+const CODE_LENGTH = 6;
+
+export default function LoginPage() {
+    const navigate = useNavigate();
+    const [step, setStep] = useState<Step>(0);
+    const [stepCount, setStepCount] = useState<2 | 3>(2);
+
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [code, setCode] = useState<string[]>(Array(CODE_LENGTH).fill(""));
+
+    const [sessionId, setSessionId] = useState<string | null>(null);
+    const [kdfSalt, setKdfSalt] = useState<string | null>(null);
+
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    const codeInputs = useRef<(HTMLInputElement | null)[]>([]);
+
+    const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const isCodeComplete = code.every((d) => d !== "");
+
+    const { setAuthenticated } = useAuth();
+
+    const goBack = () => {
+        setError("");
+        setStep((s) => Math.max(s - 1, 0) as Step);
+    };
+
+    const handleEmailSubmit = async () => {
+        if (!isEmailValid) {
+            setError("Enter a valid email address");
+            return;
+        }
+        setLoading(true);
+        try {
+            const { success, sessionId, kdfSalt, reason } =
+                await startLogin(email);
+            if (!success || !sessionId || !kdfSalt) {
+                setError(
+                    reason === "invalid_format"
+                        ? "Enter a valid email address"
+                        : reason === "too_many_attempts"
+                          ? "Too many attempts, try again later"
+                          : "Something went wrong, try again",
+                );
+                return;
+            }
+            setSessionId(sessionId);
+            setKdfSalt(kdfSalt);
+            setError("");
+            setStep(1);
+        } catch {
+            setError("Something went wrong, try again");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handlePasswordSubmit = async () => {
+        if (!password) {
+            setError("Enter your password");
+            return;
+        }
+        setLoading(true);
+        try {
+            const { authKey } = await deriveKeys(password, kdfSalt!);
+            const { success, requiresTotp, reason } = await submitLoginPassword(
+                sessionId!,
+                authKey,
+            );
+            if (!success) {
+                setError(
+                    reason === "session_expired"
+                        ? "Session expired, please start over"
+                        : reason === "too_many_attempts"
+                          ? "Too many attempts, try again later"
+                          : "Incorrect email or password",
+                );
+                return;
+            }
+            if (requiresTotp) {
+                setStepCount(3);
+                setError("");
+                setStep(2);
+                return;
+            }
+
+            const completeRes = await completeLogin(sessionId!);
+            if (!completeRes.success) {
+                setError("Something went wrong with login completion, try again");
+                return;
+            }
+
+            setAuthenticated(true);
+            navigate("/app");
+        } catch {
+            setError("Something went wrong, try again");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleTotpSubmit = async () => {
+        if (!isCodeComplete) {
+            setError("Enter the full 6-digit code");
+            return;
+        }
+        setLoading(true);
+        try {
+            const { success, reason } = await submitLoginTotp(
+                sessionId!,
+                code.join(""),
+            );
+            if (!success) {
+                setError(
+                    reason === "session_expired"
+                        ? "Session expired, please start over"
+                        : reason === "too_many_attempts"
+                          ? "Too many attempts, try again later"
+                          : "Invalid code",
+                );
+                setCode(Array(CODE_LENGTH).fill(""));
+                codeInputs.current[0]?.focus();
+                return;
+            }
+
+            const completeRes = await completeLogin(sessionId!);
+            if (!completeRes.success) {
+                setError("Something went wrong, try again");
+                return;
+            }
+            setAuthenticated(true);
+            navigate("/app");
+        } catch {
+            setError("Something went wrong, try again");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleCodeChange = (index: number, value: string) => {
+        if (!/^[0-9]?$/.test(value)) return;
+        const next = [...code];
+        next[index] = value;
+        setCode(next);
+        if (value && index < CODE_LENGTH - 1) {
+            codeInputs.current[index + 1]?.focus();
+        }
+    };
+
+    const handleCodeKeyDown = (
+        index: number,
+        e: React.KeyboardEvent<HTMLInputElement>,
+    ) => {
+        if (e.key === "Backspace" && !code[index] && index > 0) {
+            codeInputs.current[index - 1]?.focus();
+        }
+    };
+
+    const stepTitles = [
+        { title: "Welcome back", subtitle: "Sign in with your email" },
+        {
+            title: "Enter your password",
+            subtitle: (
+                <>
+                    Signing in as <b>{email}</b>
+                </>
+            ),
+        },
+        {
+            title: "Two-factor authentication",
+            subtitle: "Enter the 6-digit code from your authenticator app",
+        },
+    ];
+
+    return (
+        <div className={styles.root}>
+            <div className={styles.orb1} />
+            <div className={styles.orb2} />
+            <div className={styles.grid} />
+
+            <div className={styles.card}>
+                <div className={styles.header}>
+                    <button
+                        className={styles.backHome}
+                        onClick={() => navigate("/welcome")}
+                        aria-label="Back to welcome"
+                        style={{
+                            visibility: step === 0 ? "visible" : "hidden",
+                        }}
+                    >
+                        <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        >
+                            <path d="M19 12H5M12 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+
+                    <div className={styles.logoBox}>
+                        <svg
+                            width="28"
+                            height="28"
+                            viewBox="0 0 48 48"
+                            fill="none"
+                        >
+                            <path
+                                d="M16 12H32a6 6 0 0 1 6 6v10a6 6 0 0 1-6 6H20l-6 5v-5a6 6 0 0 1-6-6V18a6 6 0 0 1 6-6z"
+                                stroke="url(#rg)"
+                                strokeWidth="2.2"
+                                fill="none"
+                                strokeLinejoin="round"
+                            />
+                            <defs>
+                                <linearGradient
+                                    id="rg"
+                                    x1="6"
+                                    y1="4"
+                                    x2="42"
+                                    y2="44"
+                                    gradientUnits="userSpaceOnUse"
+                                >
+                                    <stop stopColor="#a78bfa" />
+                                    <stop offset="1" stopColor="#22d3ee" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                    <p className={styles.brand}>Arcanum</p>
+                </div>
+
+                <div className={styles.dots}>
+                    {Array.from({ length: stepCount }).map((_, i) => (
+                        <span
+                            key={i}
+                            className={`${styles.dot} ${i === step ? styles.active : ""} ${i < step ? styles.done : ""}`}
+                        />
+                    ))}
+                </div>
+
+                <div className={styles.viewport}>
+                    <div
+                        className={styles.track}
+                        style={{ transform: `translateX(-${step * 100}%)` }}
+                    >
+                        {/* ── STEP 0: Email ── */}
+                        <div className={styles.slide}>
+                            <h2 className={styles.stepTitle}>
+                                {stepTitles[0].title}
+                            </h2>
+                            <p className={styles.stepSubtitle}>
+                                {stepTitles[0].subtitle}
+                            </p>
+
+                            <div className={styles.field}>
+                                <label className={styles.label}>Email</label>
+                                <input
+                                    className={`${styles.input} ${error && step === 0 ? styles.error : ""}`}
+                                    type="email"
+                                    placeholder="you@example.com"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    onKeyDown={(e) =>
+                                        e.key === "Enter" && handleEmailSubmit()
+                                    }
+                                    autoFocus
+                                />
+                                {error && step === 0 && (
+                                    <p className={styles.errorText}>{error}</p>
+                                )}
+                            </div>
+
+                            <div className={styles.actions}>
+                                <button
+                                    className={styles.btnPrimary}
+                                    onClick={handleEmailSubmit}
+                                    disabled={loading}
+                                >
+                                    {loading ? "Checking…" : "Continue"}
+                                </button>
+                            </div>
+
+                            <p className={styles.footerNote}>
+                                Don't have an account?{" "}
+                                <button
+                                    className={styles.footerLink}
+                                    onClick={() => navigate("/register")}
+                                >
+                                    Create one
+                                </button>
+                            </p>
+                        </div>
+
+                        {/* ── STEP 1: Password ── */}
+                        <div className={styles.slide}>
+                            <h2 className={styles.stepTitle}>
+                                {stepTitles[1].title}
+                            </h2>
+                            <p className={styles.stepSubtitle}>
+                                {stepTitles[1].subtitle}
+                            </p>
+
+                            <div className={styles.field}>
+                                <label className={styles.label}>Password</label>
+                                <input
+                                    className={`${styles.input} ${error && step === 1 ? styles.error : ""}`}
+                                    type="password"
+                                    placeholder="••••••••"
+                                    value={password}
+                                    onChange={(e) =>
+                                        setPassword(e.target.value)
+                                    }
+                                    onKeyDown={(e) =>
+                                        e.key === "Enter" &&
+                                        handlePasswordSubmit()
+                                    }
+                                    autoFocus={step === 1}
+                                />
+                                {error && step === 1 && (
+                                    <p className={styles.errorText}>{error}</p>
+                                )}
+                            </div>
+
+                            <div className={styles.actions}>
+                                <button
+                                    className={styles.btnBack}
+                                    onClick={goBack}
+                                    aria-label="Back"
+                                >
+                                    <svg
+                                        width="18"
+                                        height="18"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2.2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    >
+                                        <path d="M19 12H5M12 19l-7-7 7-7" />
+                                    </svg>
+                                </button>
+                                <button
+                                    className={styles.btnPrimary}
+                                    onClick={handlePasswordSubmit}
+                                    disabled={loading}
+                                >
+                                    {loading ? "Signing in…" : "Sign in"}
+                                </button>
+                            </div>
+
+                            <p className={styles.footerNote}>
+                                Forgot your password?{" "}
+                                <button
+                                    className={styles.footerLink}
+                                    onClick={() => navigate("/recovery")}
+                                >
+                                    Change it
+                                </button>
+                            </p>
+                        </div>
+
+                        {/* ── STEP 2: TOTP (only if enabled in settings) ── */}
+                        <div className={styles.slide}>
+                            <h2 className={styles.stepTitle}>
+                                {stepTitles[2].title}
+                            </h2>
+                            <p className={styles.stepSubtitle}>
+                                {stepTitles[2].subtitle}
+                            </p>
+
+                            <div className={styles.codeRow}>
+                                {code.map((digit, i) => (
+                                    <input
+                                        key={i}
+                                        ref={(el) => {
+                                            codeInputs.current[i] = el;
+                                        }}
+                                        className={styles.codeDigit}
+                                        type="text"
+                                        inputMode="numeric"
+                                        maxLength={1}
+                                        value={digit}
+                                        onChange={(e) =>
+                                            handleCodeChange(i, e.target.value)
+                                        }
+                                        onKeyDown={(e) =>
+                                            handleCodeKeyDown(i, e)
+                                        }
+                                        autoFocus={step === 2 && i === 0}
+                                    />
+                                ))}
+                            </div>
+                            {error && step === 2 && (
+                                <p
+                                    className={styles.errorText}
+                                    style={{ textAlign: "center" }}
+                                >
+                                    {error}
+                                </p>
+                            )}
+
+                            <div className={styles.actions}>
+                                <button
+                                    className={styles.btnPrimary}
+                                    onClick={handleTotpSubmit}
+                                    disabled={loading}
+                                >
+                                    {loading ? "Verifying…" : "Verify"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}

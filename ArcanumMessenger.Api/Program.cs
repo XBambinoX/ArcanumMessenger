@@ -1,7 +1,15 @@
 using ArcanumMessenger.Data;
 using Microsoft.EntityFrameworkCore;
-using ArcanumMessenger.Contracts.Auth;
 using ArcanumMessenger.Services;
+using ArcanumMessenger.Services.AuthServices;
+using ArcanumMessenger.Services.AuthServices.RegisterServices;
+using ArcanumMessenger.Services.AuthServices.RecoveryServices;
+using ArcanumMessenger.Services.AuthServices.TotpServices;
+using ArcanumMessenger.Services.AuthServices.LoginServices;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+
 
 namespace ArcanumMessenger
 {
@@ -25,7 +33,8 @@ namespace ArcanumMessenger
                         return uri.Port == 5173;
                     })
                         .AllowAnyHeader()
-                        .AllowAnyMethod());
+                        .AllowAnyMethod()
+                        .AllowCredentials());
             });
 
             builder.Services.AddStackExchangeRedisCache(options =>
@@ -33,15 +42,50 @@ namespace ArcanumMessenger
                 options.Configuration = builder.Configuration.GetConnectionString("Redis");
             });
 
+            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer(options =>
+                {
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuer = true,
+                        ValidateAudience = true,
+                        ValidateLifetime = true,
+                        ValidateIssuerSigningKey = true,
+                        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+                        ValidAudience = builder.Configuration["Jwt:Issuer"],
+                        IssuerSigningKey = new SymmetricSecurityKey(
+                            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"]!))
+                    };
+
+                    options.Events = new JwtBearerEvents
+                    {
+                        OnMessageReceived = context =>
+                        {
+                            if (context.Request.Cookies.TryGetValue("access_token", out var token))
+                                context.Token = token;
+                            return Task.CompletedTask;
+                        }
+                    };
+                });
+
+            builder.Services.AddAuthorization();
             builder.Services.AddControllers();
             builder.Services.AddHealthChecks();
             builder.Services.AddSwaggerGen();
 
             // Scope
+            builder.Services.AddScoped<JwtService>();
             builder.Services.AddScoped<RegistrationSessionService>();
             builder.Services.AddScoped<EmailService>();
+            builder.Services.AddScoped<AuthService>();
+            builder.Services.AddScoped<RecoveryService>();
+            builder.Services.AddScoped<TokenIssuanceService>();
             builder.Services.AddSingleton<EncryptionService>();
             builder.Services.AddSingleton<EmailHasher>();
+            builder.Services.AddSingleton<LoginSessionService>();
+            builder.Services.AddSingleton<TotpService>();
+            builder.Services.AddSingleton<TotpSetupSessionService>();
+            builder.Services.AddSingleton<RecoverySessionService>();
 
             var app = builder.Build();
 
@@ -52,10 +96,11 @@ namespace ArcanumMessenger
                 app.UseSwaggerUI();
             }
 
-            //app.UseHttpsRedirection(); TEMPORARY DURING LOCALHOST DEVELOPMENT
+            app.UseHttpsRedirection();
             app.UseCors("DevClient");
 
-            app.UseAuthorization();     
+            app.UseAuthentication();
+            app.UseAuthorization();
 
 
             app.MapControllers();
