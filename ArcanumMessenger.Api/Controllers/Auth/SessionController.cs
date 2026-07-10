@@ -28,8 +28,7 @@ public class SessionController(TokenIssuanceService tokenIssuance) : ControllerB
 
         if (!success)
         {
-            Response.Cookies.Delete("access_token");
-            Response.Cookies.Delete("refresh_token");
+            ClearAuthCookies();
             return Unauthorized(new RefreshResponse(false, reason));
         }
 
@@ -44,8 +43,7 @@ public class SessionController(TokenIssuanceService tokenIssuance) : ControllerB
         Request.Cookies.TryGetValue("refresh_token", out var refreshToken);
         await tokenIssuance.RevokeAsync(refreshToken, ct);
 
-        Response.Cookies.Delete("access_token");
-        Response.Cookies.Delete("refresh_token");
+        ClearAuthCookies();
 
         return Ok();
     }
@@ -69,5 +67,21 @@ public class SessionController(TokenIssuanceService tokenIssuance) : ControllerB
             SameSite = isDevelopment ? SameSiteMode.None : SameSiteMode.Strict,
             Expires = DateTimeOffset.UtcNow.AddHours(24)
         });
+    }
+
+    private void ClearAuthCookies()
+    {
+        var isDevelopment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development";
+
+        var options = new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = isDevelopment ? SameSiteMode.None : SameSiteMode.Strict,
+            Expires = DateTimeOffset.UtcNow.AddDays(-1) // у минулому — примусово протерміновує
+        };
+
+        Response.Cookies.Delete("access_token", options);
+        Response.Cookies.Delete("refresh_token", options);
     }
 }

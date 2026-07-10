@@ -1,11 +1,14 @@
 import { useNavigate } from "react-router-dom";
 import { logout } from "../api/session";
+import { useAuth } from "../context/AuthContext";
 
 export default function AppPage() {
     const navigate = useNavigate();
+    const { setAuthenticated } = useAuth();
 
     const handleLogout = async () => {
         await logout();
+        setAuthenticated(false);
         navigate("/welcome");
     };
 
