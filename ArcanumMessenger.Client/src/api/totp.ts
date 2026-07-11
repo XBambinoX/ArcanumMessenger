@@ -1,5 +1,4 @@
-const API_PORT = window.location.protocol === "https:" ? 7039 : 5135;
-const API_BASE = `${window.location.protocol}//${window.location.hostname}:${API_PORT}`;
+import { apiFetch } from "../lib/apiFetch";
 
 /**
  * Stopgap: there is no auth/session cookie yet, so the server has no way to
@@ -29,12 +28,12 @@ export async function startTotpSetup(userId: string): Promise<{
     otpauthUri?: string;
     reason?: string;
 }> {
-    const res = await fetch(`${API_BASE}/api/totp/start`, {
+    const res = await apiFetch("/api/totp/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ userId }),
     });
-    if (res.status >= 500) throw new Error("Server error, try again later");
     return res.json();
 }
 
@@ -45,11 +44,11 @@ export async function confirmTotpSetup(
     success: boolean;
     reason?: string;
 }> {
-    const res = await fetch(`${API_BASE}/api/totp/confirm`, {
+    const res = await apiFetch("/api/totp/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ sessionId, code }),
     });
-    if (res.status >= 500) throw new Error("Server error, try again later");
     return res.json();
 }
