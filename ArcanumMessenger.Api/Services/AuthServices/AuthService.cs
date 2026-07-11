@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using ArcanumMessenger.Data;
 using Microsoft.EntityFrameworkCore;
 using ArcanumMessenger.Services.AuthServices.TotpServices;
@@ -27,7 +28,7 @@ public class AuthService(AppDbContext db, EncryptionService encryption, TotpServ
 
     public async Task<(bool IsCorrect, bool RequiresTotp)> CheckPassAsync(string emailHash, string AuthKey, CancellationToken ct)
     {
-        var user = await GetUserByEmailHashAsync(emailHash, ct);
+        var user = await GetUserAsync(u => u.EmailHash == emailHash, ct);
 
         var passHash = user?.PasswordHash ?? PasswordHasher.DummyPasswordHash;
         var isCorrect = PasswordHasher.Verify(AuthKey, passHash);
@@ -38,7 +39,7 @@ public class AuthService(AppDbContext db, EncryptionService encryption, TotpServ
 
     public async Task<bool> CheckTotpAsync(string emailHash, string code, CancellationToken ct)
     {
-        var user = await GetUserByEmailHashAsync(emailHash, ct);
+        var user = await GetUserAsync(u => u.EmailHash == emailHash, ct);
 
         if (user is null || !user.TwoFactorEnabled || user.TwoFactorSecretEnc is null)
             return false;
@@ -49,13 +50,15 @@ public class AuthService(AppDbContext db, EncryptionService encryption, TotpServ
         return totp.VerifyCode(secret, code);
     }
 
-    public async Task<User?> GetUserByEmailHashAsync(string emailHash, CancellationToken ct)
+
+    public async Task<User?> GetUserAsync(Expression<Func<User, bool>> predicate, CancellationToken ct)
     {
         return await db.Users
-                .AsNoTracking()
-                .Where(u => u.EmailHash == emailHash && !u.IsDeleted)
-                .FirstOrDefaultAsync(ct);
+            .Where(u => !u.IsDeleted)
+            .Where(predicate)
+            .FirstOrDefaultAsync(ct);
     }
+
 
     public async Task<bool> UserRequiresTotpAsync(string emailHash, CancellationToken ct)
     {

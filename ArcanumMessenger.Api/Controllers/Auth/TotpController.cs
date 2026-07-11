@@ -4,6 +4,9 @@ using ArcanumMessenger.Contracts.Auth.Totp;
 using ArcanumMessenger.Data;
 using ArcanumMessenger.Services.AuthServices;
 using ArcanumMessenger.Services.AuthServices.TotpServices;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
 namespace ArcanumMessenger.Controllers.Auth;
 
 [ApiController]
@@ -12,16 +15,20 @@ public class TotpController(
     AppDbContext db,
     EncryptionService encryption,
     TotpService totp,
-    TotpSetupSessionService totpSession) : ControllerBase
+    TotpSetupSessionService totpSession,
+    AuthService authService) : ControllerBase
 {
     [HttpPost("start")]
+    [Authorize]
     public async Task<ActionResult<StartTotpSetupResponse>> Start(
-        [FromBody] StartTotpSetupRequest request,
         CancellationToken ct)
     {
-        var user = await db.Users
-            .Where(u => u.Id == request.UserId && !u.IsDeleted)
-            .FirstOrDefaultAsync(ct);
+        var userIdClaim = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+            return Unauthorized();
+
+        var user = await authService.GetUserAsync(u => u.Id == userId, ct);
 
         if (user is null)
             return NotFound(new StartTotpSetupResponse(Success: false, SessionId: null, Secret: null, OtpauthUri: null, Reason: "user_not_found"));
@@ -42,6 +49,7 @@ public class TotpController(
 
 
     [HttpPost("confirm")]
+    [Authorize]
     public async Task<ActionResult<ConfirmTotpSetupResponse>> Confirm(
         [FromBody] ConfirmTotpSetupRequest request,
         CancellationToken ct)
@@ -60,9 +68,7 @@ public class TotpController(
         if (!totp.VerifyCode(session.Secret, request.Code))
             return BadRequest(new ConfirmTotpSetupResponse(Success: false, Reason: "invalid_code"));
 
-        var user = await db.Users
-            .Where(u => u.Id == session.UserId && !u.IsDeleted)
-            .FirstOrDefaultAsync(ct);
+        var user = await authService.GetUserAsync(u => u.Id == session.UserId, ct);
 
         if (user is null)
             return NotFound(new ConfirmTotpSetupResponse(Success: false, Reason: "user_not_found"));

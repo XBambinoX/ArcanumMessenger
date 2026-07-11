@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import QRCode from "qrcode";
 import styles from "./TotpSetupPage.module.css";
 import { startTotpSetup, confirmTotpSetup } from "../api/totp";
@@ -9,9 +9,6 @@ const CODE_LENGTH = 6;
 
 export default function TotpSetupPage() {
     const navigate = useNavigate();
-    // Stopgap: taken from the URL until real login sessions exist. See the
-    // comment in api/totp.ts for why the server currently trusts this.
-    const { userId } = useParams<{ userId: string }>();
     const [step, setStep] = useState<Step>(0);
     const [initializing, setInitializing] = useState(true);
 
@@ -32,15 +29,10 @@ export default function TotpSetupPage() {
     };
 
     useEffect(() => {
-        if (!userId) {
-            setError("Missing user id in URL");
-            setInitializing(false);
-            return;
-        }
         (async () => {
             try {
                 const { success, sessionId, secret, otpauthUri, reason } =
-                    await startTotpSetup(userId);
+                    await startTotpSetup();
                 if (!success || !sessionId || !secret || !otpauthUri) {
                     setError(
                         reason === "already_enabled"
@@ -63,7 +55,7 @@ export default function TotpSetupPage() {
                 setInitializing(false);
             }
         })();
-    }, [userId]);
+    }, []);
 
     const handleCodeChange = (index: number, value: string) => {
         if (!/^[0-9]?$/.test(value)) return;

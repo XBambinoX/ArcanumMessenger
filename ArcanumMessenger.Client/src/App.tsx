@@ -22,19 +22,36 @@ function AppRoutes() {
             <Routes>
                 <Route
                     path="/"
-                    element={<Navigate to={isAuthenticated ? "/app" : "/welcome"} replace />}
+                    element={
+                        <Navigate
+                            to={isAuthenticated ? "/app" : "/welcome"}
+                            replace
+                        />
+                    }
                 />
                 <Route path="/welcome" element={<WelcomePage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route
                     path="/login"
-                    element={isAuthenticated ? <Navigate to="/app" replace /> : <LoginPage />}
+                    element={
+                        isAuthenticated ? (
+                            <Navigate to="/app" replace />
+                        ) : (
+                            <LoginPage />
+                        )
+                    }
                 />
-                <Route path="/2fa/setup/:userId" element={<TotpSetupPage />} />
+                <Route path="/2fa/setup" element={<TotpSetupPage />} />
                 <Route path="/recovery" element={<RecoveryPage />} />
                 <Route
                     path="/app"
-                    element={isAuthenticated ? <AppPage /> : <Navigate to="/login" replace />}
+                    element={
+                        isAuthenticated ? (
+                            <AppPage />
+                        ) : (
+                            <Navigate to="/login" replace />
+                        )
+                    }
                 />
                 <Route path="/error" element={<ErrorPage />} />
             </Routes>

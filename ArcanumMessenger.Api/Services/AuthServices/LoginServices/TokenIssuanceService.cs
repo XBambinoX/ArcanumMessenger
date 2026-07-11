@@ -6,7 +6,7 @@ namespace ArcanumMessenger.Services.AuthServices.LoginServices;
 
 public class TokenIssuanceService(AppDbContext db, JwtService jwtService)
 {
-    private const int SessionDurationHours = 24;
+    public const int SessionDurationHours = 24;
 
     public async Task<(string AccessToken, string RefreshToken)> IssueAsync(
         Guid userId,

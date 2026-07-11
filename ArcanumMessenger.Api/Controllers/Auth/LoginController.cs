@@ -8,9 +8,9 @@ namespace ArcanumMessenger.Controllers.Auth;
 [ApiController]
 [Route("api/login")]
 public class LoginController(
-    LoginSessionService loginSession, 
-    EmailHasher emailHasher, 
-    AuthService authService, 
+    LoginSessionService loginSession,
+    EmailHasher emailHasher,
+    AuthService authService,
     TokenIssuanceService tokenIssuance) : ControllerBase
 {
 
@@ -123,7 +123,7 @@ public class LoginController(
         if (session.Step != expectedStep)
             return BadRequest(new CompleteLoginResponse(Success: false, Reason: "invalid_step"));
 
-        var user = await authService.GetUserByEmailHashAsync(session.EmailHash!, ct);
+        var user = await authService.GetUserAsync(u => u.EmailHash == session.EmailHash, ct);
         if (user is null)
             return StatusCode(StatusCodes.Status410Gone, new CompleteLoginResponse(Success: false, Reason: "session_expired"));
 
@@ -133,29 +133,10 @@ public class LoginController(
         var (accessToken, refreshToken) = await tokenIssuance.IssueAsync(
             user.Id, deviceName, deviceType: null, ipAddress, ct);
 
-        SetAuthCookies(accessToken, refreshToken);
+        Response.SetAuthCookies(accessToken, refreshToken);
 
         await loginSession.DeleteAsync(request.SessionId, ct);
 
         return Ok(new CompleteLoginResponse(Success: true));
-    }
-
-    private void SetAuthCookies(string accessToken, string refreshToken)
-    {
-        Response.Cookies.Append("access_token", accessToken, new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.Strict,
-            Expires = DateTimeOffset.UtcNow.AddMinutes(10)
-        });
-
-        Response.Cookies.Append("refresh_token", refreshToken, new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.Strict,
-            Expires = DateTimeOffset.UtcNow.AddHours(24)
-        });
     }
 }
