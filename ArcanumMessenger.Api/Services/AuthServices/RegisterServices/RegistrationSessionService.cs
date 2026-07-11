@@ -7,7 +7,7 @@ public class RegistrationSessionService(IDistributedCache cache)
     : RedisSessionService<RegistrationSession>(cache)
 {
     protected override string KeyPrefix => "registration";
-    protected override TimeSpan SessionTtl => TimeSpan.FromMinutes(10);
+    protected override TimeSpan SessionTtl => TimeSpan.FromMinutes(RedisSessionDurationMinutes);
 
     public async Task<string> CreateAsync(string username, CancellationToken ct)
     {

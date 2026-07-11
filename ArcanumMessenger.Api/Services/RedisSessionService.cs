@@ -5,6 +5,7 @@ namespace ArcanumMessenger.Services;
 
 public abstract class RedisSessionService<TSession>(IDistributedCache cache) where TSession : class
 {
+    protected const int RedisSessionDurationMinutes = 10;
     protected abstract string KeyPrefix { get; }
     protected abstract TimeSpan SessionTtl { get; }
 

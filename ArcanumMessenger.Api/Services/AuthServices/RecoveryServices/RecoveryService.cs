@@ -46,8 +46,6 @@ public class RecoveryService(AppDbContext db, RecoverySessionService recoverySes
 
         if (user is null)
         {
-            // Той самий timing-safe трюк, що й при логіні: рахуємо dummy-порівняння,
-            // щоб "юзера нема" і "фраза неправильна" займали однаковий час
             PasswordHasher.Verify(phraseAuth, PasswordHasher.DummyPasswordHash);
             await recoverySession.UpdateAsync(sessionId, session, ct);
             return RecoveryResult.Fail(genericError);

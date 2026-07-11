@@ -1,6 +1,5 @@
 using ArcanumMessenger.Contracts.Auth.Recovery;
 using Microsoft.Extensions.Caching.Distributed;
-using System.Text.Json;
 
 namespace ArcanumMessenger.Services.AuthServices.RecoveryServices;
 
@@ -8,11 +7,10 @@ public class RecoverySessionService(IDistributedCache cache)
     : RedisSessionService<RecoverySession>(cache)
 {
     protected override string KeyPrefix => "recovery";
-    protected override TimeSpan SessionTtl => TimeSpan.FromMinutes(10);
+    protected override TimeSpan SessionTtl => TimeSpan.FromMinutes(RedisSessionDurationMinutes);
 
     public async Task<string> CreateAsync(CancellationToken ct)
     {
-        var sessionId = Guid.NewGuid().ToString("N");
         var session = new RecoverySession
         {
             Step = 0,
@@ -20,13 +18,6 @@ public class RecoverySessionService(IDistributedCache cache)
             CreatedAt = DateTime.UtcNow
         };
 
-        await cache.SetStringAsync(
-            $"recovery:{sessionId}",
-            JsonSerializer.Serialize(session),
-            new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = SessionTtl },
-            ct
-        );
-
-        return sessionId;
+        return await CreateAsync(session, ct);
     }
 }
