@@ -5,9 +5,10 @@ export async function startRegistration(username: string): Promise<{
     sessionId?: string;
     reason?: string;
 }> {
-    const res = await apiFetch("/api/auth/register/start", {
+    const res = await apiFetch("/api/register/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ username }),
     });
     return res.json();
@@ -21,6 +22,7 @@ export async function submitEmail(
     const res = await apiFetch("/api/register/email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ sessionId, email, emailVisibilityConsent }),
     });
     return res.json();
@@ -33,6 +35,7 @@ export async function verifyCode(
     const res = await apiFetch("/api/register/verify-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ sessionId, code }),
     });
     return res.json();
@@ -44,6 +47,7 @@ export async function resendCode(
     const res = await apiFetch("/api/register/resend-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ sessionId }),
     });
     return res.json();
@@ -59,6 +63,7 @@ export async function submitPassword(
     const res = await apiFetch("/api/register/password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ sessionId, authKey, kdfSalt }),
     });
     return res.json();
@@ -73,6 +78,7 @@ export async function confirmRecovery(
     const res = await apiFetch("/api/register/recovery/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ sessionId, phrase1Auth, phrase2Auth }),
     });
     return res.json();
@@ -84,6 +90,7 @@ export async function finalizeRegistration(
     const res = await apiFetch("/api/register/finalize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ sessionId }),
     });
     return res.json();
