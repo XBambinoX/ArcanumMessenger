@@ -31,6 +31,8 @@ public class RegisterController(
     private const int AuthKeySize = 32;
     private const int KdfSaltSize = 16;
 
+    private static string GenerateCode() => Rng.Next(0, 1_000_000).ToString("D6");
+
 
     [HttpPost("start")]
     public async Task<ActionResult<StartRegistrationResponse>> StartRegistration(
@@ -66,7 +68,7 @@ public class RegisterController(
         if (await authService.IsEmailExist(emailHash, ct))
             return Conflict(new SubmitEmailResponse(Success: false, Reason: "email_taken"));
 
-        var code = Rng.Next(0, 1_000_000).ToString("D6");
+        var code = GenerateCode();
 
         session.EmailVisibilityConsent = request.EmailVisibilityConsent;
         session.PlainEmail = request.Email.Trim();
@@ -147,7 +149,7 @@ public class RegisterController(
             DateTime.UtcNow < session.LastCodeSentAt.Value.AddSeconds(ResendCodeCooldownSeconds))
             return StatusCode(StatusCodes.Status429TooManyRequests, new ResendCodeResponse(Success: false, Reason: "cooldown_active"));
 
-        var code = Rng.Next(0, 1_000_000).ToString("D6");
+        var code = GenerateCode();
         session.VerificationCode = code;
         session.CodeExpiresAt = DateTime.UtcNow.AddMinutes(CodeDurationMinutesVerif);
         session.CodeAttempts = 0;

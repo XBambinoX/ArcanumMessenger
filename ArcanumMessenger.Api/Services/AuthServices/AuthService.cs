@@ -59,13 +59,4 @@ public class AuthService(AppDbContext db, EncryptionService encryption, TotpServ
             .FirstOrDefaultAsync(ct);
     }
 
-
-    public async Task<bool> UserRequiresTotpAsync(string emailHash, CancellationToken ct)
-    {
-        return await db.Users
-            .Where(u => u.EmailHash == emailHash && !u.IsDeleted)
-            .Select(u => u.TwoFactorEnabled)
-            .FirstOrDefaultAsync(ct);
-    }
-
 }

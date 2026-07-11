@@ -11,7 +11,8 @@ public class LoginController(
     LoginSessionService loginSession,
     EmailHasher emailHasher,
     AuthService authService,
-    TokenIssuanceService tokenIssuance) : ControllerBase
+    TokenIssuanceService tokenIssuance,
+    ILogger<LoginController> logger) : ControllerBase
 {
 
     private const int AuthKeySize = 32;
@@ -116,16 +117,15 @@ public class LoginController(
         if (session is null)
             return StatusCode(StatusCodes.Status410Gone, new CompleteLoginResponse(Success: false, Reason: "session_expired"));
 
-        Console.WriteLine($"[CompleteLogin] session.Step={session.Step}");
-        var requiresTotp = await authService.UserRequiresTotpAsync(session.EmailHash!, ct);
-        var expectedStep = requiresTotp ? 2 : 1;
-
-        if (session.Step != expectedStep)
-            return BadRequest(new CompleteLoginResponse(Success: false, Reason: "invalid_step"));
-
         var user = await authService.GetUserAsync(u => u.EmailHash == session.EmailHash, ct);
         if (user is null)
             return StatusCode(StatusCodes.Status410Gone, new CompleteLoginResponse(Success: false, Reason: "session_expired"));
+
+        logger.LogInformation("CompleteLogin session step: {Step}", session.Step);
+
+        var expectedStep = user.TwoFactorEnabled ? 2 : 1;
+        if (session.Step != expectedStep)
+            return BadRequest(new CompleteLoginResponse(Success: false, Reason: "invalid_step"));
 
         var deviceName = Request.Headers.UserAgent.ToString();
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
