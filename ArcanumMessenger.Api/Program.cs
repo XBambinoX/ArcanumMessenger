@@ -1,6 +1,5 @@
 using ArcanumMessenger.Data;
 using Microsoft.EntityFrameworkCore;
-using ArcanumMessenger.Services;
 using ArcanumMessenger.Services.AuthServices;
 using ArcanumMessenger.Services.AuthServices.RegisterServices;
 using ArcanumMessenger.Services.AuthServices.RecoveryServices;

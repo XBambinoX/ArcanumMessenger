@@ -2,7 +2,7 @@ using ArcanumMessenger.Contracts.Auth.Recovery;
 using ArcanumMessenger.Services.AuthServices.RecoveryServices;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ArcanumMessenger.Controllers;
+namespace ArcanumMessenger.Controllers.Auth;
 
 [ApiController]
 [Route("api/auth/recovery")]

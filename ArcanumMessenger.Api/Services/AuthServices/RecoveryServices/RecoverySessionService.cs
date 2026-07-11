@@ -2,7 +2,7 @@ using ArcanumMessenger.Contracts.Auth.Recovery;
 using Microsoft.Extensions.Caching.Distributed;
 using System.Text.Json;
 
-namespace ArcanumMessenger.Services;
+namespace ArcanumMessenger.Services.AuthServices.RecoveryServices;
 
 public class RecoverySessionService(IDistributedCache cache)
     : RedisSessionService<RecoverySession>(cache)
@@ -10,7 +10,7 @@ public class RecoverySessionService(IDistributedCache cache)
     protected override string KeyPrefix => "recovery";
     protected override TimeSpan SessionTtl => TimeSpan.FromMinutes(10);
 
-        public async Task<string> CreateAsync(CancellationToken ct)
+    public async Task<string> CreateAsync(CancellationToken ct)
     {
         var sessionId = Guid.NewGuid().ToString("N");
         var session = new RecoverySession

@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using ArcanumMessenger.Contracts.Auth.Login;
-using ArcanumMessenger.Services;
 using ArcanumMessenger.Services.AuthServices;
 using ArcanumMessenger.Services.AuthServices.LoginServices;
 namespace ArcanumMessenger.Controllers.Auth;
