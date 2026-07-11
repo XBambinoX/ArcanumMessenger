@@ -15,16 +15,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         (async () => {
-            const { success } = await checkSession();
-            if (success) {
-                setIsAuthenticated(true);
+            try {
+                const { success } = await checkSession();
+                if (success) {
+                    setIsAuthenticated(true);
+                    setSessionChecked(true);
+                    return;
+                }
+                const refreshRes = await refreshSession();
+                setIsAuthenticated(refreshRes.success);
+            } catch {
+                setIsAuthenticated(false);
+            } finally {
                 setSessionChecked(true);
-                return;
             }
-
-            const refreshRes = await refreshSession();
-            setIsAuthenticated(refreshRes.success);
-            setSessionChecked(true);
         })();
     }, []);
 

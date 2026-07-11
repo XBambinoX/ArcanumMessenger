@@ -1,20 +1,16 @@
-// Kestrel serves HTTP on 5135 and HTTPS on 7039. If the page itself was
-// loaded over HTTPS, the browser blocks plain-HTTP fetches from it (mixed
-// content), so we have to follow the same protocol for the API too.
-const API_PORT = window.location.protocol === "https:" ? 7039 : 5135;
-const API_BASE = `${window.location.protocol}//${window.location.hostname}:${API_PORT}`;
+import { apiFetch } from "../lib/apiFetch";
 
 export async function startRegistration(username: string): Promise<{
     success: boolean;
     sessionId?: string;
     reason?: string;
 }> {
-    const res = await fetch(`${API_BASE}/api/register/start`, {
+    const res = await apiFetch("/api/register/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ username }),
     });
-    if (res.status >= 500) throw new Error("Server error, try again later");
     return res.json();
 }
 
@@ -23,12 +19,12 @@ export async function submitEmail(
     email: string,
     emailVisibilityConsent: boolean,
 ): Promise<{ success: boolean; reason?: string }> {
-    const res = await fetch(`${API_BASE}/api/register/email`, {
+    const res = await apiFetch("/api/register/email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ sessionId, email, emailVisibilityConsent }),
     });
-    if (res.status >= 500) throw new Error("Server error, try again later");
     return res.json();
 }
 
@@ -36,24 +32,24 @@ export async function verifyCode(
     sessionId: string,
     code: string,
 ): Promise<{ success: boolean; reason?: string }> {
-    const res = await fetch(`${API_BASE}/api/register/verify-code`, {
+    const res = await apiFetch("/api/register/verify-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ sessionId, code }),
     });
-    if (res.status >= 500) throw new Error("Server error, try again later");
     return res.json();
 }
 
 export async function resendCode(
     sessionId: string,
 ): Promise<{ success: boolean; reason?: string }> {
-    const res = await fetch(`${API_BASE}/api/register/resend-code`, {
+    const res = await apiFetch("/api/register/resend-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ sessionId }),
     });
-    if (res.status >= 500) throw new Error("Server error, try again later");
     return res.json();
 }
 
@@ -64,12 +60,12 @@ export async function submitPassword(
     authKey: string,
     kdfSalt: string,
 ): Promise<{ success: boolean; reason?: string }> {
-    const res = await fetch(`${API_BASE}/api/register/password`, {
+    const res = await apiFetch("/api/register/password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ sessionId, authKey, kdfSalt }),
     });
-    if (res.status >= 500) throw new Error("Server error, try again later");
     return res.json();
 }
 
@@ -79,23 +75,23 @@ export async function confirmRecovery(
     phrase1Auth: string,
     phrase2Auth: string,
 ): Promise<{ success: boolean; reason?: string }> {
-    const res = await fetch(`${API_BASE}/api/register/recovery/confirm`, {
+    const res = await apiFetch("/api/register/recovery/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ sessionId, phrase1Auth, phrase2Auth }),
     });
-    if (res.status >= 500) throw new Error("Server error, try again later");
     return res.json();
 }
 
 export async function finalizeRegistration(
     sessionId: string,
 ): Promise<{ success: boolean; reason?: string }> {
-    const res = await fetch(`${API_BASE}/api/register/finalize`, {
+    const res = await apiFetch("/api/register/finalize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ sessionId }),
     });
-    if (res.status >= 500) throw new Error("Server error, try again later");
     return res.json();
 }
