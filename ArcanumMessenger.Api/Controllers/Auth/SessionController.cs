@@ -78,7 +78,7 @@ public class SessionController(TokenIssuanceService tokenIssuance) : ControllerB
             HttpOnly = true,
             Secure = true,
             SameSite = isDevelopment ? SameSiteMode.None : SameSiteMode.Strict,
-            Expires = DateTimeOffset.UtcNow.AddDays(-1) // у минулому — примусово протерміновує
+            Expires = DateTimeOffset.UtcNow.AddDays(-1)
         };
 
         Response.Cookies.Delete("access_token", options);

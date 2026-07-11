@@ -7,20 +7,27 @@ namespace ArcanumMessenger.Services.AuthServices;
 
 public class AuthService(AppDbContext db, EncryptionService encryption, TotpService totp)
 {
+
+    public async Task<bool> IsEmailExist(string emailHash, CancellationToken ct)
+    {
+        return await db.Users
+                .AsNoTracking()
+                .AnyAsync(u => u.EmailHash == emailHash && !u.IsDeleted, ct);
+    }
+
+
     public async Task<string?> GetKdfSaltAsync(string emailHash, CancellationToken ct)
     {
         return await db.Users
-            .Where(u => u.EmailHash == emailHash)
-            .Select(u => u.KdfSalt)
-            .FirstOrDefaultAsync(ct);
+                .Where(u => u.EmailHash == emailHash)
+                .Select(u => u.KdfSalt)
+                .FirstOrDefaultAsync(ct);
     }
 
 
     public async Task<(bool IsCorrect, bool RequiresTotp)> CheckPassAsync(string emailHash, string AuthKey, CancellationToken ct)
     {
-        var user = await db.Users
-                            .Where(u => u.EmailHash == emailHash && !u.IsDeleted)
-                            .FirstOrDefaultAsync(ct);
+        var user = await GetUserByEmailHashAsync(emailHash, ct);
 
         var passHash = user?.PasswordHash ?? PasswordHasher.DummyPasswordHash;
         var isCorrect = PasswordHasher.Verify(AuthKey, passHash);
@@ -31,9 +38,7 @@ public class AuthService(AppDbContext db, EncryptionService encryption, TotpServ
 
     public async Task<bool> CheckTotpAsync(string emailHash, string code, CancellationToken ct)
     {
-        var user = await db.Users
-                            .Where(u => u.EmailHash == emailHash && !u.IsDeleted)
-                            .FirstOrDefaultAsync(ct);
+        var user = await GetUserByEmailHashAsync(emailHash, ct);
 
         if (user is null || !user.TwoFactorEnabled || user.TwoFactorSecretEnc is null)
             return false;
@@ -46,7 +51,10 @@ public class AuthService(AppDbContext db, EncryptionService encryption, TotpServ
 
     public async Task<User?> GetUserByEmailHashAsync(string emailHash, CancellationToken ct)
     {
-        return await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.EmailHash == emailHash && !u.IsDeleted, ct);
+        return await db.Users
+                .AsNoTracking()
+                .Where(u => u.EmailHash == emailHash && !u.IsDeleted)
+                .FirstOrDefaultAsync(ct);
     }
 
     public async Task<bool> UserRequiresTotpAsync(string emailHash, CancellationToken ct)
@@ -56,4 +64,5 @@ public class AuthService(AppDbContext db, EncryptionService encryption, TotpServ
             .Select(u => u.TwoFactorEnabled)
             .FirstOrDefaultAsync(ct);
     }
+
 }

@@ -1,9 +1,9 @@
 import { apiFetch } from "../lib/apiFetch";
 
 export async function startRecovery(
-    email: string
+    email: string,
 ): Promise<{ success: boolean; sessionId?: string; reason?: string }> {
-    const res = await apiFetch("/api/auth/recovery/start", {
+    const res = await apiFetch("/api/recovery/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -15,9 +15,9 @@ export async function startRecovery(
 export async function verifyRecovery(
     sessionId: string,
     email: string,
-    phraseAuth: string
+    phraseAuth: string,
 ): Promise<{ success: boolean; reason?: string }> {
-    const res = await apiFetch("/api/auth/recovery/verify", {
+    const res = await apiFetch("/api/recovery/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -29,9 +29,9 @@ export async function verifyRecovery(
 export async function resetPassword(
     sessionId: string,
     authKey: string,
-    kdfSalt: string
+    kdfSalt: string,
 ): Promise<{ success: boolean; reason?: string }> {
-    const res = await apiFetch("/api/auth/recovery/reset-password", {
+    const res = await apiFetch("/api/recovery/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

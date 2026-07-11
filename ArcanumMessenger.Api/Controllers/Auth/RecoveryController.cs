@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace ArcanumMessenger.Controllers.Auth;
 
 [ApiController]
-[Route("api/auth/recovery")]
+[Route("api/recovery")]
 public class RecoveryController(RecoveryService recoveryService) : ControllerBase
 {
     [HttpPost("start")]

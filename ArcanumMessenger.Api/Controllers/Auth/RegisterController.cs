@@ -11,7 +11,13 @@ namespace ArcanumMessenger.Controllers.Auth;
 
 [ApiController]
 [Route("api/register")]
-public class RegisterController(AppDbContext db, RegistrationSessionService registrationSession, EmailService emailService, EncryptionService encryption, EmailHasher emailHasher) : ControllerBase
+public class RegisterController(
+    AppDbContext db,
+    RegistrationSessionService registrationSession,
+    EmailService emailService,
+    EncryptionService encryption,
+    EmailHasher emailHasher,
+    AuthService authService) : ControllerBase
 {
     private static readonly Regex UsernameRegex = new("^[a-zA-Z0-9_]{3,32}$", RegexOptions.Compiled);
     private static readonly Regex PhraseAuthRegex = new("^[0-9a-f]{64}$", RegexOptions.Compiled);
@@ -57,11 +63,7 @@ public class RegisterController(AppDbContext db, RegistrationSessionService regi
 
         var emailHash = emailHasher.Hash(request.Email);
 
-        var emailExists = await db.Users
-            .AsNoTracking()
-            .AnyAsync(u => u.EmailHash == emailHash && !u.IsDeleted, ct);
-
-        if (emailExists)
+        if (await authService.IsEmailExist(emailHash, ct))
             return Conflict(new SubmitEmailResponse(Success: false, Reason: "email_taken"));
 
         var code = Rng.Next(0, 1_000_000).ToString("D6");
@@ -243,9 +245,7 @@ public class RegisterController(AppDbContext db, RegistrationSessionService regi
 
         var emailHash = emailHasher.Hash(session.PlainEmail);
 
-        var emailExists = await db.Users
-            .AnyAsync(u => u.EmailHash == emailHash && !u.IsDeleted, ct);
-        if (emailExists)
+        if (await authService.IsEmailExist(emailHash, ct))
             return Conflict(new FinalizeRegistrationResponse(Success: false, Reason: "email_taken"));
 
         // One DEK per user encrypts all of their profile fields. It is stored
