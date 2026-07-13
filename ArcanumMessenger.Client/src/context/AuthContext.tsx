@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { checkSession, refreshSession } from "../api/session";
 
 interface AuthContextValue {
@@ -12,8 +12,12 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [sessionChecked, setSessionChecked] = useState(false);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const didInit = useRef(false);
 
     useEffect(() => {
+        if (didInit.current) return;
+        didInit.current = true;
+
         (async () => {
             try {
                 const { success } = await checkSession();
