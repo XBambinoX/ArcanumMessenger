@@ -6,12 +6,14 @@ interface ChatListProps {
     chats: ChatSummary[];
     selectedChatId: string | null;
     onSelect: (chatId: string) => void;
+    onToggleArchive: (chatId: string) => void;
 }
 
 export default function ChatList({
     chats,
     selectedChatId,
     onSelect,
+    onToggleArchive,
 }: ChatListProps) {
     if (chats.length === 0) {
         return <p className={styles.empty}>No chats here yet</p>;
@@ -57,6 +59,59 @@ export default function ChatList({
                                         {formatChatTime(chat.lastMessageAt)}
                                     </span>
                                 )}
+                                <span
+                                    className={styles.archiveBtn}
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-label={
+                                        chat.isArchived
+                                            ? "Unarchive"
+                                            : "Archive"
+                                    }
+                                    title={
+                                        chat.isArchived
+                                            ? "Unarchive"
+                                            : "Archive"
+                                    }
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onToggleArchive(chat.id);
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                            e.stopPropagation();
+                                            onToggleArchive(chat.id);
+                                        }
+                                    }}
+                                >
+                                    {chat.isArchived ? (
+                                        <svg
+                                            width="14"
+                                            height="14"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        >
+                                            <path d="M21 8v13H3V8M1 3h22v5H1zM12 17V9M8 13l4-4 4 4" />
+                                        </svg>
+                                    ) : (
+                                        <svg
+                                            width="14"
+                                            height="14"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        >
+                                            <path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4" />
+                                        </svg>
+                                    )}
+                                </span>
                             </div>
                             <div className={styles.bottomRow}>
                                 <span className={styles.preview}>

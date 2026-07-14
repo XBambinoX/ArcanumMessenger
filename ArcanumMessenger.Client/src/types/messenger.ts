@@ -5,6 +5,10 @@
 
 export type ChatType = "direct" | "group";
 
+// Fixed categories, not user-defined folders. "unread" is computed from
+// unreadCount, "archive" maps to ChatMember.IsArchived on the server.
+export type ChatFolder = "all" | "unread" | "archive";
+
 export interface ChatSummary {
     id: string;
     type: ChatType;

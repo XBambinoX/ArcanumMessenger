@@ -103,6 +103,56 @@
     background: rgba(124, 58, 237, 0.09);
 }
 
+.folders {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.folderTab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 9px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: rgba(148, 163, 184, 0.75);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.folderTab:hover {
+    background: rgba(124, 58, 237, 0.08);
+    color: rgba(226, 232, 240, 0.9);
+}
+
+.folderActive {
+    background: linear-gradient(
+        135deg,
+        rgba(124, 58, 237, 0.22),
+        rgba(79, 70, 229, 0.14)
+    );
+    border-color: rgba(124, 58, 237, 0.3);
+    color: rgba(226, 232, 240, 0.95);
+}
+
+.folderCount {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: #fff;
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+}
+
 .chatListArea {
     flex: 1;
     overflow-y: auto;

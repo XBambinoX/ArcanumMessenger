@@ -6,23 +6,55 @@ import ChatList from "../components/ChatList";
 import ChatWindow from "../components/ChatWindow";
 import { mockChats } from "../mock/chats";
 import { mockMessages } from "../mock/messages";
+import type { ChatFolder } from "../types/messenger";
 import styles from "./AppPage.module.css";
+
+const folders: { id: ChatFolder; label: string }[] = [
+    { id: "all", label: "All" },
+    { id: "unread", label: "Unread" },
+    { id: "archive", label: "Archive" },
+];
 
 export default function AppPage() {
     const navigate = useNavigate();
     const { setAuthenticated } = useAuth();
 
+    // Local state seeded from mocks - becomes server data once the
+    // chats API exists.
+    const [chats, setChats] = useState(mockChats);
+    const [folder, setFolder] = useState<ChatFolder>("all");
     const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
     const [search, setSearch] = useState("");
 
-    const visibleChats = mockChats.filter(
+    const inFolder = {
+        all: (isArchived: boolean, _unread: number) => !isArchived,
+        unread: (isArchived: boolean, unread: number) =>
+            !isArchived && unread > 0,
+        archive: (isArchived: boolean, _unread: number) => isArchived,
+    }[folder];
+
+    const visibleChats = chats.filter(
         (chat) =>
-            !chat.isArchived &&
+            inFolder(chat.isArchived, chat.unreadCount) &&
             chat.title.toLowerCase().includes(search.trim().toLowerCase()),
     );
 
+    const unreadChatCount = chats.filter(
+        (chat) => !chat.isArchived && chat.unreadCount > 0,
+    ).length;
+
     const selectedChat =
-        mockChats.find((chat) => chat.id === selectedChatId) ?? null;
+        chats.find((chat) => chat.id === selectedChatId) ?? null;
+
+    const toggleArchive = (chatId: string) => {
+        setChats((prev) =>
+            prev.map((chat) =>
+                chat.id === chatId
+                    ? { ...chat, isArchived: !chat.isArchived }
+                    : chat,
+            ),
+        );
+    };
 
     const handleLogout = async () => {
         await logout();
@@ -93,6 +125,22 @@ export default function AppPage() {
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
+                    <nav className={styles.folders}>
+                        {folders.map(({ id, label }) => (
+                            <button
+                                key={id}
+                                className={`${styles.folderTab} ${folder === id ? styles.folderActive : ""}`}
+                                onClick={() => setFolder(id)}
+                            >
+                                {label}
+                                {id === "unread" && unreadChatCount > 0 && (
+                                    <span className={styles.folderCount}>
+                                        {unreadChatCount}
+                                    </span>
+                                )}
+                            </button>
+                        ))}
+                    </nav>
                 </header>
 
                 <div className={styles.chatListArea}>
@@ -100,6 +148,7 @@ export default function AppPage() {
                         chats={visibleChats}
                         selectedChatId={selectedChatId}
                         onSelect={setSelectedChatId}
+                        onToggleArchive={toggleArchive}
                     />
                 </div>
             </aside>

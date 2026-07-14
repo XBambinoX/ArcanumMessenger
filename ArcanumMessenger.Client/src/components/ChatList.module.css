@@ -95,6 +95,34 @@
     color: rgba(148, 163, 184, 0.6);
 }
 
+/* A span with role="button" - a real button can't be nested inside
+   the chat item, which is already a button itself. */
+.archiveBtn {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(167, 139, 250, 0.85);
+    background: rgba(124, 58, 237, 0.12);
+    opacity: 0;
+    cursor: pointer;
+    transition:
+        opacity 0.15s,
+        background 0.15s;
+}
+
+.item:hover .archiveBtn,
+.archiveBtn:focus-visible {
+    opacity: 1;
+}
+
+.archiveBtn:hover {
+    background: rgba(124, 58, 237, 0.25);
+}
+
 .bottomRow {
     display: flex;
     align-items: center;
