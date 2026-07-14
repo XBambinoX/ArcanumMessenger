@@ -6,12 +6,9 @@ services:
         container_name: arcanum-api
         ports:
             - "5135:8080"
-            - "7039:8081"
         environment:
             ASPNETCORE_ENVIRONMENT: Development
-            ASPNETCORE_URLS: https://+:8081;http://+:8080
-            ASPNETCORE_Kestrel__Certificates__Default__Path: ${KESTREL_CERT_PATH}
-            ASPNETCORE_Kestrel__Certificates__Default__Password: ${KESTREL_CERT_PASSWORD}
+            ASPNETCORE_URLS: http://+:8080
             ConnectionStrings__Postgres: Host=${POSTGRES_HOST};Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
             ConnectionStrings__Redis: redis:6379
 
@@ -27,8 +24,6 @@ services:
             Jwt__Secret: ${JWT_SECRET}
             Jwt__Issuer: ArcanumMessenger
 
-        volumes:
-            - ${HTTPS_CERT_DIR}:/https:ro
         restart: unless-stopped
         depends_on:
             db:

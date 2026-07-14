@@ -19,14 +19,11 @@ interface ServerErrorDetails {
     timestamp: string;
 }
 
-const API_PORT = window.location.protocol === "https:" ? 7039 : 5135;
-const API_BASE = `${window.location.protocol}//${window.location.hostname}:${API_PORT}`;
-
 export async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
     let res: Response;
 
     try {
-        res = await fetch(`${API_BASE}${path}`, {
+        res = await fetch(path, {
             headers: { "Content-Type": "application/json", ...init?.headers },
             ...init,
         });

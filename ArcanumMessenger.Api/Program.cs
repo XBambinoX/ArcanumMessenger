@@ -23,19 +23,6 @@ namespace ArcanumMessenger
             builder.Services.AddDbContext<AppDbContext>(options =>
                 options.UseNpgsql(builder.Configuration.GetConnectionString("Postgres")));
 
-            builder.Services.AddCors(options =>
-            {
-                options.AddPolicy("DevClient", policy =>
-                    policy.SetIsOriginAllowed(origin =>
-                    {
-                        var uri = new Uri(origin);
-                        return uri.Port == 5173;
-                    })
-                        .AllowAnyHeader()
-                        .AllowAnyMethod()
-                        .AllowCredentials());
-            });
-
             builder.Services.AddStackExchangeRedisCache(options =>
             {
                 options.Configuration = builder.Configuration.GetConnectionString("Redis");
@@ -104,9 +91,6 @@ namespace ArcanumMessenger
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
-
-            app.UseHttpsRedirection();
-            app.UseCors("DevClient");
 
             app.UseAuthentication();
             app.UseAuthorization();
