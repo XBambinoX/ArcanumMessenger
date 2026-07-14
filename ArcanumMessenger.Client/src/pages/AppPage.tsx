@@ -3,7 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { logout } from "../api/session";
 import { useAuth } from "../context/AuthContext";
 import ChatList from "../components/ChatList";
+import ChatWindow from "../components/ChatWindow";
 import { mockChats } from "../mock/chats";
+import { mockMessages } from "../mock/messages";
 import styles from "./AppPage.module.css";
 
 export default function AppPage() {
@@ -18,6 +20,9 @@ export default function AppPage() {
             !chat.isArchived &&
             chat.title.toLowerCase().includes(search.trim().toLowerCase()),
     );
+
+    const selectedChat =
+        mockChats.find((chat) => chat.id === selectedChatId) ?? null;
 
     const handleLogout = async () => {
         await logout();
@@ -100,42 +105,53 @@ export default function AppPage() {
             </aside>
 
             <main className={styles.main}>
-                <div className={styles.emptyState}>
-                    <svg
-                        width="56"
-                        height="56"
-                        viewBox="0 0 48 48"
-                        fill="none"
-                    >
-                        <path
-                            d="M16 12H32a6 6 0 0 1 6 6v10a6 6 0 0 1-6 6H20l-6 5v-5a6 6 0 0 1-6-6V18a6 6 0 0 1 6-6z"
-                            stroke="url(#eg)"
-                            strokeWidth="2"
+                {selectedChat ? (
+                    <ChatWindow
+                        key={selectedChat.id}
+                        chat={selectedChat}
+                        initialMessages={mockMessages[selectedChat.id] ?? []}
+                    />
+                ) : (
+                    <div className={styles.emptyState}>
+                        <svg
+                            width="56"
+                            height="56"
+                            viewBox="0 0 48 48"
                             fill="none"
-                            strokeLinejoin="round"
-                        />
-                        <defs>
-                            <linearGradient
-                                id="eg"
-                                x1="6"
-                                y1="4"
-                                x2="42"
-                                y2="44"
-                                gradientUnits="userSpaceOnUse"
-                            >
-                                <stop stopColor="#a78bfa" stopOpacity="0.5" />
-                                <stop
-                                    offset="1"
-                                    stopColor="#22d3ee"
-                                    stopOpacity="0.5"
-                                />
-                            </linearGradient>
-                        </defs>
-                    </svg>
-                    <p className={styles.emptyText}>
-                        Select a chat to start messaging
-                    </p>
-                </div>
+                        >
+                            <path
+                                d="M16 12H32a6 6 0 0 1 6 6v10a6 6 0 0 1-6 6H20l-6 5v-5a6 6 0 0 1-6-6V18a6 6 0 0 1 6-6z"
+                                stroke="url(#eg)"
+                                strokeWidth="2"
+                                fill="none"
+                                strokeLinejoin="round"
+                            />
+                            <defs>
+                                <linearGradient
+                                    id="eg"
+                                    x1="6"
+                                    y1="4"
+                                    x2="42"
+                                    y2="44"
+                                    gradientUnits="userSpaceOnUse"
+                                >
+                                    <stop
+                                        stopColor="#a78bfa"
+                                        stopOpacity="0.5"
+                                    />
+                                    <stop
+                                        offset="1"
+                                        stopColor="#22d3ee"
+                                        stopOpacity="0.5"
+                                    />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <p className={styles.emptyText}>
+                            Select a chat to start messaging
+                        </p>
+                    </div>
+                )}
             </main>
         </div>
     );
