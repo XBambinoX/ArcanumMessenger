@@ -70,33 +70,11 @@ export default function AppPage() {
                 <header className={styles.sidebarHeader}>
                     <div className={styles.brandRow}>
                         <div className={styles.logoBox}>
-                            <svg
-                                width="20"
-                                height="20"
-                                viewBox="0 0 48 48"
-                                fill="none"
-                            >
-                                <path
-                                    d="M16 12H32a6 6 0 0 1 6 6v10a6 6 0 0 1-6 6H20l-6 5v-5a6 6 0 0 1-6-6V18a6 6 0 0 1 6-6z"
-                                    stroke="url(#rg)"
-                                    strokeWidth="2.2"
-                                    fill="none"
-                                    strokeLinejoin="round"
-                                />
-                                <defs>
-                                    <linearGradient
-                                        id="rg"
-                                        x1="6"
-                                        y1="4"
-                                        x2="42"
-                                        y2="44"
-                                        gradientUnits="userSpaceOnUse"
-                                    >
-                                        <stop stopColor="#a78bfa" />
-                                        <stop offset="1" stopColor="#22d3ee" />
-                                    </linearGradient>
-                                </defs>
-                            </svg>
+                            <img
+                                className={styles.logoImg}
+                                src="/logo.svg"
+                                alt="Arcanum"
+                            />
                         </div>
                         <span className={styles.brand}>Arcanum</span>
                         <button

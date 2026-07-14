@@ -9,6 +9,7 @@
 }
 
 .panel {
+    box-sizing: border-box;
     width: 340px;
     max-width: 90vw;
     height: 100%;

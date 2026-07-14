@@ -49,6 +49,16 @@
     flex-shrink: 0;
 }
 
+.logoImg {
+    /* display: block kills the inline-image baseline gap that made the
+       logo sit slightly low inside the box; the tiny translate corrects
+       the optical weight of the mark itself */
+    display: block;
+    width: 20px;
+    height: auto;
+    transform: translateY(-1px);
+}
+
 .brand {
     flex: 1;
     font-size: 17px;
@@ -80,6 +90,7 @@
 }
 
 .search {
+    box-sizing: border-box;
     width: 100%;
     padding: 9px 14px;
     border-radius: 10px;
