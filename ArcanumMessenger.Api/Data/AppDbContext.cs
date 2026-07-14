@@ -7,9 +7,19 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 {
     public DbSet<User> Users => Set<User>();
     public DbSet<Session> Sessions => Set<Session>();
+    public DbSet<Chat> Chats => Set<Chat>();
+    public DbSet<ChatMember> ChatMembers => Set<ChatMember>();
+    public DbSet<Contact> Contacts => Set<Contact>();
+    public DbSet<Message> Messages => Set<Message>();
+    public DbSet<UserSettings> UserSettings => Set<UserSettings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // Deferred: no per-message read receipts yet, ChatMember.LastReadAt
+        // covers unread counts for now. Otherwise EF Core pulls this in
+        // anyway via Message.Reads and fails - it has no key configured.
+        modelBuilder.Ignore<MessageRead>();
+
         modelBuilder.Entity<User>(e =>
         {
             e.HasKey(u => u.Id);
@@ -28,6 +38,72 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(s => s.User)
                 .WithMany()
                 .HasForeignKey(s => s.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Chat>(e =>
+        {
+            e.HasKey(c => c.Id);
+            e.Property(c => c.Id).HasDefaultValueSql("gen_random_uuid()");
+            e.Property(c => c.CreatedAt).HasDefaultValueSql("NOW()");
+            e.HasOne(c => c.Creator)
+                .WithMany()
+                .HasForeignKey(c => c.CreatedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ChatMember>(e =>
+        {
+            e.HasKey(cm => new { cm.ChatId, cm.UserId });
+            e.HasOne(cm => cm.Chat)
+                .WithMany(c => c.Members)
+                .HasForeignKey(cm => cm.ChatId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(cm => cm.User)
+                .WithMany()
+                .HasForeignKey(cm => cm.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Message>(e =>
+        {
+            e.HasKey(m => m.Id);
+            e.Property(m => m.Id).HasDefaultValueSql("gen_random_uuid()");
+            e.Property(m => m.CreatedAt).HasDefaultValueSql("NOW()");
+            e.HasOne(m => m.Chat)
+                .WithMany(c => c.Messages)
+                .HasForeignKey(m => m.ChatId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(m => m.Sender)
+                .WithMany()
+                .HasForeignKey(m => m.SenderId)
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(m => m.ReplyTo)
+                .WithMany()
+                .HasForeignKey(m => m.ReplyToId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<Contact>(e =>
+        {
+            e.HasKey(c => new { c.UserId, c.ContactId });
+            e.Property(c => c.CreatedAt).HasDefaultValueSql("NOW()");
+            e.HasOne(c => c.User)
+                .WithMany()
+                .HasForeignKey(c => c.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(c => c.ContactUser)
+                .WithMany()
+                .HasForeignKey(c => c.ContactId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<UserSettings>(e =>
+        {
+            e.HasKey(s => s.UserId);
+            e.HasOne(s => s.User)
+                .WithOne()
+                .HasForeignKey<UserSettings>(s => s.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }
