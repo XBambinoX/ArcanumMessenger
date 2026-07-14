@@ -108,13 +108,6 @@
     overflow-y: auto;
 }
 
-.listPlaceholder {
-    margin: 40px 16px;
-    text-align: center;
-    font-size: 14px;
-    color: rgba(148, 163, 184, 0.5);
-}
-
 /* ── MAIN AREA ── */
 .main {
     flex: 1;

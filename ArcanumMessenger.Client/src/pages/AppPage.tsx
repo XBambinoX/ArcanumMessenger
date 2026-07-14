@@ -1,11 +1,23 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { logout } from "../api/session";
 import { useAuth } from "../context/AuthContext";
+import ChatList from "../components/ChatList";
+import { mockChats } from "../mock/chats";
 import styles from "./AppPage.module.css";
 
 export default function AppPage() {
     const navigate = useNavigate();
     const { setAuthenticated } = useAuth();
+
+    const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+    const [search, setSearch] = useState("");
+
+    const visibleChats = mockChats.filter(
+        (chat) =>
+            !chat.isArchived &&
+            chat.title.toLowerCase().includes(search.trim().toLowerCase()),
+    );
 
     const handleLogout = async () => {
         await logout();
@@ -73,13 +85,17 @@ export default function AppPage() {
                         className={styles.search}
                         type="text"
                         placeholder="Search"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
                     />
                 </header>
 
                 <div className={styles.chatListArea}>
-                    <p className={styles.listPlaceholder}>
-                        Your chats will appear here
-                    </p>
+                    <ChatList
+                        chats={visibleChats}
+                        selectedChatId={selectedChatId}
+                        onSelect={setSelectedChatId}
+                    />
                 </div>
             </aside>
 
