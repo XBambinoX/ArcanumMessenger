@@ -1,7 +1,6 @@
 ﻿using ArcanumMessenger.Contracts.Auth.Register;
 using ArcanumMessenger.Data;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 using ArcanumMessenger.Services.AuthServices;
 using ArcanumMessenger.Services.AuthServices.RegisterServices;
@@ -65,8 +64,14 @@ public class RegisterController(
 
         var emailHash = emailHasher.Hash(request.Email);
 
-        if (await authService.IsEmailExist(emailHash, ct))
-            return Conflict(new SubmitEmailResponse(Success: false, Reason: "email_taken"));
+        // A taken email must not be visible from the outside, or this form
+        // becomes a way to probe which emails are registered (bypassing all
+        // the anti-enumeration work in the login flow). The response and the
+        // session look exactly the same either way; the only difference is
+        // which email the mailbox owner receives. The code below is stored
+        // but never sent in the taken case, so guessing at the code step
+        // behaves identically too.
+        var emailTaken = await authService.IsEmailExist(emailHash, ct);
 
         var code = GenerateCode();
 
@@ -76,13 +81,17 @@ public class RegisterController(
         session.CodeExpiresAt = DateTime.UtcNow.AddMinutes(CodeDurationMinutesVerif);
         session.CodeAttempts = 0;
         session.LastCodeSentAt = DateTime.UtcNow;
+        session.EmailTaken = emailTaken;
         session.Step = 1;
 
         await registrationSession.UpdateAsync(request.SessionId, session, ct);
 
         try
         {
-            await emailService.SendVerificationCodeAsync(session.PlainEmail, code, ct);
+            if (emailTaken)
+                await emailService.SendAccountExistsNoticeAsync(session.PlainEmail, ct);
+            else
+                await emailService.SendVerificationCodeAsync(session.PlainEmail, code, ct);
         }
         catch
         {
@@ -160,7 +169,12 @@ public class RegisterController(
 
         try
         {
-            await emailService.SendVerificationCodeAsync(session.PlainEmail, code, ct);
+            // Same rule as SubmitEmail: a taken email gets the notice again,
+            // never a usable code.
+            if (session.EmailTaken)
+                await emailService.SendAccountExistsNoticeAsync(session.PlainEmail, ct);
+            else
+                await emailService.SendVerificationCodeAsync(session.PlainEmail, code, ct);
         }
         catch
         {
