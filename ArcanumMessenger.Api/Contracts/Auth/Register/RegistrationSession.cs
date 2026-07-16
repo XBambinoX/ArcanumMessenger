@@ -12,6 +12,11 @@ public class RegistrationSession
     public DateTime? CodeExpiresAt { get; set; }
     public int CodeAttempts { get; set; }
     public string? PlainEmail { get; set; }
+    // Server-side only, never sent to the client: when the email is already
+    // registered, the flow looks exactly the same from the outside (so the
+    // register form can't be used to probe which emails exist), but the
+    // mailbox owner gets a notice instead of a code.
+    public bool EmailTaken { get; set; }
 
     public int ResendCount { get; set; }
     public DateTime? LastCodeSentAt { get; set; }

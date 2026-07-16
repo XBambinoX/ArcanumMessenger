@@ -153,18 +153,19 @@ export default function RegisterPage() {
                 emailVisibilityConsent,
             );
             if (!success) {
+                // No email_taken here on purpose: the server never reveals
+                // whether an email is registered at this step (that would
+                // allow probing for existing accounts).
                 setError(
                     reason === "session_expired"
                         ? "Session expired, please start over"
-                        : reason === "email_taken"
-                          ? "This email is already registered"
-                          : reason === "email_send_failed"
-                            ? "Failed to send verification email, try again"
-                            : reason === "invalid_step"
-                              ? "Something went wrong, please start over"
-                              : reason === "invalid_email"
-                                ? "Enter a valid email address"
-                                : "Something went wrong, please start over",
+                        : reason === "email_send_failed"
+                          ? "Failed to send verification email, try again"
+                          : reason === "invalid_step"
+                            ? "Something went wrong, please start over"
+                            : reason === "invalid_email"
+                              ? "Enter a valid email address"
+                              : "Something went wrong, please start over",
                 );
                 return;
             }
@@ -315,7 +316,7 @@ export default function RegisterPage() {
             if (!success) {
                 setError(
                     reason === "email_taken"
-                        ? "Email was taken, please start over"
+                        ? "This email is already registered – try signing in instead"
                         : reason === "session_expired"
                           ? "Session expired, please start over"
                           : "Something went wrong, please start over",
