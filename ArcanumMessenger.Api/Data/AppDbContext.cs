@@ -82,6 +82,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany()
                 .HasForeignKey(m => m.ReplyToId)
                 .OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(m => new { m.ChatId, m.CreatedAt });
         });
 
         modelBuilder.Entity<Contact>(e =>
