@@ -1,13 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { logout } from "../api/session";
+import { getChats, markChatRead, setChatArchived } from "../api/chats";
 import { useAuth } from "../context/AuthContext";
 import ChatList from "../components/ChatList";
 import ChatWindow from "../components/ChatWindow";
 import SettingsPanel from "../components/SettingsPanel";
-import { mockChats } from "../mock/chats";
-import { mockMessages } from "../mock/messages";
-import type { ChatFolder } from "../types/messenger";
+import type { ChatFolder, ChatSummary } from "../types/messenger";
 import styles from "./AppPage.module.css";
 
 const folders: { id: ChatFolder; label: string }[] = [
@@ -20,13 +19,15 @@ export default function AppPage() {
     const navigate = useNavigate();
     const { setAuthenticated } = useAuth();
 
-    // Local state seeded from mocks - becomes server data once the
-    // chats API exists.
-    const [chats, setChats] = useState(mockChats);
+    const [chats, setChats] = useState<ChatSummary[]>([]);
     const [folder, setFolder] = useState<ChatFolder>("all");
     const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
     const [search, setSearch] = useState("");
     const [settingsOpen, setSettingsOpen] = useState(false);
+
+    useEffect(() => {
+        getChats().then(setChats);
+    }, []);
 
     const inFolder = {
         all: (isArchived: boolean, _unread: number) => !isArchived,
@@ -49,13 +50,26 @@ export default function AppPage() {
         chats.find((chat) => chat.id === selectedChatId) ?? null;
 
     const toggleArchive = (chatId: string) => {
+        const chat = chats.find((c) => c.id === chatId);
+        if (!chat) return;
+        const isArchived = !chat.isArchived;
+
         setChats((prev) =>
-            prev.map((chat) =>
-                chat.id === chatId
-                    ? { ...chat, isArchived: !chat.isArchived }
-                    : chat,
-            ),
+            prev.map((c) => (c.id === chatId ? { ...c, isArchived } : c)),
         );
+        setChatArchived(chatId, isArchived);
+    };
+
+    const handleSelectChat = (chatId: string) => {
+        setSelectedChatId(chatId);
+
+        const chat = chats.find((c) => c.id === chatId);
+        if (!chat || chat.unreadCount === 0) return;
+
+        setChats((prev) =>
+            prev.map((c) => (c.id === chatId ? { ...c, unreadCount: 0 } : c)),
+        );
+        markChatRead(chatId);
     };
 
     const handleLogout = async () => {
@@ -127,7 +141,7 @@ export default function AppPage() {
                     <ChatList
                         chats={visibleChats}
                         selectedChatId={selectedChatId}
-                        onSelect={setSelectedChatId}
+                        onSelect={handleSelectChat}
                         onToggleArchive={toggleArchive}
                     />
                 </div>
@@ -135,11 +149,7 @@ export default function AppPage() {
 
             <main className={styles.main}>
                 {selectedChat ? (
-                    <ChatWindow
-                        key={selectedChat.id}
-                        chat={selectedChat}
-                        initialMessages={mockMessages[selectedChat.id] ?? []}
-                    />
+                    <ChatWindow key={selectedChat.id} chat={selectedChat} />
                 ) : (
                     <div className={styles.emptyState}>
                         <svg
