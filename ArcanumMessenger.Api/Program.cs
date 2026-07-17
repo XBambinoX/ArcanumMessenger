@@ -6,7 +6,9 @@ using ArcanumMessenger.Services.AuthServices.RecoveryServices;
 using ArcanumMessenger.Services.AuthServices.TotpServices;
 using ArcanumMessenger.Services.AuthServices.LoginServices;
 using ArcanumMessenger.Services.MessengerServices;
+using ArcanumMessenger.Hubs;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -63,6 +65,8 @@ namespace ArcanumMessenger
             builder.Services.AddControllers();
             builder.Services.AddHealthChecks();
             builder.Services.AddSwaggerGen();
+            builder.Services.AddSignalR();
+            builder.Services.AddSingleton<IUserIdProvider, SubjectUserIdProvider>();
 
             // Scope
             builder.Services.AddScoped<JwtService>();
@@ -107,6 +111,7 @@ namespace ArcanumMessenger
 
             app.MapControllers();
             app.MapHealthChecks("/health");
+            app.MapHub<ChatHub>("/hubs/chat");
 
             app.Run();
         }

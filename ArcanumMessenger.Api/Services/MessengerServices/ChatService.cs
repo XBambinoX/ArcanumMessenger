@@ -1,11 +1,13 @@
 using ArcanumMessenger.Contracts.Messenger.Chats;
 using ArcanumMessenger.Data;
 using ArcanumMessenger.Entities;
+using ArcanumMessenger.Hubs;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace ArcanumMessenger.Services.MessengerServices;
 
-public class ChatService(AppDbContext db, UserDisplayNameService displayNames)
+public class ChatService(AppDbContext db, UserDisplayNameService displayNames, IHubContext<ChatHub, IChatClient> hub)
 {
     private sealed record RawChatSummary(
         Guid ChatId, string Type, string? Title, DateTime ChatCreatedAt,
@@ -74,6 +76,18 @@ public class ChatService(AppDbContext db, UserDisplayNameService displayNames)
         return (await MaterializeAsync([raw], ct)).SingleOrDefault();
     }
 
+    // Each recipient needs their own perspective's DTO - a direct chat's
+    // Title is the other member's name, so it differs per recipient.
+    private async Task NotifyChatCreatedAsync(Guid chatId, IEnumerable<Guid> memberIds, CancellationToken ct)
+    {
+        foreach (var id in memberIds)
+        {
+            var recipientView = await GetChatSummaryAsync(chatId, id, ct);
+            if (recipientView is not null)
+                await hub.Clients.User(id.ToString()).ChatCreated(recipientView);
+        }
+    }
+
     public async Task<(ChatSummaryDto? Chat, string? Reason)> CreateDirectChatAsync(
         Guid callerId, Guid otherUserId, CancellationToken ct)
     {
@@ -99,6 +113,8 @@ public class ChatService(AppDbContext db, UserDisplayNameService displayNames)
         db.ChatMembers.Add(new ChatMember { Chat = chat, UserId = callerId, Role = "member", JoinedAt = now, LastReadAt = now });
         db.ChatMembers.Add(new ChatMember { Chat = chat, UserId = otherUserId, Role = "member", JoinedAt = now, LastReadAt = now });
         await db.SaveChangesAsync(ct);
+
+        await NotifyChatCreatedAsync(chat.Id, [otherUserId], ct);
 
         return (await GetChatSummaryAsync(chat.Id, callerId, ct), null);
     }
@@ -131,6 +147,8 @@ public class ChatService(AppDbContext db, UserDisplayNameService displayNames)
         foreach (var memberId in members)
             db.ChatMembers.Add(new ChatMember { Chat = chat, UserId = memberId, Role = "member", JoinedAt = now, LastReadAt = now });
         await db.SaveChangesAsync(ct);
+
+        await NotifyChatCreatedAsync(chat.Id, members, ct);
 
         return (await GetChatSummaryAsync(chat.Id, callerId, ct), null);
     }

@@ -1,11 +1,13 @@
 using ArcanumMessenger.Contracts.Messenger.Messages;
 using ArcanumMessenger.Data;
 using ArcanumMessenger.Entities;
+using ArcanumMessenger.Hubs;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace ArcanumMessenger.Services.MessengerServices;
 
-public class MessageService(AppDbContext db, UserDisplayNameService displayNames)
+public class MessageService(AppDbContext db, UserDisplayNameService displayNames, IHubContext<ChatHub, IChatClient> hub)
 {
     private const int DefaultTake = 30;
     private const int MaxTake = 100;
@@ -77,10 +79,21 @@ public class MessageService(AppDbContext db, UserDisplayNameService displayNames
 
         var names = await displayNames.GetDisplayNamesAsync([membership.UserId], ct);
 
-        return (new ChatMessageDto(
+        var dto = new ChatMessageDto(
             message.Id, message.ChatId, message.SenderId,
             names.GetValueOrDefault(membership.UserId, "Unknown user"),
             message.ReplyToId, message.Content, message.IsEdited, message.CreatedAt, true
-        ), null);
+        );
+
+        var otherMemberIds = await db.ChatMembers.AsNoTracking()
+            .Where(cm => cm.ChatId == membership.ChatId && cm.UserId != membership.UserId)
+            .Select(cm => cm.UserId)
+            .ToListAsync(ct);
+
+        var dtoForOthers = dto with { IsOwn = false };
+        foreach (var id in otherMemberIds)
+            await hub.Clients.User(id.ToString()).ReceiveMessage(dtoForOthers);
+
+        return (dto, null);
     }
 }
