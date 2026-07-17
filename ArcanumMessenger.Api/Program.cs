@@ -32,6 +32,10 @@ namespace ArcanumMessenger
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
                 {
+                    // Without this, the handler silently renames "sub" to the old
+                    // WIF claim URI, so every User.FindFirstValue(JwtRegisteredClaimNames.Sub)
+                    // in the app (TotpController, MessengerControllerBase, ...) finds nothing.
+                    options.MapInboundClaims = false;
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
                         ValidateIssuer = true,
