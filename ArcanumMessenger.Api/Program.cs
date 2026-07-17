@@ -70,6 +70,7 @@ namespace ArcanumMessenger
             builder.Services.AddScoped<ChatService>();
             builder.Services.AddScoped<ChatAccessService>();
             builder.Services.AddScoped<UserDisplayNameService>();
+            builder.Services.AddScoped<MessageService>();
             builder.Services.AddSingleton<EncryptionService>();
             builder.Services.AddSingleton<EmailHasher>();
             builder.Services.AddSingleton<LoginSessionService>();
