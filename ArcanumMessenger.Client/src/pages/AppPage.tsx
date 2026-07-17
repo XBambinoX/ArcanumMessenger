@@ -33,10 +33,20 @@ export default function AppPage() {
     }, []);
 
     useEffect(() => {
+        let cancelled = false;
         const conn = createChatHubConnection();
-        conn.start().then(() => setConnection(conn));
+
+        conn.start()
+            .then(() => {
+                if (!cancelled) setConnection(conn);
+            })
+            .catch(() => {
+                // Expected under StrictMode's mount->cleanup->mount in dev:
+                // the cleanup below stops the connection before start() finishes.
+            });
 
         return () => {
+            cancelled = true;
             conn.stop();
         };
     }, []);
