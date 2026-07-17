@@ -1,0 +1,70 @@
+using ArcanumMessenger.Contracts.Messenger.Chats;
+using ArcanumMessenger.Services.MessengerServices;
+using Microsoft.AspNetCore.Mvc;
+
+namespace ArcanumMessenger.Controllers.Messenger;
+
+[Route("api/chats")]
+public class ChatsController(ChatService chatService, ChatAccessService chatAccess) : MessengerControllerBase
+{
+    [HttpGet]
+    public async Task<ActionResult<ChatListResponse>> List(CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var chats = await chatService.GetChatSummariesAsync(userId, ct);
+        return Ok(new ChatListResponse(true, chats));
+    }
+
+    [HttpPost]
+    public async Task<ActionResult<CreateChatResponse>> Create([FromBody] CreateChatRequest request, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        (ChatSummaryDto? Chat, string? Reason) result = request.Type switch
+        {
+            "direct" when request.OtherUserId is { } otherId => await chatService.CreateDirectChatAsync(userId, otherId, ct),
+            "direct" => (null, "missing_other_user"),
+            "group" => await chatService.CreateGroupChatAsync(userId, request.Title, request.Description, request.MemberIds, ct),
+            _ => (null, "invalid_type"),
+        };
+
+        if (result.Chat is null)
+            return result.Reason == "user_not_found"
+                ? NotFound(new CreateChatResponse(false, null, result.Reason))
+                : BadRequest(new CreateChatResponse(false, null, result.Reason));
+
+        return Ok(new CreateChatResponse(true, result.Chat));
+    }
+
+    [HttpPost("{chatId:guid}/read")]
+    public async Task<ActionResult<MarkChatReadResponse>> MarkRead(Guid chatId, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var membership = await chatAccess.GetMembershipAsync(chatId, userId, ct);
+        if (membership is null)
+            return NotFound(new MarkChatReadResponse(false, Reason: "not_found"));
+
+        var lastReadAt = await chatService.MarkReadAsync(membership, ct);
+        return Ok(new MarkChatReadResponse(true, lastReadAt));
+    }
+
+    [HttpPut("{chatId:guid}/archive")]
+    public async Task<ActionResult<SetArchivedResponse>> SetArchived(
+        Guid chatId, [FromBody] SetArchivedRequest request, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var membership = await chatAccess.GetMembershipAsync(chatId, userId, ct);
+        if (membership is null)
+            return NotFound(new SetArchivedResponse(false, Reason: "not_found"));
+
+        await chatService.SetArchivedAsync(membership, request.IsArchived, ct);
+        return Ok(new SetArchivedResponse(true, request.IsArchived));
+    }
+}

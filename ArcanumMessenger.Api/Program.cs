@@ -5,6 +5,7 @@ using ArcanumMessenger.Services.AuthServices.RegisterServices;
 using ArcanumMessenger.Services.AuthServices.RecoveryServices;
 using ArcanumMessenger.Services.AuthServices.TotpServices;
 using ArcanumMessenger.Services.AuthServices.LoginServices;
+using ArcanumMessenger.Services.MessengerServices;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -66,6 +67,9 @@ namespace ArcanumMessenger
             builder.Services.AddScoped<AuthService>();
             builder.Services.AddScoped<RecoveryService>();
             builder.Services.AddScoped<TokenIssuanceService>();
+            builder.Services.AddScoped<ChatService>();
+            builder.Services.AddScoped<ChatAccessService>();
+            builder.Services.AddScoped<UserDisplayNameService>();
             builder.Services.AddSingleton<EncryptionService>();
             builder.Services.AddSingleton<EmailHasher>();
             builder.Services.AddSingleton<LoginSessionService>();
