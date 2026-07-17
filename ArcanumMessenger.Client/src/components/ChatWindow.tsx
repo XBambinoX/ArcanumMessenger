@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { HubConnection } from "@microsoft/signalr";
 import type { ChatMessage, ChatSummary } from "../types/messenger";
 import { getMessageHistory, sendMessage } from "../api/messages";
 import { formatMessageTime } from "../lib/time";
@@ -6,6 +7,7 @@ import styles from "./ChatWindow.module.css";
 
 interface ChatWindowProps {
     chat: ChatSummary;
+    connection: HubConnection | null;
 }
 
 function dayLabel(iso: string): string {
@@ -21,7 +23,7 @@ function dayLabel(iso: string): string {
     });
 }
 
-export default function ChatWindow({ chat }: ChatWindowProps) {
+export default function ChatWindow({ chat, connection }: ChatWindowProps) {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [hasMore, setHasMore] = useState(false);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -43,6 +45,20 @@ export default function ChatWindow({ chat }: ChatWindowProps) {
             cancelled = true;
         };
     }, [chat.id]);
+
+    useEffect(() => {
+        if (!connection) return;
+
+        const handleReceiveMessage = (message: ChatMessage) => {
+            if (message.chatId !== chat.id) return;
+            setMessages((prev) => [...prev, message]);
+        };
+
+        connection.on("ReceiveMessage", handleReceiveMessage);
+        return () => {
+            connection.off("ReceiveMessage", handleReceiveMessage);
+        };
+    }, [connection, chat.id]);
 
     useEffect(() => {
         if (prependingRef.current) {

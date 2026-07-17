@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
+import type { HubConnection } from "@microsoft/signalr";
 import { useNavigate } from "react-router-dom";
 import { logout } from "../api/session";
 import { getChats, markChatRead, setChatArchived } from "../api/chats";
+import { createChatHubConnection } from "../lib/chatHub";
 import { useAuth } from "../context/AuthContext";
 import ChatList from "../components/ChatList";
 import ChatWindow from "../components/ChatWindow";
 import SettingsPanel from "../components/SettingsPanel";
-import type { ChatFolder, ChatSummary } from "../types/messenger";
+import type { ChatFolder, ChatMessage, ChatSummary } from "../types/messenger";
 import styles from "./AppPage.module.css";
 
 const folders: { id: ChatFolder; label: string }[] = [
@@ -24,10 +26,55 @@ export default function AppPage() {
     const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
     const [search, setSearch] = useState("");
     const [settingsOpen, setSettingsOpen] = useState(false);
+    const [connection, setConnection] = useState<HubConnection | null>(null);
 
     useEffect(() => {
         getChats().then(setChats);
     }, []);
+
+    useEffect(() => {
+        const conn = createChatHubConnection();
+        conn.start().then(() => setConnection(conn));
+
+        return () => {
+            conn.stop();
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!connection) return;
+
+        const handleReceiveMessage = (message: ChatMessage) => {
+            const isOpen = message.chatId === selectedChatId;
+
+            setChats((prev) =>
+                prev.map((c) =>
+                    c.id === message.chatId
+                        ? {
+                              ...c,
+                              lastMessageText: message.content,
+                              lastMessageAt: message.createdAt,
+                              unreadCount: isOpen ? c.unreadCount : c.unreadCount + 1,
+                          }
+                        : c,
+                ),
+            );
+
+            if (isOpen) markChatRead(message.chatId);
+        };
+
+        const handleChatCreated = (chat: ChatSummary) => {
+            setChats((prev) => [chat, ...prev]);
+        };
+
+        connection.on("ReceiveMessage", handleReceiveMessage);
+        connection.on("ChatCreated", handleChatCreated);
+
+        return () => {
+            connection.off("ReceiveMessage", handleReceiveMessage);
+            connection.off("ChatCreated", handleChatCreated);
+        };
+    }, [connection, selectedChatId]);
 
     const inFolder = {
         all: (isArchived: boolean, _unread: number) => !isArchived,
@@ -149,7 +196,11 @@ export default function AppPage() {
 
             <main className={styles.main}>
                 {selectedChat ? (
-                    <ChatWindow key={selectedChat.id} chat={selectedChat} />
+                    <ChatWindow
+                        key={selectedChat.id}
+                        chat={selectedChat}
+                        connection={connection}
+                    />
                 ) : (
                     <div className={styles.emptyState}>
                         <svg

@@ -21,6 +21,11 @@ export default defineConfig({
                 target: process.env.API_URL ?? 'http://api:8080',
                 changeOrigin: true,
             },
+            '/hubs': {
+                target: process.env.API_URL ?? 'http://api:8080',
+                changeOrigin: true,
+                ws: true,
+            },
         },
     },
 })
