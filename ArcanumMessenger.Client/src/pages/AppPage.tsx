@@ -8,6 +8,7 @@ import { useAuth } from "../context/AuthContext";
 import ChatList from "../components/ChatList";
 import ChatWindow from "../components/ChatWindow";
 import ProfilePanel from "../components/ProfilePanel";
+import NewChatPanel from "../components/NewChatPanel";
 import { mockProfile } from "../mock/profile";
 import type { ChatFolder, ChatMessage, ChatSummary } from "../types/messenger";
 import styles from "./AppPage.module.css";
@@ -38,6 +39,7 @@ export default function AppPage() {
     const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
     const [search, setSearch] = useState("");
     const [profileOpen, setProfileOpen] = useState(false);
+    const [newChatOpen, setNewChatOpen] = useState(false);
     const [connection, setConnection] = useState<HubConnection | null>(null);
     const [sidebarWidth, setSidebarWidth] = useState(readStoredSidebarWidth);
     const sidebarWidthRef = useRef(sidebarWidth);
@@ -182,12 +184,36 @@ export default function AppPage() {
                 <header className={styles.sidebarHeader}>
                     <div className={styles.brandRow}>
                         <button
-                            className={styles.avatarBtn}
+                            className={styles.profileBtn}
                             onClick={() => setProfileOpen(true)}
                             aria-label="Profile"
                             title="Profile"
                         >
-                            {mockProfile.username.charAt(0).toUpperCase()}
+                            <span className={styles.avatarBtn}>
+                                {mockProfile.username.charAt(0).toUpperCase()}
+                            </span>
+                            <span className={styles.profileName}>
+                                {mockProfile.username}
+                            </span>
+                        </button>
+                        <button
+                            className={styles.iconBtn}
+                            onClick={() => setNewChatOpen(true)}
+                            aria-label="New chat"
+                            title="New chat"
+                        >
+                            <svg
+                                width="18"
+                                height="18"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            >
+                                <path d="M12 5v14M5 12h14" />
+                            </svg>
                         </button>
                     </div>
                     <input
@@ -280,6 +306,10 @@ export default function AppPage() {
                     onClose={() => setProfileOpen(false)}
                     onLogout={handleLogout}
                 />
+            )}
+
+            {newChatOpen && (
+                <NewChatPanel onClose={() => setNewChatOpen(false)} />
             )}
         </div>
     );

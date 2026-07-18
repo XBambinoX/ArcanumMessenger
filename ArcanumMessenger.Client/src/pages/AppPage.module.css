@@ -45,15 +45,33 @@
 .brandRow {
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: space-between;
+    gap: 12px;
     margin-bottom: 12px;
+}
+
+.profileBtn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+    padding: 4px 8px 4px 4px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.profileBtn:hover {
+    background: rgba(124, 58, 237, 0.08);
 }
 
 .avatarBtn {
     width: 34px;
     height: 34px;
     border-radius: 50%;
-    border: none;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -62,12 +80,18 @@
     font-weight: 700;
     color: #fff;
     background: linear-gradient(135deg, #7c3aed, #4f46e5);
-    cursor: pointer;
-    transition: filter 0.2s;
 }
 
-.avatarBtn:hover {
-    filter: brightness(1.1);
+.profileName {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(226, 232, 240, 0.9);
+    text-align: left;
 }
 
 .iconBtn {
