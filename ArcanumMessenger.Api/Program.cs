@@ -5,7 +5,10 @@ using ArcanumMessenger.Services.AuthServices.RegisterServices;
 using ArcanumMessenger.Services.AuthServices.RecoveryServices;
 using ArcanumMessenger.Services.AuthServices.TotpServices;
 using ArcanumMessenger.Services.AuthServices.LoginServices;
+using ArcanumMessenger.Services.MessengerServices;
+using ArcanumMessenger.Hubs;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -31,6 +34,10 @@ namespace ArcanumMessenger
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
                 {
+                    // Without this, the handler silently renames "sub" to the old
+                    // WIF claim URI, so every User.FindFirstValue(JwtRegisteredClaimNames.Sub)
+                    // in the app (TotpController, MessengerControllerBase, ...) finds nothing.
+                    options.MapInboundClaims = false;
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
                         ValidateIssuer = true,
@@ -58,6 +65,8 @@ namespace ArcanumMessenger
             builder.Services.AddControllers();
             builder.Services.AddHealthChecks();
             builder.Services.AddSwaggerGen();
+            builder.Services.AddSignalR();
+            builder.Services.AddSingleton<IUserIdProvider, SubjectUserIdProvider>();
 
             // Scope
             builder.Services.AddScoped<JwtService>();
@@ -66,8 +75,13 @@ namespace ArcanumMessenger
             builder.Services.AddScoped<AuthService>();
             builder.Services.AddScoped<RecoveryService>();
             builder.Services.AddScoped<TokenIssuanceService>();
+            builder.Services.AddScoped<ChatService>();
+            builder.Services.AddScoped<ChatAccessService>();
+            builder.Services.AddScoped<UserDisplayNameService>();
+            builder.Services.AddScoped<MessageService>();
             builder.Services.AddSingleton<EncryptionService>();
             builder.Services.AddSingleton<EmailHasher>();
+            builder.Services.AddSingleton<PublicIdHasher>();
             builder.Services.AddSingleton<LoginSessionService>();
             builder.Services.AddSingleton<TotpService>();
             builder.Services.AddSingleton<TotpSetupSessionService>();
@@ -98,6 +112,7 @@ namespace ArcanumMessenger
 
             app.MapControllers();
             app.MapHealthChecks("/health");
+            app.MapHub<ChatHub>("/hubs/chat");
 
             app.Run();
         }

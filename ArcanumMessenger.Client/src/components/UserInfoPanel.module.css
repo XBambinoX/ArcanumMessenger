@@ -1,0 +1,141 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    background: rgba(6, 4, 16, 0.55);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.panel {
+    position: relative;
+    box-sizing: border-box;
+    width: 320px;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    background: #12102a;
+    border: 1px solid rgba(124, 58, 237, 0.2);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+    padding: 18px;
+}
+
+.closeBtn {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    border: 1px solid rgba(124, 58, 237, 0.25);
+    background: rgba(124, 58, 237, 0.05);
+    color: rgba(167, 139, 250, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.closeBtn:hover {
+    background: rgba(124, 58, 237, 0.12);
+    border-color: rgba(167, 139, 250, 0.4);
+}
+
+.profileHeader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 20px 0 20px;
+}
+
+.profileAvatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    margin-bottom: 10px;
+}
+
+.profileName {
+    font-size: 16px;
+    font-weight: 700;
+    color: rgba(226, 232, 240, 0.95);
+    margin-bottom: 6px;
+}
+
+.lastSeen {
+    font-size: 12.5px;
+    color: rgba(148, 163, 184, 0.6);
+}
+
+.actionRow {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.actionBtn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 9px;
+    border-radius: 10px;
+    border: 1px solid rgba(124, 58, 237, 0.25);
+    background: rgba(124, 58, 237, 0.08);
+    color: rgba(226, 232, 240, 0.95);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.actionBtn:hover {
+    background: rgba(124, 58, 237, 0.15);
+    border-color: rgba(167, 139, 250, 0.4);
+}
+
+.actionBtn:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.infoSection {
+    border-top: 1px solid rgba(124, 58, 237, 0.12);
+    padding-top: 14px;
+}
+
+.infoRow {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 0;
+}
+
+.infoLabel {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(167, 139, 250, 0.6);
+}
+
+.infoValue {
+    font-size: 14px;
+    color: rgba(226, 232, 240, 0.9);
+    word-break: break-word;
+}

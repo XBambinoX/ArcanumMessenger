@@ -58,6 +58,69 @@
     border-color: rgba(167, 139, 250, 0.4);
 }
 
+.profileHeader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 8px 0 20px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid rgba(124, 58, 237, 0.12);
+}
+
+.profileAvatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    margin-bottom: 10px;
+}
+
+.profileName {
+    font-size: 16px;
+    font-weight: 700;
+    color: rgba(226, 232, 240, 0.95);
+    margin-bottom: 8px;
+}
+
+.idRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 9px;
+    border: 1px solid rgba(124, 58, 237, 0.25);
+    background: rgba(124, 58, 237, 0.08);
+    color: rgba(167, 139, 250, 0.9);
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.idRow:hover {
+    background: rgba(124, 58, 237, 0.15);
+    border-color: rgba(167, 139, 250, 0.4);
+}
+
+.idValue {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    font-family: "SFMono-Regular", Consolas, monospace;
+}
+
+.copiedHint {
+    margin-top: 8px;
+    font-size: 11.5px;
+    color: rgba(148, 163, 184, 0.55);
+}
+
 .note {
     margin: 0 0 14px;
     font-size: 12.5px;

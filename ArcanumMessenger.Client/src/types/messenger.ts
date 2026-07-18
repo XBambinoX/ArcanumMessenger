@@ -18,6 +18,7 @@ export interface ChatSummary {
     unreadCount: number;
     isMuted: boolean;
     isArchived: boolean;
+    otherUserId: string | null; // the other member's real id, direct chats only
 }
 
 export interface ChatMessage {
@@ -30,4 +31,20 @@ export interface ChatMessage {
     isEdited: boolean;
     createdAt: string; // ISO timestamp
     isOwn: boolean;
+}
+
+export interface User {
+    name: string;
+    publicId: string;
+    lastSeen: string | null; // ISO timestamp
+    bio: string | null;
+    email: string | null;
+    phone: string | null;
+    isContact: boolean;
+}
+
+export interface UserSearchResult {
+    id: string;
+    name: string;
+    publicId: string;
 }

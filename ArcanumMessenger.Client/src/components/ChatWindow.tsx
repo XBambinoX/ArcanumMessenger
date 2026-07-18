@@ -1,11 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import type { ChatMessage, ChatSummary } from "../types/messenger";
+import type { HubConnection } from "@microsoft/signalr";
+import type { ChatMessage, ChatSummary, User } from "../types/messenger";
+import { getMessageHistory, sendMessage } from "../api/messages";
+import { getUser } from "../api/users";
 import { formatMessageTime } from "../lib/time";
+import UserInfoPanel from "./UserInfoPanel";
+import ChatInfoPanel from "./ChatInfoPanel";
 import styles from "./ChatWindow.module.css";
 
 interface ChatWindowProps {
     chat: ChatSummary;
-    initialMessages: ChatMessage[];
+    connection: HubConnection | null;
+    onStartChat: (chat: ChatSummary) => void;
 }
 
 function dayLabel(iso: string): string {
@@ -21,46 +27,101 @@ function dayLabel(iso: string): string {
     });
 }
 
-export default function ChatWindow({ chat, initialMessages }: ChatWindowProps) {
-    // Local only for now - sending goes to the server once the
-    // messages API exists.
-    const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
+export default function ChatWindow({ chat, connection, onStartChat }: ChatWindowProps) {
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [hasMore, setHasMore] = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [draft, setDraft] = useState("");
+    const [userInfo, setUserInfo] = useState<{ userId: string; user: User } | null>(null);
+    const [chatInfoOpen, setChatInfoOpen] = useState(false);
     const scrollAnchor = useRef<HTMLDivElement | null>(null);
+    const messagesRef = useRef<HTMLDivElement | null>(null);
+    const prependingRef = useRef(false);
 
     useEffect(() => {
+        let cancelled = false;
+
+        getMessageHistory(chat.id).then((history) => {
+            if (cancelled) return;
+            setMessages(history.messages);
+            setHasMore(history.hasMore);
+        });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [chat.id]);
+
+    useEffect(() => {
+        if (!connection) return;
+
+        const handleReceiveMessage = (message: ChatMessage) => {
+            if (message.chatId !== chat.id) return;
+            setMessages((prev) => [...prev, message]);
+        };
+
+        connection.on("ReceiveMessage", handleReceiveMessage);
+        return () => {
+            connection.off("ReceiveMessage", handleReceiveMessage);
+        };
+    }, [connection, chat.id]);
+
+    useEffect(() => {
+        if (prependingRef.current) {
+            prependingRef.current = false;
+            return;
+        }
         scrollAnchor.current?.scrollIntoView();
     }, [messages.length]);
 
-    const handleSend = () => {
+    const loadMore = async () => {
+        if (loadingMore || !hasMore || messages.length === 0) return;
+
+        setLoadingMore(true);
+        const container = messagesRef.current;
+        const previousHeight = container?.scrollHeight ?? 0;
+
+        const older = await getMessageHistory(chat.id, messages[0].id);
+
+        prependingRef.current = true;
+        setMessages((prev) => [...older.messages, ...prev]);
+        setHasMore(older.hasMore);
+        setLoadingMore(false);
+
+        requestAnimationFrame(() => {
+            if (container) container.scrollTop = container.scrollHeight - previousHeight;
+        });
+    };
+
+    const handleScroll = () => {
+        if ((messagesRef.current?.scrollTop ?? 0) < 50) loadMore();
+    };
+
+    const handleSend = async () => {
         const content = draft.trim();
         if (!content) return;
 
-        setMessages((prev) => [
-            ...prev,
-            {
-                id: `local-${Date.now()}`,
-                chatId: chat.id,
-                senderId: "me",
-                senderName: "You",
-                replyToId: null,
-                content,
-                isEdited: false,
-                createdAt: new Date().toISOString(),
-                isOwn: true,
-            },
-        ]);
         setDraft("");
+        const sent = await sendMessage(chat.id, content);
+        if (sent) setMessages((prev) => [...prev, sent]);
     };
 
     const findMessage = (id: string | null) =>
         id ? messages.find((m) => m.id === id) : undefined;
 
+    const handleAvatarClick = async () => {
+        if (chat.type !== "direct" || !chat.otherUserId) return;
+        const userId = chat.otherUserId;
+        const user = await getUser(userId);
+        if (user) setUserInfo({ userId, user });
+    };
+
     return (
         <div className={styles.root}>
             <header className={styles.header}>
                 <div
-                    className={`${styles.avatar} ${chat.type === "group" ? styles.avatarGroup : ""}`}
+                    className={`${styles.avatar} ${chat.type === "group" ? styles.avatarGroup : ""} ${chat.type === "direct" ? styles.avatarClickable : ""}`}
+                    onClick={handleAvatarClick}
                 >
                     {chat.title.charAt(0).toUpperCase()}
                 </div>
@@ -70,9 +131,33 @@ export default function ChatWindow({ chat, initialMessages }: ChatWindowProps) {
                         {chat.type === "group" ? "group chat" : "direct chat"}
                     </span>
                 </div>
+                <button
+                    className={styles.infoBtn}
+                    onClick={() => setChatInfoOpen(true)}
+                    aria-label="Chat info"
+                    title="Chat info"
+                >
+                    <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    >
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 16v-4M12 8h.01" />
+                    </svg>
+                </button>
             </header>
 
-            <div className={styles.messages}>
+            <div
+                className={styles.messages}
+                ref={messagesRef}
+                onScroll={handleScroll}
+            >
                 {messages.length === 0 && (
                     <p className={styles.noMessages}>No messages yet</p>
                 )}
@@ -165,6 +250,22 @@ export default function ChatWindow({ chat, initialMessages }: ChatWindowProps) {
                     </svg>
                 </button>
             </footer>
+
+            {userInfo && (
+                <UserInfoPanel
+                    userId={userInfo.userId}
+                    user={userInfo.user}
+                    onClose={() => setUserInfo(null)}
+                    onStartChat={onStartChat}
+                />
+            )}
+
+            {chatInfoOpen && (
+                <ChatInfoPanel
+                    chat={chat}
+                    onClose={() => setChatInfoOpen(false)}
+                />
+            )}
         </div>
     );
 }

@@ -26,6 +26,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(u => u.Id).HasDefaultValueSql("gen_random_uuid()");
             e.Property(u => u.CreatedAt).HasDefaultValueSql("NOW()");
             e.HasIndex(u => u.EmailHash).IsUnique();
+            e.HasIndex(u => u.PublicIdHash).IsUnique();
+            e.HasIndex(u => u.PublicIdPrefixHash);
         });
 
         modelBuilder.Entity<Session>(e =>
@@ -82,6 +84,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany()
                 .HasForeignKey(m => m.ReplyToId)
                 .OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(m => new { m.ChatId, m.CreatedAt });
         });
 
         modelBuilder.Entity<Contact>(e =>

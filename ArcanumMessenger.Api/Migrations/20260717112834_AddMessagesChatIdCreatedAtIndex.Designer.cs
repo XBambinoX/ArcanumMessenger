@@ -3,6 +3,7 @@ using System;
 using ArcanumMessenger.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ArcanumMessenger.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260717112834_AddMessagesChatIdCreatedAtIndex")]
+    partial class AddMessagesChatIdCreatedAtIndex
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -248,18 +251,6 @@ namespace ArcanumMessenger.Migrations
                     b.Property<string>("PublicEmailEnc")
                         .HasColumnType("text");
 
-                    b.Property<string>("PublicIdEnc")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("PublicIdHash")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("PublicIdPrefixHash")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<string>("PublicPhoneEnc")
                         .HasColumnType("text");
 
@@ -289,11 +280,6 @@ namespace ArcanumMessenger.Migrations
 
                     b.HasIndex("EmailHash")
                         .IsUnique();
-
-                    b.HasIndex("PublicIdHash")
-                        .IsUnique();
-
-                    b.HasIndex("PublicIdPrefixHash");
 
                     b.ToTable("Users");
                 });
