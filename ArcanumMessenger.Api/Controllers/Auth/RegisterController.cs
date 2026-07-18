@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using ArcanumMessenger.Services.AuthServices;
 using ArcanumMessenger.Services.AuthServices.RegisterServices;
 using ArcanumMessenger.Entities;
+using System.Security.Cryptography;
 
 namespace ArcanumMessenger.Controllers.Auth;
 
@@ -278,9 +279,20 @@ public class RegisterController(
         }
 
         var now = DateTime.UtcNow;
+
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+        string id = string.Join("-",
+            Enumerable.Range(0, 4)
+                .Select(_ => new string(
+                    Enumerable.Range(0, 4)
+                        .Select(__ => chars[RandomNumberGenerator.GetInt32(chars.Length)])
+                        .ToArray())));
+
         var user = new User
         {
             UsernameEnc = usernameEnc,
+            PublicId = id,
             EmailHash = emailHash,
             PasswordHash = session.PasswordHash,
             KdfSalt = session.KdfSalt,

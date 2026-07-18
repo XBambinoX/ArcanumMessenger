@@ -3,6 +3,7 @@ namespace ArcanumMessenger.Entities;
 public class User
 {
     public Guid Id { get; set; }
+    public string PublicId { get; set; } = null!;
     public string UsernameEnc { get; set; } = null!;
     public string EmailHash { get; set; } = null!;
     public string PasswordHash { get; set; } = null!;
