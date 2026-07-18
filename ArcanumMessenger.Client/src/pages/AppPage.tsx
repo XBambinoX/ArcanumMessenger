@@ -3,14 +3,14 @@ import type { HubConnection } from "@microsoft/signalr";
 import { useNavigate } from "react-router-dom";
 import { logout } from "../api/session";
 import { getChats, markChatRead, setChatArchived } from "../api/chats";
+import { getCurrentUser } from "../api/users";
 import { createChatHubConnection } from "../lib/chatHub";
 import { useAuth } from "../context/AuthContext";
 import ChatList from "../components/ChatList";
 import ChatWindow from "../components/ChatWindow";
 import ProfilePanel from "../components/ProfilePanel";
 import NewChatPanel from "../components/NewChatPanel";
-import { mockProfile } from "../mock/profile";
-import type { ChatFolder, ChatMessage, ChatSummary } from "../types/messenger";
+import type { ChatFolder, ChatMessage, ChatSummary, User } from "../types/messenger";
 import styles from "./AppPage.module.css";
 
 const folders: { id: ChatFolder; label: string }[] = [
@@ -35,6 +35,7 @@ export default function AppPage() {
     const { setAuthenticated } = useAuth();
 
     const [chats, setChats] = useState<ChatSummary[]>([]);
+    const [profile, setProfile] = useState<User | null>(null);
     const [folder, setFolder] = useState<ChatFolder>("all");
     const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
     const [search, setSearch] = useState("");
@@ -46,6 +47,7 @@ export default function AppPage() {
 
     useEffect(() => {
         getChats().then(setChats);
+        getCurrentUser().then(setProfile);
     }, []);
 
     useEffect(() => {
@@ -190,10 +192,10 @@ export default function AppPage() {
                             title="Profile"
                         >
                             <span className={styles.avatarBtn}>
-                                {mockProfile.username.charAt(0).toUpperCase()}
+                                {(profile?.name ?? "?").charAt(0).toUpperCase()}
                             </span>
                             <span className={styles.profileName}>
-                                {mockProfile.username}
+                                {profile?.name ?? "..."}
                             </span>
                         </button>
                         <button
@@ -301,8 +303,9 @@ export default function AppPage() {
                 )}
             </main>
 
-            {profileOpen && (
+            {profileOpen && profile && (
                 <ProfilePanel
+                    profile={profile}
                     onClose={() => setProfileOpen(false)}
                     onLogout={handleLogout}
                 />

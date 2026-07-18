@@ -1,16 +1,17 @@
 import { useState } from "react";
-import { mockProfile } from "../mock/profile";
+import type { User } from "../types/messenger";
 import styles from "./ProfilePanel.module.css";
 
 interface ProfilePanelProps {
+    profile: User;
     onClose: () => void;
     onLogout: () => void;
 }
 
 // Visual stub only: the settings fields mirror the UserSettings entity on
-// the server, but nothing is saved yet, and the profile section above
-// them uses mock/profile.ts. Real profile + settings get their own branch.
-export default function ProfilePanel({ onClose, onLogout }: ProfilePanelProps) {
+// the server, but nothing is saved yet. The profile section above them
+// is real (see api/users.ts).
+export default function ProfilePanel({ profile, onClose, onLogout }: ProfilePanelProps) {
     const [notifications, setNotifications] = useState(true);
     const [showLastSeen, setShowLastSeen] = useState(true);
     const [showOnlineStatus, setShowOnlineStatus] = useState(true);
@@ -19,7 +20,7 @@ export default function ProfilePanel({ onClose, onLogout }: ProfilePanelProps) {
     const [copied, setCopied] = useState(false);
 
     const handleCopyId = () => {
-        navigator.clipboard.writeText(mockProfile.displayId);
+        navigator.clipboard.writeText(profile.publicId);
         setCopied(true);
         setTimeout(() => setCopied(false), 1500);
     };
@@ -53,10 +54,10 @@ export default function ProfilePanel({ onClose, onLogout }: ProfilePanelProps) {
 
                 <div className={styles.profileHeader}>
                     <div className={styles.profileAvatar}>
-                        {mockProfile.username.charAt(0).toUpperCase()}
+                        {profile.name.charAt(0).toUpperCase()}
                     </div>
                     <span className={styles.profileName}>
-                        {mockProfile.username}
+                        {profile.name}
                     </span>
                     <button
                         className={styles.idRow}
@@ -64,7 +65,7 @@ export default function ProfilePanel({ onClose, onLogout }: ProfilePanelProps) {
                         title="Copy ID"
                     >
                         <span className={styles.idValue}>
-                            {mockProfile.displayId}
+                            {profile.publicId}
                         </span>
                         <svg
                             width="14"

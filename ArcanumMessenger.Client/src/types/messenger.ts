@@ -31,3 +31,9 @@ export interface ChatMessage {
     createdAt: string; // ISO timestamp
     isOwn: boolean;
 }
+
+export interface User {
+    name: string;
+    publicId: string;
+    lastSeen: string | null; // ISO timestamp
+}
