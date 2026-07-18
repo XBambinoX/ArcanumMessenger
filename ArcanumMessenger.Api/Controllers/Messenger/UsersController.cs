@@ -19,7 +19,7 @@ public class UsersController(AppDbContext db, EncryptionService encryption) : Me
         var user = await db.Users
                         .AsNoTracking()
                         .Where(u => u.Id == userId)
-                        .Select(u => new { u.UsernameEnc, u.PublicId, u.LastSeen, u.WrappedDek, u.IsDeleted })
+                        .Select(u => new { u.UsernameEnc, u.PublicIdEnc, u.LastSeen, u.WrappedDek, u.IsDeleted })
                         .FirstOrDefaultAsync(ct);
 
         if (user is null || user.IsDeleted)
@@ -27,7 +27,8 @@ public class UsersController(AppDbContext db, EncryptionService encryption) : Me
 
         var dek = encryption.UnwrapDek(user.WrappedDek);
         var username = encryption.Decrypt(user.UsernameEnc, dek);
+        var publicId = encryption.Decrypt(user.PublicIdEnc, dek);
 
-        return new GetCurrentUserResponce(username, user.PublicId, user.LastSeen, success: true, reason: null);
+        return new GetCurrentUserResponce(username, publicId, user.LastSeen, success: true, reason: null);
     }
 }

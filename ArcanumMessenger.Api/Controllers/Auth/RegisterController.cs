@@ -289,10 +289,12 @@ public class RegisterController(
                         .Select(__ => chars[RandomNumberGenerator.GetInt32(chars.Length)])
                         .ToArray())));
 
+        var publicIdEnc = encryption.Encrypt(id, dek);
+
         var user = new User
         {
             UsernameEnc = usernameEnc,
-            PublicId = id,
+            PublicIdEnc = publicIdEnc,
             EmailHash = emailHash,
             PasswordHash = session.PasswordHash,
             KdfSalt = session.KdfSalt,
