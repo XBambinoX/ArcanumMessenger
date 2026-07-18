@@ -41,3 +41,9 @@ export interface User {
     email: string | null;
     phone: string | null;
 }
+
+export interface UserSearchResult {
+    id: string;
+    name: string;
+    publicId: string;
+}

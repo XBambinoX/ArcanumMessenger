@@ -1,5 +1,5 @@
 import { apiFetch } from "../lib/apiFetch";
-import type { User } from "../types/messenger";
+import type { User, UserSearchResult } from "../types/messenger";
 
 function toUser(data: {
     success: boolean;
@@ -29,4 +29,12 @@ export async function getMe(): Promise<User | null> {
 export async function getUser(id: string): Promise<User | null> {
     const res = await apiFetch(`/api/users/${id}`, { credentials: "include" });
     return toUser(await res.json());
+}
+
+export async function searchUsers(query: string): Promise<UserSearchResult[]> {
+    const res = await apiFetch(`/api/users/search?query=${encodeURIComponent(query)}`, {
+        credentials: "include",
+    });
+    const data = await res.json();
+    return data.success ? (data.results ?? []) : [];
 }

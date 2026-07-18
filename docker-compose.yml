@@ -20,6 +20,7 @@ services:
 
             Encryption__Kek: ${ENCRYPTION_KEK}
             Hashing__EmailPepper: ${EMAIL_HASH_PEPPER}
+            Hashing__PublicIdPepper: ${PUBLIC_ID_HASH_PEPPER}
 
             Jwt__Secret: ${JWT_SECRET}
             Jwt__Issuer: ArcanumMessenger

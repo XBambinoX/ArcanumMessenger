@@ -1,16 +1,35 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { mockContacts } from "../mock/contacts";
+import { searchUsers } from "../api/users";
+import type { UserSearchResult } from "../types/messenger";
 import styles from "./NewChatPanel.module.css";
+
+const MIN_SEARCH_LENGTH = 4;
+const SEARCH_DEBOUNCE_MS = 350;
 
 interface NewChatPanelProps {
     onClose: () => void;
 }
 
-// Visual stub only: search and contacts aren't wired up to anything
-// real yet - see mock/contacts.ts. A real user-search/contacts branch
-// replaces this.
+// Contacts are still a stub - see mock/contacts.ts. Search is real (see
+// api/users.ts), but clicking a result doesn't start a chat yet.
 export default function NewChatPanel({ onClose }: NewChatPanelProps) {
     const [search, setSearch] = useState("");
+    const [results, setResults] = useState<UserSearchResult[]>([]);
+    const query = search.trim();
+
+    useEffect(() => {
+        if (query.length < MIN_SEARCH_LENGTH) {
+            setResults([]);
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            searchUsers(query).then(setResults);
+        }, SEARCH_DEBOUNCE_MS);
+
+        return () => clearTimeout(timer);
+    }, [query]);
 
     return (
         <div className={styles.overlay} onClick={onClose}>
@@ -68,24 +87,64 @@ export default function NewChatPanel({ onClose }: NewChatPanelProps) {
                     Create a group
                 </button>
 
-                <h3 className={styles.sectionTitle}>Contacts</h3>
-                <ul className={styles.contactList}>
-                    {mockContacts.map((contact) => (
-                        <li key={contact.id}>
-                            <button className={styles.contactRow}>
-                                <div className={styles.contactAvatar}>
-                                    {contact.username.charAt(0).toUpperCase()}
-                                </div>
-                                <span>{contact.username}</span>
-                            </button>
-                        </li>
-                    ))}
-                </ul>
+                {query.length > 0 ? (
+                    <>
+                        <h3 className={styles.sectionTitle}>Search results</h3>
+                        {query.length < MIN_SEARCH_LENGTH ? (
+                            <p className={styles.note}>
+                                Type at least {MIN_SEARCH_LENGTH} characters
+                                of the ID.
+                            </p>
+                        ) : results.length === 0 ? (
+                            <p className={styles.note}>No matches.</p>
+                        ) : (
+                            <ul className={styles.contactList}>
+                                {results.map((result) => (
+                                    <li key={result.id}>
+                                        <button className={styles.contactRow}>
+                                            <div
+                                                className={
+                                                    styles.contactAvatar
+                                                }
+                                            >
+                                                {result.name
+                                                    .charAt(0)
+                                                    .toUpperCase()}
+                                            </div>
+                                            <span>{result.name}</span>
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </>
+                ) : (
+                    <>
+                        <h3 className={styles.sectionTitle}>Contacts</h3>
+                        <ul className={styles.contactList}>
+                            {mockContacts.map((contact) => (
+                                <li key={contact.id}>
+                                    <button className={styles.contactRow}>
+                                        <div
+                                            className={styles.contactAvatar}
+                                        >
+                                            {contact.username
+                                                .charAt(0)
+                                                .toUpperCase()}
+                                        </div>
+                                        <span>{contact.username}</span>
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
 
-                <p className={styles.note}>
-                    Search and contacts aren't connected yet – this panel is
-                    a preview.
-                </p>
+                        <p className={styles.note}>
+                            Contacts aren't connected yet – this list is a
+                            preview. Clicking a search result doesn't start a
+                            chat yet either.
+                        </p>
+                    </>
+                )}
             </aside>
         </div>
     );

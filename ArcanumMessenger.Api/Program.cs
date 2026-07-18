@@ -81,6 +81,7 @@ namespace ArcanumMessenger
             builder.Services.AddScoped<MessageService>();
             builder.Services.AddSingleton<EncryptionService>();
             builder.Services.AddSingleton<EmailHasher>();
+            builder.Services.AddSingleton<PublicIdHasher>();
             builder.Services.AddSingleton<LoginSessionService>();
             builder.Services.AddSingleton<TotpService>();
             builder.Services.AddSingleton<TotpSetupSessionService>();

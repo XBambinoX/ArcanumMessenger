@@ -17,6 +17,7 @@ public class RegisterController(
     EmailService emailService,
     EncryptionService encryption,
     EmailHasher emailHasher,
+    PublicIdHasher publicIdHasher,
     AuthService authService) : ControllerBase
 {
     private static readonly Regex UsernameRegex = new("^[a-zA-Z0-9_]{3,32}$", RegexOptions.Compiled);
@@ -290,11 +291,16 @@ public class RegisterController(
                         .ToArray())));
 
         var publicIdEnc = encryption.Encrypt(id, dek);
+        var normalizedId = PublicIdHasher.Normalize(id);
+        var publicIdHash = publicIdHasher.Hash(normalizedId);
+        var publicIdPrefixHash = publicIdHasher.HashPrefix(normalizedId);
 
         var user = new User
         {
             UsernameEnc = usernameEnc,
             PublicIdEnc = publicIdEnc,
+            PublicIdHash = publicIdHash,
+            PublicIdPrefixHash = publicIdPrefixHash,
             EmailHash = emailHash,
             PasswordHash = session.PasswordHash,
             KdfSalt = session.KdfSalt,
