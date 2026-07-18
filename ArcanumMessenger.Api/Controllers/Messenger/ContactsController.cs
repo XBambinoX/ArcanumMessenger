@@ -55,4 +55,21 @@ public class ContactsController(AppDbContext db, EncryptionService encryption) :
 
         return Ok(new AddContactResponse(true));
     }
+
+    [HttpDelete("{contactId:guid}")]
+    public async Task<ActionResult<AddContactResponse>> Remove(Guid contactId, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var existing = await db.Contacts
+            .FirstOrDefaultAsync(c => c.UserId == userId && c.ContactId == contactId, ct);
+        if (existing is not null)
+        {
+            db.Contacts.Remove(existing);
+            await db.SaveChangesAsync(ct);
+        }
+
+        return Ok(new AddContactResponse(true));
+    }
 }

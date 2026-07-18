@@ -16,3 +16,12 @@ export async function addContact(contactId: string): Promise<boolean> {
     const data = await res.json();
     return data.success === true;
 }
+
+export async function removeContact(contactId: string): Promise<boolean> {
+    const res = await apiFetch(`/api/contacts/${contactId}`, {
+        method: "DELETE",
+        credentials: "include",
+    });
+    const data = await res.json();
+    return data.success === true;
+}

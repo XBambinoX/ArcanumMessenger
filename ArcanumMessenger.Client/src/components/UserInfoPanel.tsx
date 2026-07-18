@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { ChatSummary, User } from "../types/messenger";
 import { createDirectChat } from "../api/chats";
-import { addContact } from "../api/contacts";
+import { addContact, removeContact } from "../api/contacts";
 import { formatChatTime } from "../lib/time";
 import styles from "./UserInfoPanel.module.css";
 
@@ -18,7 +18,7 @@ export default function UserInfoPanel({
     onClose,
     onStartChat,
 }: UserInfoPanelProps) {
-    const [contactState, setContactState] = useState<"idle" | "added">("idle");
+    const [isContact, setIsContact] = useState(user.isContact);
 
     const handleWrite = async () => {
         const chat = await createDirectChat(userId);
@@ -28,8 +28,11 @@ export default function UserInfoPanel({
         }
     };
 
-    const handleAddContact = async () => {
-        if (await addContact(userId)) setContactState("added");
+    const handleToggleContact = async () => {
+        const ok = isContact
+            ? await removeContact(userId)
+            : await addContact(userId);
+        if (ok) setIsContact(!isContact);
     };
 
     return (
@@ -87,8 +90,7 @@ export default function UserInfoPanel({
                     </button>
                     <button
                         className={styles.actionBtn}
-                        onClick={handleAddContact}
-                        disabled={contactState === "added"}
+                        onClick={handleToggleContact}
                     >
                         <svg
                             width="16"
@@ -102,9 +104,13 @@ export default function UserInfoPanel({
                         >
                             <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                             <circle cx="8.5" cy="7" r="4" />
-                            <path d="M20 8v6M23 11h-6" />
+                            {isContact ? (
+                                <path d="M17 11h6" />
+                            ) : (
+                                <path d="M20 8v6M23 11h-6" />
+                            )}
                         </svg>
-                        {contactState === "added" ? "Added" : "Add to contacts"}
+                        {isContact ? "Remove from contacts" : "Add to contacts"}
                     </button>
                 </div>
 

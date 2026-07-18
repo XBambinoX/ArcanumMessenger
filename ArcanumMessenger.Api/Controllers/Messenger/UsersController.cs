@@ -15,14 +15,17 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
         if (!TryGetUserId(out var userId))
             return Unauthorized();
 
-        var response = await BuildProfileAsync(userId, ct);
+        var response = await BuildProfileAsync(userId, userId, ct);
         return response.success ? response : NotFound(response);
     }
 
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<GetUserResponce>> GetUser(Guid id, CancellationToken ct)
     {
-        var response = await BuildProfileAsync(id, ct);
+        if (!TryGetUserId(out var callerId))
+            return Unauthorized();
+
+        var response = await BuildProfileAsync(id, callerId, ct);
         return response.success ? response : NotFound(response);
     }
 
@@ -75,7 +78,7 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
         return Ok(new SearchUsersResponse(true, results));
     }
 
-    private async Task<GetUserResponce> BuildProfileAsync(Guid id, CancellationToken ct)
+    private async Task<GetUserResponce> BuildProfileAsync(Guid id, Guid callerId, CancellationToken ct)
     {
         var user = await db.Users
                         .AsNoTracking()
@@ -94,7 +97,7 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
                         .FirstOrDefaultAsync(ct);
 
         if (user is null || user.IsDeleted)
-            return new GetUserResponce(Name: null, Id: null, LastSeen: null, PublicEmail: null, PublicBio: null, PublicPhone: null, success: false, reason: "not_found");
+            return new GetUserResponce(Name: null, Id: null, LastSeen: null, PublicEmail: null, PublicBio: null, PublicPhone: null, IsContact: false, success: false, reason: "not_found");
 
         var dek = encryption.UnwrapDek(user.WrappedDek);
         var username = encryption.Decrypt(user.UsernameEnc, dek);
@@ -103,6 +106,8 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
         var publicEmail = string.IsNullOrEmpty(user.PublicEmailEnc) ? null : encryption.Decrypt(user.PublicEmailEnc, dek);
         var publicPhone = string.IsNullOrEmpty(user.PublicPhoneEnc) ? null : encryption.Decrypt(user.PublicPhoneEnc, dek);
 
-        return new GetUserResponce(username, publicId, user.LastSeen, publicEmail, publicbio, publicPhone, success: true, reason: null);
+        var isContact = id != callerId && await db.Contacts.AnyAsync(c => c.UserId == callerId && c.ContactId == id, ct);
+
+        return new GetUserResponce(username, publicId, user.LastSeen, publicEmail, publicbio, publicPhone, isContact, success: true, reason: null);
     }
 }

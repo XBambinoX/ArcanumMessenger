@@ -40,6 +40,7 @@ export interface User {
     bio: string | null;
     email: string | null;
     phone: string | null;
+    isContact: boolean;
 }
 
 export interface UserSearchResult {

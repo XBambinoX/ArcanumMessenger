@@ -9,6 +9,7 @@ function toUser(data: {
     publicBio: string | null;
     publicEmail: string | null;
     publicPhone: string | null;
+    isContact: boolean;
 }): User | null {
     if (!data.success || data.name === null || data.id === null) return null;
     return {
@@ -18,6 +19,7 @@ function toUser(data: {
         bio: data.publicBio,
         email: data.publicEmail,
         phone: data.publicPhone,
+        isContact: data.isContact,
     };
 }
 
