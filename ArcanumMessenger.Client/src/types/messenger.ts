@@ -39,4 +39,5 @@ export interface User {
     lastSeen: string | null; // ISO timestamp
     bio: string | null;
     email: string | null;
+    phone: string | null;
 }

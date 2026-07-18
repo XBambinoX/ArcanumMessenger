@@ -8,6 +8,7 @@ function toUser(data: {
     lastSeen: string | null;
     publicBio: string | null;
     publicEmail: string | null;
+    publicPhone: string | null;
 }): User | null {
     if (!data.success || data.name === null || data.id === null) return null;
     return {
@@ -16,6 +17,7 @@ function toUser(data: {
         lastSeen: data.lastSeen,
         bio: data.publicBio,
         email: data.publicEmail,
+        phone: data.publicPhone,
     };
 }
 

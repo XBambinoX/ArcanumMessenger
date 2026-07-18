@@ -58,6 +58,12 @@ export default function UserInfoPanel({ user, onClose }: UserInfoPanelProps) {
                         </span>
                     </div>
                     <div className={styles.infoRow}>
+                        <span className={styles.infoLabel}>Phone</span>
+                        <span className={styles.infoValue}>
+                            {user.phone ?? "Not shared"}
+                        </span>
+                    </div>
+                    <div className={styles.infoRow}>
                         <span className={styles.infoLabel}>ID</span>
                         <span className={styles.infoValue}>
                             {user.publicId}

@@ -39,19 +39,21 @@ public class UsersController(AppDbContext db, EncryptionService encryption) : Me
                             u.LastSeen,
                             u.WrappedDek,
                             u.PublicBioEnc,
-                            u.PublicEmailEnc
+                            u.PublicEmailEnc,
+                            u.PublicPhoneEnc
                         })
                         .FirstOrDefaultAsync(ct);
 
         if (user is null || user.IsDeleted)
-            return new GetUserResponce(Name: null, Id: null, LastSeen: null, PublicEmail: null, PublicBio: null, success: false, reason: "not_found");
+            return new GetUserResponce(Name: null, Id: null, LastSeen: null, PublicEmail: null, PublicBio: null, PublicPhone: null, success: false, reason: "not_found");
 
         var dek = encryption.UnwrapDek(user.WrappedDek);
         var username = encryption.Decrypt(user.UsernameEnc, dek);
         var publicId = encryption.Decrypt(user.PublicIdEnc, dek);
         var publicbio = string.IsNullOrEmpty(user.PublicBioEnc) ? null : encryption.Decrypt(user.PublicBioEnc, dek);
         var publicEmail = string.IsNullOrEmpty(user.PublicEmailEnc) ? null : encryption.Decrypt(user.PublicEmailEnc, dek);
+        var publicPhone = string.IsNullOrEmpty(user.PublicPhoneEnc) ? null : encryption.Decrypt(user.PublicPhoneEnc, dek);
 
-        return new GetUserResponce(username, publicId, user.LastSeen, publicEmail, publicbio, success: true, reason: null);
+        return new GetUserResponce(username, publicId, user.LastSeen, publicEmail, publicbio, publicPhone, success: true, reason: null);
     }
 }
