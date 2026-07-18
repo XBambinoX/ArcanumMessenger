@@ -147,6 +147,14 @@ export default function AppPage() {
         markChatRead(chatId);
     };
 
+    const handleStartChat = (chat: ChatSummary) => {
+        setChats((prev) =>
+            prev.some((c) => c.id === chat.id) ? prev : [chat, ...prev],
+        );
+        setSelectedChatId(chat.id);
+        setNewChatOpen(false);
+    };
+
     const handleLogout = async () => {
         await logout();
         setAuthenticated(false);
@@ -259,6 +267,7 @@ export default function AppPage() {
                         key={selectedChat.id}
                         chat={selectedChat}
                         connection={connection}
+                        onStartChat={handleStartChat}
                     />
                 ) : (
                     <div className={styles.emptyState}>
@@ -312,7 +321,10 @@ export default function AppPage() {
             )}
 
             {newChatOpen && (
-                <NewChatPanel onClose={() => setNewChatOpen(false)} />
+                <NewChatPanel
+                    onClose={() => setNewChatOpen(false)}
+                    onStartChat={handleStartChat}
+                />
             )}
         </div>
     );

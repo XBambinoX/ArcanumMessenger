@@ -10,6 +10,7 @@ import styles from "./ChatWindow.module.css";
 interface ChatWindowProps {
     chat: ChatSummary;
     connection: HubConnection | null;
+    onStartChat: (chat: ChatSummary) => void;
 }
 
 function dayLabel(iso: string): string {
@@ -25,12 +26,12 @@ function dayLabel(iso: string): string {
     });
 }
 
-export default function ChatWindow({ chat, connection }: ChatWindowProps) {
+export default function ChatWindow({ chat, connection, onStartChat }: ChatWindowProps) {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [hasMore, setHasMore] = useState(false);
     const [loadingMore, setLoadingMore] = useState(false);
     const [draft, setDraft] = useState("");
-    const [userInfo, setUserInfo] = useState<User | null>(null);
+    const [userInfo, setUserInfo] = useState<{ userId: string; user: User } | null>(null);
     const scrollAnchor = useRef<HTMLDivElement | null>(null);
     const messagesRef = useRef<HTMLDivElement | null>(null);
     const prependingRef = useRef(false);
@@ -108,8 +109,9 @@ export default function ChatWindow({ chat, connection }: ChatWindowProps) {
 
     const handleAvatarClick = async () => {
         if (chat.type !== "direct" || !chat.otherUserId) return;
-        const user = await getUser(chat.otherUserId);
-        if (user) setUserInfo(user);
+        const userId = chat.otherUserId;
+        const user = await getUser(userId);
+        if (user) setUserInfo({ userId, user });
     };
 
     return (
@@ -229,8 +231,10 @@ export default function ChatWindow({ chat, connection }: ChatWindowProps) {
 
             {userInfo && (
                 <UserInfoPanel
-                    user={userInfo}
+                    userId={userInfo.userId}
+                    user={userInfo.user}
                     onClose={() => setUserInfo(null)}
+                    onStartChat={onStartChat}
                 />
             )}
         </div>

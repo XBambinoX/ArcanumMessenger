@@ -1,13 +1,37 @@
-import type { User } from "../types/messenger";
+import { useState } from "react";
+import type { ChatSummary, User } from "../types/messenger";
+import { createDirectChat } from "../api/chats";
+import { addContact } from "../api/contacts";
 import { formatChatTime } from "../lib/time";
 import styles from "./UserInfoPanel.module.css";
 
 interface UserInfoPanelProps {
+    userId: string;
     user: User;
     onClose: () => void;
+    onStartChat: (chat: ChatSummary) => void;
 }
 
-export default function UserInfoPanel({ user, onClose }: UserInfoPanelProps) {
+export default function UserInfoPanel({
+    userId,
+    user,
+    onClose,
+    onStartChat,
+}: UserInfoPanelProps) {
+    const [contactState, setContactState] = useState<"idle" | "added">("idle");
+
+    const handleWrite = async () => {
+        const chat = await createDirectChat(userId);
+        if (chat) {
+            onStartChat(chat);
+            onClose();
+        }
+    };
+
+    const handleAddContact = async () => {
+        if (await addContact(userId)) setContactState("added");
+    };
+
     return (
         <div className={styles.overlay} onClick={onClose}>
             <aside
@@ -42,6 +66,46 @@ export default function UserInfoPanel({ user, onClose }: UserInfoPanelProps) {
                             ? `Last seen ${formatChatTime(user.lastSeen)}`
                             : "Last seen a while ago"}
                     </span>
+                </div>
+
+                <div className={styles.actionRow}>
+                    <button className={styles.actionBtn} onClick={handleWrite}>
+                        <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        >
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z" />
+                        </svg>
+                        Message
+                    </button>
+                    <button
+                        className={styles.actionBtn}
+                        onClick={handleAddContact}
+                        disabled={contactState === "added"}
+                    >
+                        <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        >
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                            <circle cx="8.5" cy="7" r="4" />
+                            <path d="M20 8v6M23 11h-6" />
+                        </svg>
+                        {contactState === "added" ? "Added" : "Add to contacts"}
+                    </button>
                 </div>
 
                 <section className={styles.infoSection}>

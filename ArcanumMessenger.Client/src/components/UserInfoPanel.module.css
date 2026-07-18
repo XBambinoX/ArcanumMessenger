@@ -80,6 +80,40 @@
     color: rgba(148, 163, 184, 0.6);
 }
 
+.actionRow {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.actionBtn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 9px;
+    border-radius: 10px;
+    border: 1px solid rgba(124, 58, 237, 0.25);
+    background: rgba(124, 58, 237, 0.08);
+    color: rgba(226, 232, 240, 0.95);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.actionBtn:hover {
+    background: rgba(124, 58, 237, 0.15);
+    border-color: rgba(167, 139, 250, 0.4);
+}
+
+.actionBtn:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
 .infoSection {
     border-top: 1px solid rgba(124, 58, 237, 0.12);
     padding-top: 14px;

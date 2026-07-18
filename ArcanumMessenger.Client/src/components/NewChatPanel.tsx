@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { mockContacts } from "../mock/contacts";
-import { searchUsers } from "../api/users";
-import type { UserSearchResult } from "../types/messenger";
+import { getContacts } from "../api/contacts";
+import { searchUsers, getUser } from "../api/users";
+import type { ChatSummary, User, UserSearchResult } from "../types/messenger";
+import UserInfoPanel from "./UserInfoPanel";
 import styles from "./NewChatPanel.module.css";
 
 const MIN_SEARCH_LENGTH = 4;
@@ -9,14 +10,20 @@ const SEARCH_DEBOUNCE_MS = 350;
 
 interface NewChatPanelProps {
     onClose: () => void;
+    onStartChat: (chat: ChatSummary) => void;
 }
 
-// Contacts are still a stub - see mock/contacts.ts. Search is real (see
-// api/users.ts), but clicking a result doesn't start a chat yet.
-export default function NewChatPanel({ onClose }: NewChatPanelProps) {
+// Creating a group isn't wired up yet.
+export default function NewChatPanel({ onClose, onStartChat }: NewChatPanelProps) {
     const [search, setSearch] = useState("");
     const [results, setResults] = useState<UserSearchResult[]>([]);
+    const [contacts, setContacts] = useState<UserSearchResult[]>([]);
+    const [viewedUser, setViewedUser] = useState<{ userId: string; user: User } | null>(null);
     const query = search.trim();
+
+    useEffect(() => {
+        getContacts().then(setContacts);
+    }, []);
 
     useEffect(() => {
         if (query.length < MIN_SEARCH_LENGTH) {
@@ -31,7 +38,13 @@ export default function NewChatPanel({ onClose }: NewChatPanelProps) {
         return () => clearTimeout(timer);
     }, [query]);
 
+    const handleViewUser = async (id: string) => {
+        const user = await getUser(id);
+        if (user) setViewedUser({ userId: id, user });
+    };
+
     return (
+        <>
         <div className={styles.overlay} onClick={onClose}>
             <aside
                 className={styles.panel}
@@ -101,7 +114,12 @@ export default function NewChatPanel({ onClose }: NewChatPanelProps) {
                             <ul className={styles.contactList}>
                                 {results.map((result) => (
                                     <li key={result.id}>
-                                        <button className={styles.contactRow}>
+                                        <button
+                                            className={styles.contactRow}
+                                            onClick={() =>
+                                                handleViewUser(result.id)
+                                            }
+                                        >
                                             <div
                                                 className={
                                                     styles.contactAvatar
@@ -121,31 +139,48 @@ export default function NewChatPanel({ onClose }: NewChatPanelProps) {
                 ) : (
                     <>
                         <h3 className={styles.sectionTitle}>Contacts</h3>
-                        <ul className={styles.contactList}>
-                            {mockContacts.map((contact) => (
-                                <li key={contact.id}>
-                                    <button className={styles.contactRow}>
-                                        <div
-                                            className={styles.contactAvatar}
+                        {contacts.length === 0 ? (
+                            <p className={styles.note}>
+                                No contacts yet – find someone by ID above.
+                            </p>
+                        ) : (
+                            <ul className={styles.contactList}>
+                                {contacts.map((contact) => (
+                                    <li key={contact.id}>
+                                        <button
+                                            className={styles.contactRow}
+                                            onClick={() =>
+                                                handleViewUser(contact.id)
+                                            }
                                         >
-                                            {contact.username
-                                                .charAt(0)
-                                                .toUpperCase()}
-                                        </div>
-                                        <span>{contact.username}</span>
-                                    </button>
-                                </li>
-                            ))}
-                        </ul>
-
-                        <p className={styles.note}>
-                            Contacts aren't connected yet – this list is a
-                            preview. Clicking a search result doesn't start a
-                            chat yet either.
-                        </p>
+                                            <div
+                                                className={
+                                                    styles.contactAvatar
+                                                }
+                                            >
+                                                {contact.name
+                                                    .charAt(0)
+                                                    .toUpperCase()}
+                                            </div>
+                                            <span>{contact.name}</span>
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
                     </>
                 )}
             </aside>
         </div>
+
+        {viewedUser && (
+            <UserInfoPanel
+                userId={viewedUser.userId}
+                user={viewedUser.user}
+                onClose={() => setViewedUser(null)}
+                onStartChat={onStartChat}
+            />
+        )}
+        </>
     );
 }
