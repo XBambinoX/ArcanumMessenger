@@ -44,7 +44,7 @@ public class ChatService(AppDbContext db, UserDisplayNameService displayNames, I
                     r.ChatId,
                     r.Type,
                     r.Type == "direct"
-                        ? names.GetValueOrDefault(r.OtherMemberId!.Value, "Unknown user")
+                        ? (r.OtherMemberId is { } otherId ? names.GetValueOrDefault(otherId, "Unknown user") : "Unknown user")
                         : r.Title ?? "Untitled group",
                     r.LastMessageContent,
                     r.LastMessageAt,
