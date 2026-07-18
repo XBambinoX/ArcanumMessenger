@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { HubConnection } from "@microsoft/signalr";
 import { useNavigate } from "react-router-dom";
 import { logout } from "../api/session";
@@ -7,7 +7,8 @@ import { createChatHubConnection } from "../lib/chatHub";
 import { useAuth } from "../context/AuthContext";
 import ChatList from "../components/ChatList";
 import ChatWindow from "../components/ChatWindow";
-import SettingsPanel from "../components/SettingsPanel";
+import ProfilePanel from "../components/ProfilePanel";
+import { mockProfile } from "../mock/profile";
 import type { ChatFolder, ChatMessage, ChatSummary } from "../types/messenger";
 import styles from "./AppPage.module.css";
 
@@ -17,6 +18,17 @@ const folders: { id: ChatFolder; label: string }[] = [
     { id: "archive", label: "Archive" },
 ];
 
+const MIN_SIDEBAR_WIDTH = 260;
+const MAX_SIDEBAR_WIDTH = 480;
+const DEFAULT_SIDEBAR_WIDTH = 340;
+
+function readStoredSidebarWidth(): number {
+    const saved = Number(localStorage.getItem("sidebarWidth"));
+    return saved >= MIN_SIDEBAR_WIDTH && saved <= MAX_SIDEBAR_WIDTH
+        ? saved
+        : DEFAULT_SIDEBAR_WIDTH;
+}
+
 export default function AppPage() {
     const navigate = useNavigate();
     const { setAuthenticated } = useAuth();
@@ -25,8 +37,10 @@ export default function AppPage() {
     const [folder, setFolder] = useState<ChatFolder>("all");
     const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
     const [search, setSearch] = useState("");
-    const [settingsOpen, setSettingsOpen] = useState(false);
+    const [profileOpen, setProfileOpen] = useState(false);
     const [connection, setConnection] = useState<HubConnection | null>(null);
+    const [sidebarWidth, setSidebarWidth] = useState(readStoredSidebarWidth);
+    const sidebarWidthRef = useRef(sidebarWidth);
 
     useEffect(() => {
         getChats().then(setChats);
@@ -135,38 +149,45 @@ export default function AppPage() {
         navigate("/welcome");
     };
 
+    const handleSidebarResizeStart = (e: React.PointerEvent) => {
+        e.preventDefault();
+        const startX = e.clientX;
+        const startWidth = sidebarWidthRef.current;
+
+        const handleMove = (moveEvent: PointerEvent) => {
+            const next = Math.min(
+                MAX_SIDEBAR_WIDTH,
+                Math.max(MIN_SIDEBAR_WIDTH, startWidth + (moveEvent.clientX - startX)),
+            );
+            sidebarWidthRef.current = next;
+            setSidebarWidth(next);
+        };
+        const handleUp = () => {
+            window.removeEventListener("pointermove", handleMove);
+            window.removeEventListener("pointerup", handleUp);
+            localStorage.setItem("sidebarWidth", String(sidebarWidthRef.current));
+        };
+
+        window.addEventListener("pointermove", handleMove);
+        window.addEventListener("pointerup", handleUp);
+    };
+
     return (
         <div className={styles.root}>
-            <aside className={styles.sidebar}>
+            <aside className={styles.sidebar} style={{ width: sidebarWidth }}>
+                <div
+                    className={styles.resizeHandle}
+                    onPointerDown={handleSidebarResizeStart}
+                />
                 <header className={styles.sidebarHeader}>
                     <div className={styles.brandRow}>
-                        <div className={styles.logoBox}>
-                            <img
-                                className={styles.logoImg}
-                                src="/logo.svg"
-                                alt="Arcanum"
-                            />
-                        </div>
-                        <span className={styles.brand}>Arcanum</span>
                         <button
-                            className={styles.iconBtn}
-                            onClick={() => setSettingsOpen(true)}
-                            aria-label="Settings"
-                            title="Settings"
+                            className={styles.avatarBtn}
+                            onClick={() => setProfileOpen(true)}
+                            aria-label="Profile"
+                            title="Profile"
                         >
-                            <svg
-                                width="18"
-                                height="18"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            >
-                                <circle cx="12" cy="12" r="3" />
-                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                            </svg>
+                            {mockProfile.username.charAt(0).toUpperCase()}
                         </button>
                     </div>
                     <input
@@ -254,9 +275,9 @@ export default function AppPage() {
                 )}
             </main>
 
-            {settingsOpen && (
-                <SettingsPanel
-                    onClose={() => setSettingsOpen(false)}
+            {profileOpen && (
+                <ProfilePanel
+                    onClose={() => setProfileOpen(false)}
                     onLogout={handleLogout}
                 />
             )}

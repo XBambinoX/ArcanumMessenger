@@ -13,12 +13,28 @@
 
 /* ── SIDEBAR ── */
 .sidebar {
+    position: relative;
     display: flex;
     flex-direction: column;
-    width: 340px;
-    min-width: 280px;
+    flex-shrink: 0;
     border-right: 1px solid rgba(124, 58, 237, 0.15);
     background: rgba(15, 12, 30, 0.6);
+}
+
+.resizeHandle {
+    position: absolute;
+    top: 0;
+    right: -3px;
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 5;
+    background: transparent;
+}
+
+.resizeHandle:hover,
+.resizeHandle:active {
+    background: rgba(124, 58, 237, 0.35);
 }
 
 .sidebarHeader {
@@ -33,40 +49,25 @@
     margin-bottom: 12px;
 }
 
-.logoBox {
+.avatarBtn {
     width: 34px;
     height: 34px;
-    border-radius: 10px;
-    border: 1px solid rgba(124, 58, 237, 0.45);
-    background: linear-gradient(
-        135deg,
-        rgba(124, 58, 237, 0.28),
-        rgba(79, 70, 229, 0.18)
-    );
+    border-radius: 50%;
+    border: none;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-}
-
-.logoImg {
-    /* display: block kills the inline-image baseline gap that made the
-       logo sit slightly low inside the box; the tiny translate corrects
-       the optical weight of the mark itself */
-    display: block;
-    width: 20px;
-    height: auto;
-    transform: translateY(-1px);
-}
-
-.brand {
-    flex: 1;
-    font-size: 17px;
+    font-size: 14px;
     font-weight: 700;
-    background: linear-gradient(135deg, #a78bfa, #22d3ee);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: #fff;
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    cursor: pointer;
+    transition: filter 0.2s;
+}
+
+.avatarBtn:hover {
+    filter: brightness(1.1);
 }
 
 .iconBtn {
