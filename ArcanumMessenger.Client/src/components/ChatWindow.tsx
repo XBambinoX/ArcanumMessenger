@@ -5,6 +5,7 @@ import { getMessageHistory, sendMessage } from "../api/messages";
 import { getUser } from "../api/users";
 import { formatMessageTime } from "../lib/time";
 import UserInfoPanel from "./UserInfoPanel";
+import ChatInfoPanel from "./ChatInfoPanel";
 import styles from "./ChatWindow.module.css";
 
 interface ChatWindowProps {
@@ -32,6 +33,7 @@ export default function ChatWindow({ chat, connection, onStartChat }: ChatWindow
     const [loadingMore, setLoadingMore] = useState(false);
     const [draft, setDraft] = useState("");
     const [userInfo, setUserInfo] = useState<{ userId: string; user: User } | null>(null);
+    const [chatInfoOpen, setChatInfoOpen] = useState(false);
     const scrollAnchor = useRef<HTMLDivElement | null>(null);
     const messagesRef = useRef<HTMLDivElement | null>(null);
     const prependingRef = useRef(false);
@@ -129,6 +131,26 @@ export default function ChatWindow({ chat, connection, onStartChat }: ChatWindow
                         {chat.type === "group" ? "group chat" : "direct chat"}
                     </span>
                 </div>
+                <button
+                    className={styles.infoBtn}
+                    onClick={() => setChatInfoOpen(true)}
+                    aria-label="Chat info"
+                    title="Chat info"
+                >
+                    <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    >
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 16v-4M12 8h.01" />
+                    </svg>
+                </button>
             </header>
 
             <div
@@ -235,6 +257,13 @@ export default function ChatWindow({ chat, connection, onStartChat }: ChatWindow
                     user={userInfo.user}
                     onClose={() => setUserInfo(null)}
                     onStartChat={onStartChat}
+                />
+            )}
+
+            {chatInfoOpen && (
+                <ChatInfoPanel
+                    chat={chat}
+                    onClose={() => setChatInfoOpen(false)}
                 />
             )}
         </div>
