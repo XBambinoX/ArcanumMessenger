@@ -10,7 +10,7 @@ namespace ArcanumMessenger.Controllers.Messenger;
 public class UsersController(AppDbContext db, EncryptionService encryption) : MessengerControllerBase
 {
     [HttpGet("me")]
-    public async Task<ActionResult<GetCurrentUserResponce>> GetMe(CancellationToken ct)
+    public async Task<ActionResult<GetUserResponce>> GetMe(CancellationToken ct)
     {
         if (!TryGetUserId(out var userId))
             return Unauthorized();
@@ -20,27 +20,38 @@ public class UsersController(AppDbContext db, EncryptionService encryption) : Me
     }
 
     [HttpGet("{id:guid}")]
-    public async Task<ActionResult<GetCurrentUserResponce>> GetUser(Guid id, CancellationToken ct)
+    public async Task<ActionResult<GetUserResponce>> GetUser(Guid id, CancellationToken ct)
     {
         var response = await BuildProfileAsync(id, ct);
         return response.success ? response : NotFound(response);
     }
 
-    private async Task<GetCurrentUserResponce> BuildProfileAsync(Guid id, CancellationToken ct)
+    private async Task<GetUserResponce> BuildProfileAsync(Guid id, CancellationToken ct)
     {
         var user = await db.Users
                         .AsNoTracking()
                         .Where(u => u.Id == id)
-                        .Select(u => new { u.UsernameEnc, u.PublicIdEnc, u.LastSeen, u.WrappedDek, u.IsDeleted })
+                        .Select(u => new
+                        {
+                            u.UsernameEnc,
+                            u.IsDeleted,
+                            u.PublicIdEnc,
+                            u.LastSeen,
+                            u.WrappedDek,
+                            u.PublicBioEnc,
+                            u.PublicEmailEnc
+                        })
                         .FirstOrDefaultAsync(ct);
 
         if (user is null || user.IsDeleted)
-            return new GetCurrentUserResponce(Name: null, Id: null, LastSeen: null, success: false, reason: "not_found");
+            return new GetUserResponce(Name: null, Id: null, LastSeen: null, PublicEmail: null, PublicBio: null, success: false, reason: "not_found");
 
         var dek = encryption.UnwrapDek(user.WrappedDek);
         var username = encryption.Decrypt(user.UsernameEnc, dek);
         var publicId = encryption.Decrypt(user.PublicIdEnc, dek);
+        var publicbio = user.PublicBioEnc is null ? null : encryption.Decrypt(user.PublicBioEnc, dek);
+        var publicEmail = user.PublicEmailEnc is null ? null : encryption.Decrypt(user.PublicEmailEnc, dek);
 
-        return new GetCurrentUserResponce(username, publicId, user.LastSeen, success: true, reason: null);
+        return new GetUserResponce(username, publicId, user.LastSeen, publicEmail, publicbio, success: true, reason: null);
     }
 }

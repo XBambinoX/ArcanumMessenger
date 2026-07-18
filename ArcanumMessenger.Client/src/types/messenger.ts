@@ -37,9 +37,6 @@ export interface User {
     name: string;
     publicId: string;
     lastSeen: string | null; // ISO timestamp
-    // Not fetched from the server yet - always null until there's a
-    // backend field for them. UserInfoPanel already renders their
-    // empty state so the panel doesn't need to change once they land.
     bio: string | null;
     email: string | null;
 }

@@ -3,7 +3,7 @@ import type { HubConnection } from "@microsoft/signalr";
 import { useNavigate } from "react-router-dom";
 import { logout } from "../api/session";
 import { getChats, markChatRead, setChatArchived } from "../api/chats";
-import { getCurrentUser } from "../api/users";
+import { getMe } from "../api/users";
 import { createChatHubConnection } from "../lib/chatHub";
 import { useAuth } from "../context/AuthContext";
 import ChatList from "../components/ChatList";
@@ -47,7 +47,7 @@ export default function AppPage() {
 
     useEffect(() => {
         getChats().then(setChats);
-        getCurrentUser().then(setProfile);
+        getMe().then(setProfile);
     }, []);
 
     useEffect(() => {
