@@ -49,8 +49,8 @@ public class UsersController(AppDbContext db, EncryptionService encryption) : Me
         var dek = encryption.UnwrapDek(user.WrappedDek);
         var username = encryption.Decrypt(user.UsernameEnc, dek);
         var publicId = encryption.Decrypt(user.PublicIdEnc, dek);
-        var publicbio = user.PublicBioEnc is null ? null : encryption.Decrypt(user.PublicBioEnc, dek);
-        var publicEmail = user.PublicEmailEnc is null ? null : encryption.Decrypt(user.PublicEmailEnc, dek);
+        var publicbio = string.IsNullOrEmpty(user.PublicBioEnc) ? null : encryption.Decrypt(user.PublicBioEnc, dek);
+        var publicEmail = string.IsNullOrEmpty(user.PublicEmailEnc) ? null : encryption.Decrypt(user.PublicEmailEnc, dek);
 
         return new GetUserResponce(username, publicId, user.LastSeen, publicEmail, publicbio, success: true, reason: null);
     }
