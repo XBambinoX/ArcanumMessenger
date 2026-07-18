@@ -8,7 +8,8 @@ public record ChatSummaryDto(
     DateTime? LastMessageAt,
     int UnreadCount,
     bool IsMuted,
-    bool IsArchived);
+    bool IsArchived,
+    Guid? OtherUserId);
 
 public record ChatListResponse(bool Success, IReadOnlyList<ChatSummaryDto>? Chats, string? Reason = null);
 

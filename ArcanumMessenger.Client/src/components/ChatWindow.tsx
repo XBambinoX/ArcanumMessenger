@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import type { HubConnection } from "@microsoft/signalr";
-import type { ChatMessage, ChatSummary } from "../types/messenger";
+import type { ChatMessage, ChatSummary, User } from "../types/messenger";
 import { getMessageHistory, sendMessage } from "../api/messages";
+import { getUser } from "../api/users";
 import { formatMessageTime } from "../lib/time";
+import UserInfoPanel from "./UserInfoPanel";
 import styles from "./ChatWindow.module.css";
 
 interface ChatWindowProps {
@@ -28,6 +30,7 @@ export default function ChatWindow({ chat, connection }: ChatWindowProps) {
     const [hasMore, setHasMore] = useState(false);
     const [loadingMore, setLoadingMore] = useState(false);
     const [draft, setDraft] = useState("");
+    const [userInfo, setUserInfo] = useState<User | null>(null);
     const scrollAnchor = useRef<HTMLDivElement | null>(null);
     const messagesRef = useRef<HTMLDivElement | null>(null);
     const prependingRef = useRef(false);
@@ -103,11 +106,18 @@ export default function ChatWindow({ chat, connection }: ChatWindowProps) {
     const findMessage = (id: string | null) =>
         id ? messages.find((m) => m.id === id) : undefined;
 
+    const handleAvatarClick = async () => {
+        if (chat.type !== "direct" || !chat.otherUserId) return;
+        const user = await getUser(chat.otherUserId);
+        if (user) setUserInfo(user);
+    };
+
     return (
         <div className={styles.root}>
             <header className={styles.header}>
                 <div
-                    className={`${styles.avatar} ${chat.type === "group" ? styles.avatarGroup : ""}`}
+                    className={`${styles.avatar} ${chat.type === "group" ? styles.avatarGroup : ""} ${chat.type === "direct" ? styles.avatarClickable : ""}`}
+                    onClick={handleAvatarClick}
                 >
                     {chat.title.charAt(0).toUpperCase()}
                 </div>
@@ -216,6 +226,13 @@ export default function ChatWindow({ chat, connection }: ChatWindowProps) {
                     </svg>
                 </button>
             </footer>
+
+            {userInfo && (
+                <UserInfoPanel
+                    user={userInfo}
+                    onClose={() => setUserInfo(null)}
+                />
+            )}
         </div>
     );
 }

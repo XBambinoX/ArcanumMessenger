@@ -50,7 +50,8 @@ public class ChatService(AppDbContext db, UserDisplayNameService displayNames, I
                     r.LastMessageAt,
                     r.UnreadCount,
                     r.IsMuted,
-                    r.IsArchived),
+                    r.IsArchived,
+                    r.OtherMemberId),
                 SortKey = r.LastMessageAt ?? r.ChatCreatedAt,
             })
             .OrderByDescending(x => x.SortKey)

@@ -34,6 +34,15 @@
     background: linear-gradient(135deg, #0891b2, #4f46e5);
 }
 
+.avatarClickable {
+    cursor: pointer;
+    transition: filter 0.2s;
+}
+
+.avatarClickable:hover {
+    filter: brightness(1.1);
+}
+
 .headerText {
     display: flex;
     flex-direction: column;
