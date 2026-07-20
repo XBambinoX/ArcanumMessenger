@@ -21,8 +21,6 @@ public class User
     // EncryptionService.UnwrapDek() before decrypting any *Enc field below.
     public string WrappedDek { get; set; } = null!;
     public string? PublicEmailEnc { get; set; }
-    public string? PublicPhoneEnc { get; set; }
-    public string? PublicBioEnc { get; set; }
     public bool TwoFactorEnabled { get; set; }
     // Base32 TOTP secret, encrypted with this user's DEK (same pattern as
     // the other *Enc fields). Unlike PasswordHash, this must be reversible —

@@ -3,6 +3,9 @@ namespace ArcanumMessenger.Entities;
 public class UserSettings
 {
     public Guid UserId { get; set; }
+
+    public string? BioEnc { get; set; }
+    public string? PhoneEnc { get; set; }
     public bool NotificationsEnabled { get; set; } = true;
     public bool ShowLastSeen { get; set; } = true;
     public bool ShowOnlineStatus { get; set; } = true;

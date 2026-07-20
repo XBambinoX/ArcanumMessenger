@@ -1,7 +1,7 @@
 namespace ArcanumMessenger.Contracts.Messenger.Users;
 
 
-public record GetUserResponce(string? Name, string? Id, DateTime? LastSeen, string? PublicEmail, string? PublicBio, string? PublicPhone, bool IsContact, bool success, string? reason);
+public record GetUserResponce(string? Name, string? Id, DateTime? LastSeen, string? PublicEmail, bool IsContact, bool success, string? reason);
 
 public record UserSearchResultDto(Guid Id, string Name, string PublicId);
 
