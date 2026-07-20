@@ -348,3 +348,170 @@
     font-size: 13px;
     color: rgba(148, 163, 184, 0.8);
 }
+
+.menuRow:disabled {
+    cursor: default;
+    opacity: 0.55;
+}
+
+.menuRow:disabled:hover {
+    background: transparent;
+}
+
+.menuChevron {
+    display: flex;
+    align-items: center;
+    color: rgba(148, 163, 184, 0.5);
+    flex-shrink: 0;
+}
+
+.backBtn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border: none;
+    background: transparent;
+    color: rgba(226, 232, 240, 0.95);
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 4px 4px 4px 0;
+}
+
+.backBtn:hover {
+    color: #a78bfa;
+}
+
+/* ── Slide transition ── */
+.slideViewport {
+    position: relative;
+    overflow: hidden;
+    transition: height 0.25s ease;
+}
+
+.slidePanel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+}
+
+.staticPanel {
+    position: relative;
+    width: 100%;
+}
+
+@keyframes slideOutLeft {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(-30%); opacity: 0; }
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideOutRight {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(30%); opacity: 0; }
+}
+
+@keyframes slideInLeft {
+    from { transform: translateX(-100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.slideOutLeft {
+    animation: slideOutLeft 0.25s ease forwards;
+}
+
+.slideInRight {
+    animation: slideInRight 0.25s ease forwards;
+}
+
+.slideOutRight {
+    animation: slideOutRight 0.25s ease forwards;
+}
+
+.slideInLeft {
+    animation: slideInLeft 0.25s ease forwards;
+}
+
+/* ── Sub-page fields ── */
+.subPage {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px 4px 4px;
+}
+
+.fieldLabel {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: rgba(167, 139, 250, 0.6);
+    margin: 12px 0 6px;
+}
+
+.fieldLabel:first-child {
+    margin-top: 0;
+}
+
+.textInput,
+.textArea {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(124, 58, 237, 0.25);
+    background: rgba(124, 58, 237, 0.06);
+    color: rgba(226, 232, 240, 0.95);
+    font-family: inherit;
+    font-size: 14px;
+    outline: none;
+    resize: none;
+    transition: border-color 0.2s;
+}
+
+.textInput:focus,
+.textArea:focus {
+    border-color: rgba(167, 139, 250, 0.5);
+}
+
+.fieldHint {
+    margin: 8px 0 0;
+    font-size: 12px;
+    color: rgba(148, 163, 184, 0.55);
+}
+
+.optionList {
+    display: flex;
+    flex-direction: column;
+}
+
+.optionRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 12px 10px;
+    border: none;
+    background: transparent;
+    color: rgba(226, 232, 240, 0.95);
+    font-family: inherit;
+    font-size: 14.5px;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: background 0.15s;
+}
+
+.optionRow:hover {
+    background: rgba(124, 58, 237, 0.08);
+}
+
+.optionCheck {
+    display: flex;
+    color: #7c9bfa;
+}
