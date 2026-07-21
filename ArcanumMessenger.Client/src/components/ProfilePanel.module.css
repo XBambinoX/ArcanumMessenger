@@ -42,6 +42,7 @@
     align-items: center;
     justify-content: space-between;
     margin-bottom: 6px;
+    flex-shrink: 0;
 }
 
 .title {
@@ -387,6 +388,7 @@
     position: relative;
     overflow: hidden;
     transition: height 0.25s ease;
+    flex-shrink: 0;
 }
 
 .slidePanel {
@@ -625,4 +627,17 @@
     justify-content: space-between;
     font-size: 14px;
     margin-bottom: 8px;
+}
+
+.panel::-webkit-scrollbar {
+    width: 6px;
+}
+
+.panel::-webkit-scrollbar-thumb {
+    background: rgba(124, 58, 237, 0.35);
+    border-radius: 3px;
+}
+
+.panel::-webkit-scrollbar-track {
+    background: transparent;
 }
