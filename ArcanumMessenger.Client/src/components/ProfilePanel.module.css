@@ -641,3 +641,9 @@
 .panel::-webkit-scrollbar-track {
     background: transparent;
 }
+
+.textInput:disabled,
+.textArea:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

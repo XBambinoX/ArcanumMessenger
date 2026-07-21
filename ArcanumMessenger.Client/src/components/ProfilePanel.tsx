@@ -1,6 +1,7 @@
-import { useLayoutEffect, useRef, useState, type ReactElement } from "react";
+import { useLayoutEffect, useRef, useState, useEffect, type ReactElement } from "react";
 import type { User } from "../types/messenger";
 import styles from "./ProfilePanel.module.css";
+import { getUserSettings } from "../api/userSettings";
 
 interface ProfilePanelProps {
     profile: User;
@@ -149,7 +150,7 @@ const addMeOptions: { id: SettingsState["whoCanAddMe"]; label: string }[] = [
 const sectionTitles: Record<Section, string> = {
     main: "Profile",
     account: "My Account",
-    notifications: "Notifications and Sounds",
+    notifications: "Notifications and Sounds" ,
     privacy: "Privacy and Security",
     chats: "Chat Settings",
 };
@@ -160,6 +161,7 @@ const ANIMATION_MS = 250;
 export default function ProfilePanel({ profile, onClose, onLogout }: ProfilePanelProps) {
     const [copied, setCopied] = useState(false);
     const [settings, setSettings] = useState<SettingsState>(defaultSettings);
+    const [settingsLoaded, setSettingsLoaded] = useState(false);
 
     const [section, setSection] = useState<Section>("main");
     const [prevSection, setPrevSection] = useState<Section | null>(null);
@@ -220,6 +222,29 @@ export default function ProfilePanel({ profile, onClose, onLogout }: ProfilePane
             requestAnimationFrame(() => setViewportHeight(target));
         }
     }, [animating, section]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        getUserSettings()
+            .then((data) => {
+                if (cancelled) return;
+                setSettings(prev => ({
+                    ...prev,
+                    bio: data.bio,
+                    phone: data.phone,
+                    username: data.username,
+                }));
+                setSettingsLoaded(true);
+            })
+            .catch(() => {
+                if (!cancelled) setSettingsLoaded(true);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     const renderSection = (sec: Section) => {
         switch (sec) {
@@ -297,24 +322,26 @@ export default function ProfilePanel({ profile, onClose, onLogout }: ProfilePane
                             </div>
                         </div>
 
-                        <label className={styles.fieldLabel}>Nickname</label>
-                        <input
+                        <label className={styles.fieldLabel}>Username</label>
+                        <input                    
                             className={styles.textInput}
                             type="text"
-                            placeholder="Your nickname"
+                            placeholder={settingsLoaded ? "Your username" : "Loading..."}
                             value={settings.username}
                             onChange={(e) => handleUsernameChange(e.target.value)}
                             maxLength={32}
+                            disabled={!settingsLoaded}
                         />
 
                         <label className={styles.fieldLabel}>Bio</label>
                         <textarea
                             className={styles.textArea}
-                            placeholder="Tell something about yourself"
+                            placeholder={settingsLoaded ? "Tell something about yourself" : "Loading..."}
                             value={settings.bio}
                             onChange={(e) => handleBioChange(e.target.value)}
                             rows={3}
                             maxLength={70}
+                            disabled={!settingsLoaded}
                         />
                         <p className={styles.fieldHint}>{70 - settings.bio.length} characters left</p>
 
@@ -323,11 +350,11 @@ export default function ProfilePanel({ profile, onClose, onLogout }: ProfilePane
                             className={styles.textInput}
                             type="tel"
                             inputMode="numeric"
-                            placeholder="+1..."
+                            placeholder={settingsLoaded ? "+1..." : "Loading..."}
                             value={settings.phone}
                             onChange={(e) => handlePhoneChange(e.target.value)}
+                            disabled={!settingsLoaded}
                         />
-
                         <span className={styles.subGroupTitle}>Danger Zone</span>
                         <button className={styles.dangerRow}>
                             <TrashIcon />
