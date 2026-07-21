@@ -350,16 +350,6 @@ export default function ProfilePanel({ profile, onClose, onLogout }: ProfilePane
                             />
                         </label>
                         <label className={styles.row}>
-                            <span>Show message preview</span>
-                            <input
-                                className={styles.switch}
-                                type="checkbox"
-                                checked={settings.messagePreview}
-                                onChange={(e) => patch({ messagePreview: e.target.checked })}
-                                disabled={!settings.notificationsEnabled}
-                            />
-                        </label>
-                        <label className={styles.row}>
                             <span>Group chat notifications</span>
                             <input
                                 className={styles.switch}
