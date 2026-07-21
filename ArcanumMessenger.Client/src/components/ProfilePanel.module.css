@@ -515,3 +515,114 @@
     display: flex;
     color: #7c9bfa;
 }
+
+.subGroupTitle {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(167, 139, 250, 0.6);
+    margin: 18px 4px 4px;
+}
+
+.subGroupTitle:first-child {
+    margin-top: 2px;
+}
+
+.avatarEditRow {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 6px 4px 14px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid rgba(124, 58, 237, 0.12);
+}
+
+.avatarEditPic {
+    position: relative;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.avatarEditOverlay {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.45);
+    color: #fff;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.avatarEditPic:hover .avatarEditOverlay {
+    opacity: 1;
+}
+
+.avatarEditHint {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.avatarEditTitle {
+    font-size: 14px;
+    font-weight: 600;
+    color: #7c9bfa;
+}
+
+.avatarEditSub {
+    font-size: 12px;
+    color: rgba(148, 163, 184, 0.55);
+}
+
+.dangerRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 8px;
+    border: none;
+    background: transparent;
+    color: #f87171;
+    font-family: inherit;
+    font-size: 14.5px;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: background 0.15s;
+}
+
+.dangerRow:hover {
+    background: rgba(248, 113, 113, 0.08);
+}
+
+.row[data-disabled],
+.switch:disabled {
+    opacity: 0.5;
+}
+
+.fontSizeRow {
+    padding: 8px 8px 4px;
+}
+
+.fontSizeLabelRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 14px;
+    margin-bottom: 8px;
+}

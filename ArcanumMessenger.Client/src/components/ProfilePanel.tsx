@@ -10,24 +10,42 @@ interface ProfilePanelProps {
 
 type Section = "main" | "account" | "notifications" | "privacy" | "chats";
 
-// Mirrors Entities.UserSettings. Not persisted yet — wiring to
-// GET/PUT /api/users/me/settings is the next step.
+// Mirrors Entities.UserSettings, plus a few visual-only extras below.
+// Not persisted yet — wiring to GET/PUT /api/users/me/settings is next.
 interface SettingsState {
     bio: string;
     phone: string;
     notificationsEnabled: boolean;
+    messagePreview: boolean;
+    groupNotifications: boolean;
+    notificationSound: string;
     showLastSeen: boolean;
     showOnlineStatus: boolean;
+    showPhoneNumber: "everyone" | "contacts" | "nobody";
+    whoCanAddMe: "everyone" | "contacts";
+    readReceipts: boolean;
     theme: "system" | "dark" | "light";
+    wallpaper: string;
+    fontSize: number;
+    autoDownloadMedia: boolean;
 }
 
 const defaultSettings: SettingsState = {
     bio: "",
     phone: "",
     notificationsEnabled: true,
+    messagePreview: true,
+    groupNotifications: true,
+    notificationSound: "Default",
     showLastSeen: true,
     showOnlineStatus: true,
+    showPhoneNumber: "contacts",
+    whoCanAddMe: "everyone",
+    readReceipts: true,
     theme: "system",
+    wallpaper: "Default",
+    fontSize: 15,
+    autoDownloadMedia: true,
 };
 
 type IconProps = { color: string };
@@ -66,15 +84,7 @@ const ChatIcon = ({ color }: IconProps) => (
         <path d="M4 12a8 6.5 0 1 1 3 5l-4 1.2 1.2-3.8A6.4 6.4 0 0 1 4 12z" />
     </svg>
 );
-const SlidersIcon = ({ color }: IconProps) => (
-    <svg {...iconProps} style={{ color }}>
-        <path d="M4 6h10M4 12h6M4 18h13" />
-        <circle cx="17" cy="6" r="2" />
-        <circle cx="13" cy="18" r="2" />
-        <circle cx="20" cy="12" r="0.01" />
-        <path d="M18 12h3" />
-    </svg>
-);
+
 const LanguageIcon = ({ color }: IconProps) => (
     <svg {...iconProps} style={{ color }}>
         <circle cx="12" cy="12" r="9" />
@@ -91,6 +101,17 @@ const CheckIcon = () => (
         <path d="M20 6 9 17l-5-5" />
     </svg>
 );
+const CameraIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 8a2 2 0 0 1 2-2h1.5l1-1.5h7l1 1.5H18a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8z" />
+        <circle cx="12" cy="13" r="3.5" />
+    </svg>
+);
+const TrashIcon = () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0 1 12a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2l1-12" />
+    </svg>
+);
 
 const menuItems: {
     icon: (p: IconProps) => ReactElement;
@@ -103,7 +124,6 @@ const menuItems: {
     { icon: BellIcon, color: "#f2703c", label: "Notifications and Sounds", section: "notifications" },
     { icon: LockIcon, color: "#4fb85c", label: "Privacy and Security", section: "privacy" },
     { icon: ChatIcon, color: "#4ec4dc", label: "Chat Settings", section: "chats" },
-    { icon: SlidersIcon, color: "#8f7ee6", label: "Advanced" },
     { icon: LanguageIcon, color: "#3fbfae", label: "Language", value: "Coming soon :)" },
 ];
 
@@ -111,6 +131,17 @@ const themeOptions: { id: SettingsState["theme"]; label: string }[] = [
     { id: "system", label: "System" },
     { id: "dark", label: "Dark" },
     { id: "light", label: "Light" },
+];
+
+const phoneVisibilityOptions: { id: SettingsState["showPhoneNumber"]; label: string }[] = [
+    { id: "everyone", label: "Everyone" },
+    { id: "contacts", label: "My Contacts" },
+    { id: "nobody", label: "Nobody" },
+];
+
+const addMeOptions: { id: SettingsState["whoCanAddMe"]; label: string }[] = [
+    { id: "everyone", label: "Everyone" },
+    { id: "contacts", label: "My Contacts Only" },
 ];
 
 const sectionTitles: Record<Section, string> = {
@@ -166,8 +197,6 @@ export default function ProfilePanel({ profile, onClose, onLogout }: ProfilePane
         }, ANIMATION_MS);
     };
 
-    // Once the incoming panel is in the DOM, measure it so the viewport
-    // can smoothly transition to the new content's height.
     useLayoutEffect(() => {
         if (animating && incomingRef.current) {
             const target = incomingRef.current.scrollHeight;
@@ -236,6 +265,21 @@ export default function ProfilePanel({ profile, onClose, onLogout }: ProfilePane
             case "account":
                 return (
                     <div className={styles.subPage}>
+                        <div className={styles.avatarEditRow}>
+                            <div className={styles.avatarEditPic}>
+                                {profile.name.charAt(0).toUpperCase()}
+                                <span className={styles.avatarEditOverlay}>
+                                    <CameraIcon />
+                                </span>
+                            </div>
+                            <div className={styles.avatarEditHint}>
+                                <span className={styles.avatarEditTitle}>Set New Photo</span>
+                                <span className={styles.avatarEditSub}>
+                                    Upload isn't wired up yet
+                                </span>
+                            </div>
+                        </div> 
+
                         <label className={styles.fieldLabel}>Bio</label>
                         <textarea
                             className={styles.textArea}
@@ -243,7 +287,10 @@ export default function ProfilePanel({ profile, onClose, onLogout }: ProfilePane
                             value={settings.bio}
                             onChange={(e) => patch({ bio: e.target.value })}
                             rows={3}
+                            maxLength={70}
                         />
+                        <p className={styles.fieldHint}>{70 - settings.bio.length} characters left</p>
+
                         <label className={styles.fieldLabel}>Phone number</label>
                         <input
                             className={styles.textInput}
@@ -252,15 +299,19 @@ export default function ProfilePanel({ profile, onClose, onLogout }: ProfilePane
                             value={settings.phone}
                             onChange={(e) => patch({ phone: e.target.value })}
                         />
-                        <p className={styles.fieldHint}>
-                            These fields are encrypted on the server (BioEnc / PhoneEnc) — saving comes next.
-                        </p>
+
+                        <span className={styles.subGroupTitle}>Danger Zone</span>
+                        <button className={styles.dangerRow}>
+                            <TrashIcon />
+                            <span>Delete My Account</span>
+                        </button>
                     </div>
                 );
 
             case "notifications":
                 return (
                     <div className={styles.subPage}>
+                        <span className={styles.subGroupTitle}>Message Notifications</span>
                         <label className={styles.row}>
                             <span>Enable notifications</span>
                             <input
@@ -270,12 +321,42 @@ export default function ProfilePanel({ profile, onClose, onLogout }: ProfilePane
                                 onChange={(e) => patch({ notificationsEnabled: e.target.checked })}
                             />
                         </label>
+                        <label className={styles.row}>
+                            <span>Show message preview</span>
+                            <input
+                                className={styles.switch}
+                                type="checkbox"
+                                checked={settings.messagePreview}
+                                onChange={(e) => patch({ messagePreview: e.target.checked })}
+                                disabled={!settings.notificationsEnabled}
+                            />
+                        </label>
+                        <label className={styles.row}>
+                            <span>Group chat notifications</span>
+                            <input
+                                className={styles.switch}
+                                type="checkbox"
+                                checked={settings.groupNotifications}
+                                onChange={(e) => patch({ groupNotifications: e.target.checked })}
+                                disabled={!settings.notificationsEnabled}
+                            />
+                        </label>
+
+                        <span className={styles.subGroupTitle}>Sound</span>
+                        <div className={styles.row}>
+                            <span>Notification sound</span>
+                            <span className={styles.menuValue}>{settings.notificationSound}</span>
+                        </div>
+                        <p className={styles.fieldHint}>
+                            Sound picker isn't wired up yet — will list uploaded/system tones.
+                        </p>
                     </div>
                 );
 
             case "privacy":
                 return (
                     <div className={styles.subPage}>
+                        <span className={styles.subGroupTitle}>Presence</span>
                         <label className={styles.row}>
                             <span>Show last seen</span>
                             <input
@@ -294,13 +375,64 @@ export default function ProfilePanel({ profile, onClose, onLogout }: ProfilePane
                                 onChange={(e) => patch({ showOnlineStatus: e.target.checked })}
                             />
                         </label>
+                        <label className={styles.row}>
+                            <span>Send read receipts</span>
+                            <input
+                                className={styles.switch}
+                                type="checkbox"
+                                checked={settings.readReceipts}
+                                onChange={(e) => patch({ readReceipts: e.target.checked })}
+                            />
+                        </label>
+
+                        <span className={styles.subGroupTitle}>Who can see my phone number</span>
+                        <div className={styles.optionList}>
+                            {phoneVisibilityOptions.map((opt) => (
+                                <button
+                                    key={opt.id}
+                                    className={styles.optionRow}
+                                    onClick={() => patch({ showPhoneNumber: opt.id })}
+                                >
+                                    <span>{opt.label}</span>
+                                    {settings.showPhoneNumber === opt.id && (
+                                        <span className={styles.optionCheck}>
+                                            <CheckIcon />
+                                        </span>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+
+                        <span className={styles.subGroupTitle}>Who can add me to chats</span>
+                        <div className={styles.optionList}>
+                            {addMeOptions.map((opt) => (
+                                <button
+                                    key={opt.id}
+                                    className={styles.optionRow}
+                                    onClick={() => patch({ whoCanAddMe: opt.id })}
+                                >
+                                    <span>{opt.label}</span>
+                                    {settings.whoCanAddMe === opt.id && (
+                                        <span className={styles.optionCheck}>
+                                            <CheckIcon />
+                                        </span>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+
+                        <span className={styles.subGroupTitle}>Blocked Users</span>
+                        <div className={styles.row}>
+                            <span>Blocked users</span>
+                            <span className={styles.menuValue}>0</span>
+                        </div>
                     </div>
                 );
 
             case "chats":
                 return (
                     <div className={styles.subPage}>
-                        <span className={styles.fieldLabel}>Theme</span>
+                        <span className={styles.subGroupTitle}>Theme</span>
                         <div className={styles.optionList}>
                             {themeOptions.map((opt) => (
                                 <button
@@ -317,6 +449,38 @@ export default function ProfilePanel({ profile, onClose, onLogout }: ProfilePane
                                 </button>
                             ))}
                         </div>
+
+                        <span className={styles.subGroupTitle}>Appearance</span>
+                        <div className={styles.row}>
+                            <span>Chat wallpaper</span>
+                            <span className={styles.menuValue}>{settings.wallpaper}</span>
+                        </div>
+                        <div className={styles.fontSizeRow}>
+                            <div className={styles.fontSizeLabelRow}>
+                                <span>Message text size</span>
+                                <span className={styles.menuValue}>{settings.fontSize}px</span>
+                            </div>
+                            <input
+                                className={styles.rangeInput}
+                                type="range"
+                                min={12}
+                                max={20}
+                                step={1}
+                                value={settings.fontSize}
+                                onChange={(e) => patch({ fontSize: Number(e.target.value) })}
+                            />
+                        </div>
+
+                        <span className={styles.subGroupTitle}>Data Usage</span>
+                        <label className={styles.row}>
+                            <span>Auto-download media</span>
+                            <input
+                                className={styles.switch}
+                                type="checkbox"
+                                checked={settings.autoDownloadMedia}
+                                onChange={(e) => patch({ autoDownloadMedia: e.target.checked })}
+                            />
+                        </label>
                     </div>
                 );
         }
