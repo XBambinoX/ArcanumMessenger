@@ -51,12 +51,19 @@ public class AuthService(AppDbContext db, EncryptionService encryption, TotpServ
     }
 
 
-    public async Task<User?> GetUserAsync(Expression<Func<User, bool>> predicate, CancellationToken ct)
+    public async Task<User?> GetUserAsync(
+        Expression<Func<User, bool>> predicate,
+        CancellationToken ct,
+        bool includeSettings = false)
     {
-        return await db.Users
+        IQueryable<User> query = db.Users;
+
+        if (includeSettings)
+            query = query.Include(u => u.UserSettings);
+
+        return await query
             .Where(u => !u.IsDeleted)
             .Where(predicate)
             .FirstOrDefaultAsync(ct);
     }
-
 }

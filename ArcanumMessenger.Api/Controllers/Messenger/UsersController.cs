@@ -48,7 +48,7 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
             var fullHash = publicIdHasher.Hash(normalized);
             var exact = await db.Users.AsNoTracking()
                 .Where(u => u.PublicIdHash == fullHash && u.Id != callerId && !u.IsDeleted)
-                .Select(u => new { u.Id, u.UsernameEnc, u.PublicIdEnc, u.WrappedDek })
+                .Select(u => new { u.Id, u.UserSettings.UsernameEnc, u.PublicIdEnc, u.WrappedDek })
                 .FirstOrDefaultAsync(ct);
 
             if (exact is null)
@@ -63,7 +63,7 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
         var prefixHash = publicIdHasher.HashPrefix(normalized);
         var candidates = await db.Users.AsNoTracking()
             .Where(u => u.PublicIdPrefixHash == prefixHash && u.Id != callerId && !u.IsDeleted)
-            .Select(u => new { u.Id, u.UsernameEnc, u.PublicIdEnc, u.WrappedDek })
+            .Select(u => new { u.Id, u.UserSettings.UsernameEnc, u.PublicIdEnc, u.WrappedDek })
             .ToListAsync(ct);
 
         var results = new List<UserSearchResultDto>();
@@ -85,7 +85,7 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
                         .Where(u => u.Id == id)
                         .Select(u => new
                         {
-                            u.UsernameEnc,
+                            u.UserSettings.UsernameEnc,
                             u.IsDeleted,
                             u.PublicIdEnc,
                             u.LastSeen,

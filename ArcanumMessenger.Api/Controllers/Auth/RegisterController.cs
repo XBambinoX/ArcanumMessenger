@@ -294,10 +294,11 @@ public class RegisterController(
         var normalizedId = PublicIdHasher.Normalize(id);
         var publicIdHash = publicIdHasher.Hash(normalizedId);
         var publicIdPrefixHash = publicIdHasher.HashPrefix(normalizedId);
+        var userId = Guid.NewGuid();
 
         var user = new User
         {
-            UsernameEnc = usernameEnc,
+            Id = userId,
             PublicIdEnc = publicIdEnc,
             PublicIdHash = publicIdHash,
             PublicIdPrefixHash = publicIdPrefixHash,
@@ -311,6 +312,13 @@ public class RegisterController(
             LastSeen = now,
             CreatedAt = now,
             IsDeleted = false,
+
+            UserSettings = new UserSettings
+            {
+                UserId = userId,
+                UsernameEnc = usernameEnc,
+                UpdatedAt = now
+            }
         };
 
         db.Users.Add(user);

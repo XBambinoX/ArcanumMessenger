@@ -5,7 +5,7 @@ public class UserSettings
     public Guid UserId { get; set; }
 
     // Account
-    public string? UsernameEnc { get; set; }
+    public string UsernameEnc { get; set; } = null!;
     public string? BioEnc { get; set; }
     public string? PhoneEnc { get; set; }
 
@@ -24,7 +24,7 @@ public class UserSettings
 
     // Chat appearance
     public string Theme { get; set; } = "system";
-    public string Language { get; set; } = "uk";
+    public string Language { get; set; } = "en";
     public string Wallpaper { get; set; } = "default";
     public int FontSize { get; set; } = 15;
     public bool AutoDownloadMedia { get; set; } = true;

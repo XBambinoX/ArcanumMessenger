@@ -104,8 +104,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<UserSettings>(e =>
         {
             e.HasKey(s => s.UserId);
+
             e.HasOne(s => s.User)
-                .WithOne()
+                .WithOne(u => u.UserSettings)
                 .HasForeignKey<UserSettings>(s => s.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
