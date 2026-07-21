@@ -15,6 +15,7 @@ type Section = "main" | "account" | "notifications" | "privacy" | "chats";
 interface SettingsState {
     bio: string;
     phone: string;
+    username: string;
     notificationsEnabled: boolean;
     messagePreview: boolean;
     groupNotifications: boolean;
@@ -33,6 +34,7 @@ interface SettingsState {
 const defaultSettings: SettingsState = {
     bio: "",
     phone: "",
+    username: "",
     notificationsEnabled: true,
     messagePreview: true,
     groupNotifications: true,
@@ -152,6 +154,7 @@ const sectionTitles: Record<Section, string> = {
     chats: "Chat Settings",
 };
 
+const MAX_PHONE_DIGITS = 15;
 const ANIMATION_MS = 250;
 
 export default function ProfilePanel({ profile, onClose, onLogout }: ProfilePanelProps) {
@@ -175,6 +178,20 @@ export default function ProfilePanel({ profile, onClose, onLogout }: ProfilePane
         navigator.clipboard.writeText(profile.publicId);
         setCopied(true);
         setTimeout(() => setCopied(false), 1500);
+    };
+
+    const handleBioChange = (raw: string) => {
+    patch({ bio: raw.replace(/^\s+/, "") });
+};
+
+    const handlePhoneChange = (raw: string) => {
+        const hasPlus = raw.trim().startsWith("+");
+        const digits = raw.replace(/\D/g, "").slice(0, MAX_PHONE_DIGITS);
+        patch({ phone: (hasPlus ? "+" : "") + digits });
+    };
+
+    const handleUsernameChange = (raw: string) => {
+        patch({ username: raw.replace(/^\s+/, "") });
     };
 
     const navigateTo = (target: Section) => {
@@ -278,14 +295,24 @@ export default function ProfilePanel({ profile, onClose, onLogout }: ProfilePane
                                     Upload isn't wired up yet
                                 </span>
                             </div>
-                        </div> 
+                        </div>
+
+                        <label className={styles.fieldLabel}>Nickname</label>
+                        <input
+                            className={styles.textInput}
+                            type="text"
+                            placeholder="Your nickname"
+                            value={settings.username}
+                            onChange={(e) => handleUsernameChange(e.target.value)}
+                            maxLength={32}
+                        />
 
                         <label className={styles.fieldLabel}>Bio</label>
                         <textarea
                             className={styles.textArea}
                             placeholder="Tell something about yourself"
                             value={settings.bio}
-                            onChange={(e) => patch({ bio: e.target.value })}
+                            onChange={(e) => handleBioChange(e.target.value)}
                             rows={3}
                             maxLength={70}
                         />
@@ -295,9 +322,10 @@ export default function ProfilePanel({ profile, onClose, onLogout }: ProfilePane
                         <input
                             className={styles.textInput}
                             type="tel"
+                            inputMode="numeric"
                             placeholder="+1..."
                             value={settings.phone}
-                            onChange={(e) => patch({ phone: e.target.value })}
+                            onChange={(e) => handlePhoneChange(e.target.value)}
                         />
 
                         <span className={styles.subGroupTitle}>Danger Zone</span>
