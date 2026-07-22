@@ -3,7 +3,10 @@ namespace ArcanumMessenger.Contracts.Messenger.Settings;
 public record UserSettingsResponse(
     string Username,
     string Bio,
-    string Phone
+    string Phone,
+    bool NotificationsEnabled,
+    bool GroupNotifications,
+    string NotificationSound
 );
 
 public record UpdateAccountFieldsRequest(
@@ -14,3 +17,8 @@ public record UpdateAccountFieldsRequest(
 public record DeleteAccountRequest(string AuthKey);
 
 public record KdfSaltResponse(string KdfSalt);
+
+public record UpdateNotificationSettingsRequest(
+    bool? NotificationsEnabled,
+    bool? GroupNotifications
+); 

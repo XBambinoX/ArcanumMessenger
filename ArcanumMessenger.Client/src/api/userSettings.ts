@@ -5,6 +5,9 @@ export interface UserSettingsResponse {
     username: string;
     bio: string;
     phone: string;
+    notificationsEnabled: boolean;
+    groupNotifications: boolean;
+    notificationSound: string;
 }
 
 export interface UpdateAccountFieldsRequest {
@@ -52,4 +55,18 @@ export async function deleteAccount(password: string, kdfSalt: string): Promise<
 export async function getKdfSalt(): Promise<string> {
     const res = await apiFetch("/api/settings/kdf-salt");
     return (await res.json()).kdfSalt;
+}
+
+export interface UpdateNotificationSettingsRequest {
+    notificationsEnabled?: boolean;
+    groupNotifications?: boolean;
+}
+
+export async function updateNotificationSettings(
+    payload: UpdateNotificationSettingsRequest,
+): Promise<void> {
+    await apiFetch("/api/settings/notifications", {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+    });
 }

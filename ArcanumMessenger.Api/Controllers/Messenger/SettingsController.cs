@@ -32,7 +32,10 @@ public class SettingsController(AppDbContext db, EncryptionService encryption, T
         var response = new UserSettingsResponse(
             Username:encryption.Decrypt(user.UserSettings.UsernameEnc, dek),
             Bio: user.UserSettings.BioEnc is not null ? encryption.Decrypt(user.UserSettings.BioEnc, dek) : "",
-            Phone: user.UserSettings.PhoneEnc is not null ? encryption.Decrypt(user.UserSettings.PhoneEnc, dek) : ""
+            Phone: user.UserSettings.PhoneEnc is not null ? encryption.Decrypt(user.UserSettings.PhoneEnc, dek) : "",
+            NotificationsEnabled: user.UserSettings.NotificationsEnabled,
+            GroupNotifications: user.UserSettings.GroupNotificationsEnabled,
+            NotificationSound: user.UserSettings.NotificationSound
         );
 
         logger.LogInformation("User settings fetched successfully for user {UserId}", userId);
@@ -129,5 +132,32 @@ public class SettingsController(AppDbContext db, EncryptionService encryption, T
             return NotFound();
 
         return Ok(new KdfSaltResponse(user.KdfSalt));
+    }
+
+
+    [HttpPatch("notifications")]
+    [Authorize]
+    public async Task<IActionResult> UpdateNotificationSettings(
+        [FromBody] UpdateNotificationSettingsRequest request,
+        CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var settings = await db.UserSettings.FirstOrDefaultAsync(s => s.UserId == userId, ct);
+        if (settings is null)
+            return NotFound();
+
+        if (request.NotificationsEnabled is not null)
+            settings.NotificationsEnabled = request.NotificationsEnabled.Value;
+
+        if (request.GroupNotifications is not null)
+            settings.GroupNotificationsEnabled = request.GroupNotifications.Value;
+
+        settings.UpdatedAt = DateTime.UtcNow;
+
+        await db.SaveChangesAsync(ct);
+
+        return NoContent();
     }
 }

@@ -668,6 +668,13 @@
     color: #f87171;
 }
 
+.saveStatusRow {
+    min-height: 18px;
+    margin: 0 4px 4px;
+    font-size: 12px;
+    text-align: right;
+}
+
 .dangerTitle {
     display: block;
     font-size: 12px;

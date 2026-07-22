@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState, useEffect, type ReactElement } from "react";
 import type { User } from "../types/messenger";
 import styles from "./ProfilePanel.module.css";
-import { getUserSettings, updateAccountFields, getKdfSalt } from "../api/userSettings";
+import { getUserSettings, updateAccountFields, getKdfSalt, updateNotificationSettings } from "../api/userSettings";
 import DeleteAccountModal from "./DeleteAccountModal";
 
 interface ProfilePanelProps {
@@ -183,6 +183,8 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
     const saveTimer = useRef<number | null>(null);
     const pendingFields = useRef<Partial<{ username: string; bio: string; phone: string }>>({});
 
+    const [notifSaveStatus, setNotifSaveStatus] = useState<SaveStatus>("idle");
+
     const patch = (partial: Partial<SettingsState>) =>
         setSettings((prev) => ({ ...prev, ...partial }));
 
@@ -245,6 +247,24 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
         scheduleSave("username", value);
     };
 
+    const handleNotificationToggle = async (
+        field: "notificationsEnabled" | "groupNotifications",
+        value: boolean,
+    ) => {
+        patch({ [field]: value } as Partial<SettingsState>);
+        setNotifSaveStatus("saving");
+
+        try {
+            await updateNotificationSettings({ [field]: value });
+            setNotifSaveStatus("saved");
+            window.setTimeout(() => setNotifSaveStatus((s) => (s === "saved" ? "idle" : s)), 1500);
+        } catch {
+            // Roll back optimistic update on failure
+            patch({ [field]: !value } as Partial<SettingsState>);
+            setNotifSaveStatus("error");
+        }
+    };
+
     const navigateTo = (target: Section) => {
         if (animating || target === section) return;
 
@@ -283,6 +303,9 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                     bio: data.bio,
                     phone: data.phone,
                     username: data.username,
+                    notificationsEnabled: data.notificationsEnabled,
+                    groupNotifications: data.groupNotifications,
+                    notificationSound: data.notificationSound,
                 }));
                 setSettingsLoaded(true);
             })
@@ -438,6 +461,12 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
             case "notifications":
                 return (
                     <div className={styles.subPage}>
+                        <div className={styles.saveStatusRow}>
+                            {notifSaveStatus === "saving" && <span className={styles.saveStatusSaving}>Saving...</span>}
+                            {notifSaveStatus === "saved" && <span className={styles.saveStatusSaved}>Saved</span>}
+                            {notifSaveStatus === "error" && <span className={styles.saveStatusError}>Failed to save</span>}
+                        </div>
+
                         <span className={styles.subGroupTitle}>Message Notifications</span>
                         <label className={styles.row}>
                             <span>Enable notifications</span>
@@ -445,7 +474,8 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                                 className={styles.switch}
                                 type="checkbox"
                                 checked={settings.notificationsEnabled}
-                                onChange={(e) => patch({ notificationsEnabled: e.target.checked })}
+                                disabled={!settingsLoaded}
+                                onChange={(e) => handleNotificationToggle("notificationsEnabled", e.target.checked)}
                             />
                         </label>
                         <label className={styles.row}>
@@ -454,8 +484,8 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                                 className={styles.switch}
                                 type="checkbox"
                                 checked={settings.groupNotifications}
-                                onChange={(e) => patch({ groupNotifications: e.target.checked })}
-                                disabled={!settings.notificationsEnabled}
+                                disabled={!settingsLoaded || !settings.notificationsEnabled}
+                                onChange={(e) => handleNotificationToggle("groupNotifications", e.target.checked)}
                             />
                         </label>
 
