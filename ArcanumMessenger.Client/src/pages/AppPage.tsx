@@ -63,8 +63,6 @@ export default function AppPage() {
                 if (!cancelled) setConnection(conn);
             })
             .catch(() => {
-                // Expected under StrictMode's mount->cleanup->mount in dev:
-                // the cleanup below stops the connection before start() finishes.
             });
 
         return () => {

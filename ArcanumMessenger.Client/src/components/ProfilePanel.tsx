@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState, useEffect, type ReactElement } from "react";
 import type { User } from "../types/messenger";
 import styles from "./ProfilePanel.module.css";
-import { getUserSettings, updateAccountFields } from "../api/userSettings";
+import { getUserSettings, updateAccountFields, getKdfSalt } from "../api/userSettings";
 import DeleteAccountModal from "./DeleteAccountModal";
 
 interface ProfilePanelProps {
@@ -178,6 +178,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
     const animationTimer = useRef<number | null>(null);
 
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [kdfSalt, setKdfSalt] = useState<string | null>(null);
 
     const saveTimer = useRef<number | null>(null);
     const pendingFields = useRef<Partial<{ username: string; bio: string; phone: string }>>({});
@@ -189,6 +190,14 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
         navigator.clipboard.writeText(profile.publicId);
         setCopied(true);
         setTimeout(() => setCopied(false), 1500);
+    };
+
+    const handleOpenDeleteModal = async () => {
+        try {
+            const salt = await getKdfSalt();
+            setKdfSalt(salt);
+            setDeleteModalOpen(true);
+        } catch { }
     };
 
     const flushSave = async () => {
@@ -419,7 +428,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                             disabled={!settingsLoaded}
                         />
                         <span className={styles.subGroupTitle}>Danger Zone</span>
-                        <button className={styles.dangerRow} onClick={() => setDeleteModalOpen(true)}>
+                        <button className={styles.dangerRow} onClick={handleOpenDeleteModal}>
                             <TrashIcon />
                             <span>Delete My Account</span>
                         </button>
@@ -645,6 +654,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
             </aside>
             {deleteModalOpen && (
                 <DeleteAccountModal
+                    kdfSalt={kdfSalt || ""}
                     onClose={() => setDeleteModalOpen(false)}
                     onConfirmed={() => {
                         setDeleteModalOpen(false);

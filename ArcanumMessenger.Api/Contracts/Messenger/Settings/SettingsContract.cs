@@ -10,3 +10,7 @@ public record UpdateAccountFieldsRequest(
     string? Username, 
     string? Bio, 
     string? Phone);
+
+public record DeleteAccountRequest(string AuthKey);
+
+public record KdfSaltResponse(string KdfSalt);

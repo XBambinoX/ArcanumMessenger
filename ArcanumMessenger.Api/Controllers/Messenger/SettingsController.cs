@@ -4,11 +4,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using ArcanumMessenger.Contracts.Messenger.Settings;
 using ArcanumMessenger.Services.AuthServices;
+using ArcanumMessenger.Services.AuthServices.LoginServices;
 
 namespace ArcanumMessenger.Controllers.Messenger;
 
 [Route("api/settings")]
-public class SettingsController(AppDbContext db, EncryptionService encryption, ILogger<SettingsController> logger) : MessengerControllerBase
+public class SettingsController(AppDbContext db, EncryptionService encryption, TokenIssuanceService tokenIssuance, ILogger<SettingsController> logger) : MessengerControllerBase
 {
     [HttpGet("get")]
     [Authorize]
@@ -72,5 +73,61 @@ public class SettingsController(AppDbContext db, EncryptionService encryption, I
 
         logger.LogInformation("Account fields updated successfully for user {UserId}", userId);
         return NoContent();
+    }
+
+    [HttpPost("delete-account")]
+    [Authorize]
+    public async Task<IActionResult> DeleteAccount(
+        [FromBody] DeleteAccountRequest request,
+        CancellationToken ct)
+    {
+        logger.LogInformation("Start deleting account for user");
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted, ct);
+        if (user is null)
+            return NotFound();
+
+        if (!PasswordHasher.Verify(request.AuthKey, user.PasswordHash))
+            return StatusCode(StatusCodes.Status422UnprocessableEntity, new { reason = "invalid_password" });
+
+        user.IsDeleted = true;
+
+        var sessions = await db.Sessions
+            .Where(s => s.UserId == userId && s.RevokedAt == null)
+            .ToListAsync(ct);
+
+        var now = DateTime.UtcNow;
+        foreach (var session in sessions)
+            session.RevokedAt = now;
+
+        await db.SaveChangesAsync(ct);
+
+        Request.Cookies.TryGetValue("refresh_token", out var refreshToken);
+        if (!string.IsNullOrEmpty(refreshToken))
+            await tokenIssuance.RevokeAsync(refreshToken, ct);
+
+        Response.ClearAuthCookies();
+
+        logger.LogInformation("Account deleted successfully for user {UserId}", userId);
+        return Ok();
+    }
+
+    [HttpGet("kdf-salt")]
+    [Authorize]
+    public async Task<ActionResult<KdfSaltResponse>> GetKdfSalt(CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var user = await db.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted, ct);
+
+        if (user is null)
+            return NotFound();
+
+        return Ok(new KdfSaltResponse(user.KdfSalt));
     }
 }

@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { deleteAccount } from "../api/userSettings";
 import styles from "./DeleteAccountModal.module.css";
 
 interface DeleteAccountModalProps {
     onClose: () => void;
     onConfirmed: () => void;
+    kdfSalt: string;
 }
 
 const COOLDOWN_SECONDS = 5;
@@ -11,7 +13,7 @@ const MAX_ATTEMPTS = 5;
 
 type Step = "warning" | "password";
 
-export default function DeleteAccountModal({ onClose, onConfirmed }: DeleteAccountModalProps) {
+export default function DeleteAccountModal({ onClose, onConfirmed, kdfSalt }: DeleteAccountModalProps) {
     const [step, setStep] = useState<Step>("warning");
     const [cooldown, setCooldown] = useState(COOLDOWN_SECONDS);
     const [password, setPassword] = useState("");
@@ -39,24 +41,16 @@ export default function DeleteAccountModal({ onClose, onConfirmed }: DeleteAccou
         setSubmitting(true);
         setError(null);
 
-        try {
-            // TODO: replace with the same client-side Argon2id derivation
-            // used at login, then send the derived authKey — not the raw
-            // password — to match the existing KDF scheme.
-            const ok = await verifyPasswordAndDelete(password);
+        const result = await deleteAccount(password, kdfSalt);
 
-            if (!ok) {
-                setAttempts((a) => a + 1);
-                setError("Incorrect password");
-                setSubmitting(false);
-                return;
-            }
-
-            onConfirmed();
-        } catch {
-            setError("Something went wrong. Please try again.");
+        if (!result.ok) {
+            setAttempts((a) => a + 1);
+            setError(result.reason === "invalid_password" ? "Incorrect password" : "Something went wrong");
             setSubmitting(false);
+            return;
         }
+
+        onConfirmed();
     };
 
     return (
@@ -119,8 +113,4 @@ export default function DeleteAccountModal({ onClose, onConfirmed }: DeleteAccou
             </div>
         </div>
     );
-}
-
-async function verifyPasswordAndDelete(_password: string): Promise<boolean> {
-    throw new Error("Not implemented — wire up to the real auth/delete endpoint");
 }

@@ -1,4 +1,5 @@
 import { apiFetch } from "../lib/apiFetch";
+import { deriveKeys } from "../crypto/kdf";
 
 export interface UserSettingsResponse {
     username: string;
@@ -26,4 +27,29 @@ export async function updateAccountFields( payload: UpdateAccountFieldsRequest, 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
     });
+}
+
+export async function deleteAccount(password: string, kdfSalt: string): Promise<{ ok: boolean; reason?: string }> {
+    const { authKey } = await deriveKeys(password, kdfSalt);
+
+    const res = await apiFetch("/api/settings/delete-account", {
+        method: "POST",
+        body: JSON.stringify({ authKey }),
+    });
+
+    if (res.status === 422) {
+        const body = await res.json().catch(() => null);
+        return { ok: false, reason: body?.reason ?? "invalid_password" };
+    }
+
+    if (!res.ok) {
+        return { ok: false, reason: "unknown_error" };
+    }
+
+    return { ok: true };
+}
+
+export async function getKdfSalt(): Promise<string> {
+    const res = await apiFetch("/api/settings/kdf-salt");
+    return (await res.json()).kdfSalt;
 }
