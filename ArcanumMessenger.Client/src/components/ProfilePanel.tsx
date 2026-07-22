@@ -178,7 +178,6 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
 
     const saveTimer = useRef<number | null>(null);
     const pendingFields = useRef<Partial<{ username: string; bio: string; phone: string }>>({});
-    const isFirstLoad = useRef(true);
 
     const patch = (partial: Partial<SettingsState>) =>
         setSettings((prev) => ({ ...prev, ...partial }));
