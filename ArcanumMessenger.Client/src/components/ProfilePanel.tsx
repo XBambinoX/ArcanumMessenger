@@ -7,6 +7,7 @@ interface ProfilePanelProps {
     profile: User;
     onClose: () => void;
     onLogout: () => void;
+    onUsernameChange?: (username: string) => void;
 }
 
 type Section = "main" | "account" | "notifications" | "privacy" | "chats";
@@ -159,7 +160,7 @@ const sectionTitles: Record<Section, string> = {
 const MAX_PHONE_DIGITS = 15;
 const ANIMATION_MS = 250;
 
-export default function ProfilePanel({ profile, onClose, onLogout }: ProfilePanelProps) {
+export default function ProfilePanel({ profile, onClose, onLogout, onUsernameChange }: ProfilePanelProps) {
     const [copied, setCopied] = useState(false);
     const [settings, setSettings] = useState<SettingsState>(defaultSettings);
     const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -284,6 +285,12 @@ export default function ProfilePanel({ profile, onClose, onLogout }: ProfilePane
     }, []);
 
     useEffect(() => {
+        if (settingsLoaded) {
+            onUsernameChange?.(settings.username);
+        }
+    }, [settings.username, settingsLoaded]);
+
+    useEffect(() => {
         return () => {
             if (saveTimer.current) window.clearTimeout(saveTimer.current);
             flushSave();
@@ -297,9 +304,13 @@ export default function ProfilePanel({ profile, onClose, onLogout }: ProfilePane
                     <>
                         <div className={styles.profileHeader}>
                             <div className={styles.profileAvatar}>
-                                {profile.name.charAt(0).toUpperCase()}
+                                {(settingsLoaded ? (settings.username || profile.name) : profile.name).charAt(0).toUpperCase()}
                             </div>
-                            <span className={styles.profileName}>{profile.name}</span>
+
+                            <span className={styles.profileName}>
+                                {settingsLoaded ? (settings.username || profile.name) : profile.name}
+                            </span>
+
                             <button className={styles.idRow} onClick={handleCopyId} title="Copy ID">
                                 <span className={styles.idValue}>{profile.publicId}</span>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
