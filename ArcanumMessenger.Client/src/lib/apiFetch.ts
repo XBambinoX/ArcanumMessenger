@@ -19,12 +19,42 @@ interface ServerErrorDetails {
     timestamp: string;
 }
 
-export async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
+// Only one refresh call in flight at a time — if several requests hit 401
+// simultaneously (e.g. multiple widgets fetching on mount), they all await
+// the same refresh instead of racing each other and burning refresh tokens.
+let refreshPromise: Promise<boolean> | null = null;
+
+async function tryRefresh(): Promise<boolean> {
+    if (!refreshPromise) {
+        refreshPromise = fetch("/api/auth/refresh", {
+            method: "POST",
+            credentials: "include",
+        })
+            .then((res) => res.ok)
+            .catch(() => false)
+            .finally(() => {
+                refreshPromise = null;
+            });
+    }
+    return refreshPromise;
+}
+
+function handleSessionExpired() {
+    window.dispatchEvent(new CustomEvent("auth:expired"));
+    navigateTo("/welcome", { replace: true });
+}
+
+export async function apiFetch(
+    path: string,
+    init?: RequestInit,
+    _isRetry = false,
+): Promise<Response> {
     let res: Response;
 
     try {
         res = await fetch(path, {
             headers: { "Content-Type": "application/json", ...init?.headers },
+            credentials: "include",
             ...init,
         });
     } catch (networkErr) {
@@ -35,6 +65,17 @@ export async function apiFetch(path: string, init?: RequestInit): Promise<Respon
             timestamp: new Date().toISOString(),
         });
         throw networkErr;
+    }
+
+    if (res.status === 401 && !_isRetry) {
+        const refreshed = await tryRefresh();
+
+        if (refreshed) {
+            return apiFetch(path, init, true);
+        }
+
+        handleSessionExpired();
+        throw new ApiError(401, "Session expired");
     }
 
     if (res.status >= 500) {
