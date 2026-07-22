@@ -68,6 +68,9 @@ namespace ArcanumMessenger
             builder.Services.AddSignalR();
             builder.Services.AddSingleton<IUserIdProvider, SubjectUserIdProvider>();
 
+            // Background jobs
+            builder.Services.AddHostedService<Services.BackgroundJobs.AccountCleanupService>();
+
             // Scope
             builder.Services.AddScoped<JwtService>();
             builder.Services.AddScoped<RegistrationSessionService>();
