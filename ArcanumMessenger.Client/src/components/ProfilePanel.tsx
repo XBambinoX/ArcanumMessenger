@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState, useEffect, type ReactElement } from 
 import type { User } from "../types/messenger";
 import styles from "./ProfilePanel.module.css";
 import { getUserSettings, updateAccountFields } from "../api/userSettings";
+import DeleteAccountModal from "./DeleteAccountModal";
 
 interface ProfilePanelProps {
     profile: User;
@@ -175,6 +176,8 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
     const viewportRef = useRef<HTMLDivElement>(null);
     const incomingRef = useRef<HTMLDivElement>(null);
     const animationTimer = useRef<number | null>(null);
+
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
     const saveTimer = useRef<number | null>(null);
     const pendingFields = useRef<Partial<{ username: string; bio: string; phone: string }>>({});
@@ -416,7 +419,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                             disabled={!settingsLoaded}
                         />
                         <span className={styles.subGroupTitle}>Danger Zone</span>
-                        <button className={styles.dangerRow}>
+                        <button className={styles.dangerRow} onClick={() => setDeleteModalOpen(true)}>
                             <TrashIcon />
                             <span>Delete My Account</span>
                         </button>
@@ -640,6 +643,15 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                     </div>
                 </div>
             </aside>
+            {deleteModalOpen && (
+                <DeleteAccountModal
+                    onClose={() => setDeleteModalOpen(false)}
+                    onConfirmed={() => {
+                        setDeleteModalOpen(false);
+                        onLogout(); // reuse the existing logout flow
+                    }}
+                />
+            )}
         </div>
     );
 }

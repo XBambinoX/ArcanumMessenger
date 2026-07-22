@@ -1,0 +1,121 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    background: rgba(6, 4, 16, 0.65);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.modal {
+    width: 380px;
+    max-width: 100%;
+    background: #12102a;
+    border: 1px solid rgba(248, 113, 113, 0.25);
+    border-radius: 16px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+    padding: 22px;
+    animation: modalPop 0.16s ease-out;
+}
+
+@keyframes modalPop {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    animation: stepFade 0.2s ease;
+}
+
+@keyframes stepFade {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.title {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    color: #f87171;
+}
+
+.text {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: rgba(148, 163, 184, 0.8);
+}
+
+.passwordInput {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(124, 58, 237, 0.25);
+    background: rgba(124, 58, 237, 0.06);
+    color: rgba(226, 232, 240, 0.95);
+    font-family: inherit;
+    font-size: 14px;
+    outline: none;
+}
+
+.passwordInput:focus {
+    border-color: rgba(167, 139, 250, 0.5);
+}
+
+.error {
+    margin: 0;
+    font-size: 12.5px;
+    color: #f87171;
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.cancelBtn {
+    padding: 9px 16px;
+    border-radius: 10px;
+    border: 1px solid rgba(124, 58, 237, 0.25);
+    background: transparent;
+    color: rgba(226, 232, 240, 0.9);
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.cancelBtn:hover {
+    background: rgba(124, 58, 237, 0.08);
+}
+
+.dangerBtn {
+    padding: 9px 16px;
+    border-radius: 10px;
+    border: none;
+    background: #f87171;
+    color: #1a1029;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+
+.dangerBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.dangerBtn:hover:not(:disabled) {
+    opacity: 0.9;
+}
