@@ -204,7 +204,7 @@ export default function AppPage() {
                             title="Profile"
                         >
                             <span className={styles.avatarBtn}>
-                                {(profile?.name ?? "?").charAt(0).toUpperCase()}
+                                {(displayName ?? profile?.name ?? "?").charAt(0).toUpperCase()}
                             </span>
 
                             <span className={styles.profileName}>
