@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState, useEffect, type ReactElement } from "react";
 import type { User } from "../types/messenger";
 import styles from "./ProfilePanel.module.css";
-import { getUserSettings } from "../api/userSettings";
+import { getUserSettings, updateAccountFields } from "../api/userSettings";
 
 interface ProfilePanelProps {
     profile: User;
@@ -10,6 +10,7 @@ interface ProfilePanelProps {
 }
 
 type Section = "main" | "account" | "notifications" | "privacy" | "chats";
+type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 // Mirrors Entities.UserSettings, plus a few visual-only extras below.
 // Not persisted yet — wiring to GET/PUT /api/users/me/settings is next.
@@ -162,6 +163,7 @@ export default function ProfilePanel({ profile, onClose, onLogout }: ProfilePane
     const [copied, setCopied] = useState(false);
     const [settings, setSettings] = useState<SettingsState>(defaultSettings);
     const [settingsLoaded, setSettingsLoaded] = useState(false);
+    const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
 
     const [section, setSection] = useState<Section>("main");
     const [prevSection, setPrevSection] = useState<Section | null>(null);
@@ -173,6 +175,10 @@ export default function ProfilePanel({ profile, onClose, onLogout }: ProfilePane
     const incomingRef = useRef<HTMLDivElement>(null);
     const animationTimer = useRef<number | null>(null);
 
+    const saveTimer = useRef<number | null>(null);
+    const pendingFields = useRef<Partial<{ username: string; bio: string; phone: string }>>({});
+    const isFirstLoad = useRef(true);
+
     const patch = (partial: Partial<SettingsState>) =>
         setSettings((prev) => ({ ...prev, ...partial }));
 
@@ -182,18 +188,49 @@ export default function ProfilePanel({ profile, onClose, onLogout }: ProfilePane
         setTimeout(() => setCopied(false), 1500);
     };
 
+    const flushSave = async () => {
+        const fields = pendingFields.current;
+        if (Object.keys(fields).length === 0) return;
+
+        pendingFields.current = {};
+        setSaveStatus("saving");
+
+        try {
+            await updateAccountFields(fields);
+            setSaveStatus("saved");
+            window.setTimeout(() => setSaveStatus((s) => (s === "saved" ? "idle" : s)), 1500);
+        } catch {
+            setSaveStatus("error");
+        }
+    };
+
+    const scheduleSave = (field: "username" | "bio" | "phone", value: string) => {
+        pendingFields.current = { ...pendingFields.current, [field]: value };
+
+        if (saveTimer.current) window.clearTimeout(saveTimer.current);
+        saveTimer.current = window.setTimeout(() => {
+            flushSave();
+        }, 2000);
+    };
+
     const handleBioChange = (raw: string) => {
-    patch({ bio: raw.replace(/^\s+/, "") });
-};
+        const value = raw.replace(/^\s+/, "");
+        patch({ bio: value });
+        scheduleSave("bio", value);
+    };
 
     const handlePhoneChange = (raw: string) => {
         const hasPlus = raw.trim().startsWith("+");
         const digits = raw.replace(/\D/g, "").slice(0, MAX_PHONE_DIGITS);
-        patch({ phone: (hasPlus ? "+" : "") + digits });
+        const value = (hasPlus ? "+" : "") + digits;
+        patch({ phone: value });
+        scheduleSave("phone", value);
     };
 
     const handleUsernameChange = (raw: string) => {
-        patch({ username: raw.replace(/^\s+/, "") });
+        const value = raw.replace(/^\s+/, "");
+        patch({ username: value });
+        scheduleSave("username", value);
     };
 
     const navigateTo = (target: Section) => {
@@ -243,6 +280,13 @@ export default function ProfilePanel({ profile, onClose, onLogout }: ProfilePane
 
         return () => {
             cancelled = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            if (saveTimer.current) window.clearTimeout(saveTimer.current);
+            flushSave();
         };
     }, []);
 
@@ -319,6 +363,12 @@ export default function ProfilePanel({ profile, onClose, onLogout }: ProfilePane
                                 <span className={styles.avatarEditSub}>
                                     Upload isn't wired up yet
                                 </span>
+                            </div>
+
+                            <div className={styles.saveStatus}>
+                                {saveStatus === "saving" && <span className={styles.saveStatusSaving}>Saving...</span>}
+                                {saveStatus === "saved" && <span className={styles.saveStatusSaved}>Saved</span>}
+                                {saveStatus === "error" && <span className={styles.saveStatusError}>Failed to save</span>}
                             </div>
                         </div>
 

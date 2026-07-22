@@ -647,3 +647,23 @@
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+.saveStatus {
+    margin-left: auto;
+    flex-shrink: 0;
+    font-size: 16px;
+    text-align: right;
+    min-width: 60px;
+}
+
+.saveStatusSaving {
+    color: rgba(148, 163, 184, 0.7);
+}
+
+.saveStatusSaved {
+    color: #4fb85c;
+}
+
+.saveStatusError {
+    color: #f87171;
+}

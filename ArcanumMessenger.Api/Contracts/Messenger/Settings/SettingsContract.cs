@@ -5,3 +5,8 @@ public record UserSettingsResponse(
     string Bio,
     string Phone
 );
+
+public record UpdateAccountFieldsRequest(
+    string? Username, 
+    string? Bio, 
+    string? Phone);
