@@ -427,7 +427,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                             onChange={(e) => handlePhoneChange(e.target.value)}
                             disabled={!settingsLoaded}
                         />
-                        <span className={styles.subGroupTitle}>Danger Zone</span>
+                        <span className={styles.dangerTitle}>Danger Zone</span>
                         <button className={styles.dangerRow} onClick={handleOpenDeleteModal}>
                             <TrashIcon />
                             <span>Delete My Account</span>

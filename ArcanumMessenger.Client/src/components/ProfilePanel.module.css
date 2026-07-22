@@ -667,3 +667,13 @@
 .saveStatusError {
     color: #f87171;
 }
+
+.dangerTitle {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #f87171;
+    margin: 18px 4px 4px;
+}
