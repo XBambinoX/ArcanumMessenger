@@ -19,7 +19,7 @@ interface ProfilePanelProps {
 
 type Section = "main" | "account" | "notifications" | "privacy" | "chats";
 type SaveStatus = "idle" | "saving" | "saved" | "error";
-type PrivacyField = "showLastSeen" | "showOnlineStatus" | "readReceipts" | "showPhoneNumber" | "whoCanAddMe";
+type PrivacyField = "showLastSeen" | "showOnlineStatus" | "readReceipts" | "showPhoneNumber" | "whoCanAddMe" | "totpEnabled";
 
 // Mirrors Entities.UserSettings, plus a few visual-only extras below.
 // Not persisted yet — wiring to GET/PUT /api/users/me/settings is next.
@@ -202,6 +202,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
         readReceipts: "readReceiptsEnabled",
         showPhoneNumber: "showPhoneNumber",
         whoCanAddMe: "whoCanAddMe",
+        totpEnabled: "totpEnabled",
     };
 
     const patch = (partial: Partial<SettingsState>) =>
@@ -552,11 +553,11 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                                 className={styles.switch}
                                 type="checkbox"
                                 checked={settings.totpEnabled}
-                                disabled
-                                title="Coming soon — needs a dedicated setup flow"
+                                disabled={!settingsLoaded}
+                                onChange={(e) => handlePrivacyChange("totpEnabled", e.target.checked)}
                             />
                         </label>
-
+                        
                         <span className={styles.subGroupTitle}>Presence</span>
                         <label className={styles.row}>
                             <span>Show last seen</span>

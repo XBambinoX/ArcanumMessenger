@@ -83,6 +83,7 @@ export interface UpdatePrivacySettingsRequest {
     readReceiptsEnabled?: boolean;
     showPhoneNumber?: "everyone" | "contacts" | "nobody";
     whoCanAddMe?: "everyone" | "contacts";
+    totpEnabled?: boolean;
 }
 
 export async function updatePrivacySettings(

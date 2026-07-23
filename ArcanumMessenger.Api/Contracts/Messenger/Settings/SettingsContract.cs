@@ -34,5 +34,6 @@ public record UpdatePrivacySettingsRequest(
     bool? ShowOnlineStatus,
     bool? ReadReceiptsEnabled,
     string? ShowPhoneNumber,
-    string? WhoCanAddMe
+    string? WhoCanAddMe,
+    bool? TotpEnabled
 );

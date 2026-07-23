@@ -206,6 +206,9 @@ public class SettingsController(AppDbContext db, EncryptionService encryption, T
             settings.WhoCanAddMe = addPermission;
         }
 
+        if (request.TotpEnabled is not null)
+            settings.TwoFactorEnabled = request.TotpEnabled.Value;
+
         settings.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
 
