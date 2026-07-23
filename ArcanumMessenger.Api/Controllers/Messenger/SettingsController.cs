@@ -1,4 +1,5 @@
 using ArcanumMessenger.Data;
+using ArcanumMessenger.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
@@ -28,14 +29,21 @@ public class SettingsController(AppDbContext db, EncryptionService encryption, T
             return NotFound();
 
         var dek = encryption.UnwrapDek(user.WrappedDek);
-        
+        var settings = user.UserSettings;
+
         var response = new UserSettingsResponse(
-            Username:encryption.Decrypt(user.UserSettings.UsernameEnc, dek),
-            Bio: user.UserSettings.BioEnc is not null ? encryption.Decrypt(user.UserSettings.BioEnc, dek) : "",
-            Phone: user.UserSettings.PhoneEnc is not null ? encryption.Decrypt(user.UserSettings.PhoneEnc, dek) : "",
-            NotificationsEnabled: user.UserSettings.NotificationsEnabled,
-            GroupNotifications: user.UserSettings.GroupNotificationsEnabled,
-            NotificationSound: user.UserSettings.NotificationSound
+            Username: encryption.Decrypt(settings.UsernameEnc, dek),
+            Bio: settings.BioEnc is not null ? encryption.Decrypt(settings.BioEnc, dek) : "",
+            Phone: settings.PhoneEnc is not null ? encryption.Decrypt(settings.PhoneEnc, dek) : "",
+            NotificationsEnabled: settings.NotificationsEnabled,
+            GroupNotifications: settings.GroupNotificationsEnabled,
+            NotificationSound: settings.NotificationSound,
+            TotpEnabled: settings.TwoFactorEnabled,
+            ShowLastSeen: settings.ShowLastSeen,
+            ShowOnlineStatus: settings.ShowOnlineStatus,
+            ReadReceiptsEnabled: settings.ReadReceiptsEnabled,
+            ShowPhoneNumber: settings.ShowPhoneNumber.ToApiString(),
+            WhoCanAddMe: settings.WhoCanAddMe.ToApiString()
         );
 
         logger.LogInformation("User settings fetched successfully for user {UserId}", userId);
@@ -134,7 +142,6 @@ public class SettingsController(AppDbContext db, EncryptionService encryption, T
         return Ok(new KdfSaltResponse(user.KdfSalt));
     }
 
-
     [HttpPatch("notifications")]
     [Authorize]
     public async Task<IActionResult> UpdateNotificationSettings(
@@ -156,6 +163,50 @@ public class SettingsController(AppDbContext db, EncryptionService encryption, T
 
         settings.UpdatedAt = DateTime.UtcNow;
 
+        await db.SaveChangesAsync(ct);
+
+        return NoContent();
+    }
+
+    [HttpPatch("privacy")]
+    [Authorize]
+    public async Task<IActionResult> UpdatePrivacySettings(
+        [FromBody] UpdatePrivacySettingsRequest request,
+        CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var settings = await db.UserSettings.FirstOrDefaultAsync(s => s.UserId == userId, ct);
+        if (settings is null)
+            return NotFound();
+
+        if (request.ShowLastSeen is not null)
+            settings.ShowLastSeen = request.ShowLastSeen.Value;
+
+        if (request.ShowOnlineStatus is not null)
+            settings.ShowOnlineStatus = request.ShowOnlineStatus.Value;
+
+        if (request.ReadReceiptsEnabled is not null)
+            settings.ReadReceiptsEnabled = request.ReadReceiptsEnabled.Value;
+
+        if (request.ShowPhoneNumber is not null)
+        {
+            if (!PrivacyEnumConverters.TryParsePhoneVisibility(request.ShowPhoneNumber, out var phoneVisibility))
+                return BadRequest(new { reason = "invalid_show_phone_number" });
+
+            settings.ShowPhoneNumber = phoneVisibility;
+        }
+
+        if (request.WhoCanAddMe is not null)
+        {
+            if (!PrivacyEnumConverters.TryParseAddPermission(request.WhoCanAddMe, out var addPermission))
+                return BadRequest(new { reason = "invalid_who_can_add_me" });
+
+            settings.WhoCanAddMe = addPermission;
+        }
+
+        settings.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
 
         return NoContent();

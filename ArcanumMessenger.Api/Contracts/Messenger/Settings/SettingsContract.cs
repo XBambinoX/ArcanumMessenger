@@ -6,7 +6,13 @@ public record UserSettingsResponse(
     string Phone,
     bool NotificationsEnabled,
     bool GroupNotifications,
-    string NotificationSound
+    string NotificationSound,
+    bool TotpEnabled,
+    bool ShowLastSeen,
+    bool ShowOnlineStatus,
+    bool ReadReceiptsEnabled,
+    string ShowPhoneNumber,   // "everyone" | "contacts" | "nobody"
+    string WhoCanAddMe        // "everyone" | "contacts"
 );
 
 public record UpdateAccountFieldsRequest(
@@ -21,4 +27,12 @@ public record KdfSaltResponse(string KdfSalt);
 public record UpdateNotificationSettingsRequest(
     bool? NotificationsEnabled,
     bool? GroupNotifications
-); 
+);
+
+public record UpdatePrivacySettingsRequest(
+    bool? ShowLastSeen,
+    bool? ShowOnlineStatus,
+    bool? ReadReceiptsEnabled,
+    string? ShowPhoneNumber,
+    string? WhoCanAddMe
+);

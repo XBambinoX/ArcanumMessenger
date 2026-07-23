@@ -8,6 +8,12 @@ export interface UserSettingsResponse {
     notificationsEnabled: boolean;
     groupNotifications: boolean;
     notificationSound: string;
+    totpEnabled: boolean;
+    showLastSeen: boolean;
+    showOnlineStatus: boolean;
+    readReceiptsEnabled: boolean;
+    showPhoneNumber: "everyone" | "contacts" | "nobody";
+    whoCanAddMe: "everyone" | "contacts";
 }
 
 export interface UpdateAccountFieldsRequest {
@@ -15,7 +21,7 @@ export interface UpdateAccountFieldsRequest {
     bio?: string;
     phone?: string;
 }
- 
+
 export async function getUserSettings(): Promise<UserSettingsResponse> {
     const res = await apiFetch("api/settings/get", {
         credentials: "include",
@@ -23,7 +29,7 @@ export async function getUserSettings(): Promise<UserSettingsResponse> {
     return res.json();
 }
 
-export async function updateAccountFields( payload: UpdateAccountFieldsRequest, ): Promise<void> {
+export async function updateAccountFields(payload: UpdateAccountFieldsRequest): Promise<void> {
     await apiFetch("api/settings/update-account", {
         method: "PATCH",
         credentials: "include",
@@ -66,6 +72,23 @@ export async function updateNotificationSettings(
     payload: UpdateNotificationSettingsRequest,
 ): Promise<void> {
     await apiFetch("/api/settings/notifications", {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+    });
+}
+
+export interface UpdatePrivacySettingsRequest {
+    showLastSeen?: boolean;
+    showOnlineStatus?: boolean;
+    readReceiptsEnabled?: boolean;
+    showPhoneNumber?: "everyone" | "contacts" | "nobody";
+    whoCanAddMe?: "everyone" | "contacts";
+}
+
+export async function updatePrivacySettings(
+    payload: UpdatePrivacySettingsRequest,
+): Promise<void> {
+    await apiFetch("/api/settings/privacy", {
         method: "PATCH",
         body: JSON.stringify(payload),
     });

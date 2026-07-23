@@ -1,7 +1,13 @@
 import { useLayoutEffect, useRef, useState, useEffect, type ReactElement } from "react";
 import type { User } from "../types/messenger";
 import styles from "./ProfilePanel.module.css";
-import { getUserSettings, updateAccountFields, getKdfSalt, updateNotificationSettings } from "../api/userSettings";
+import { getUserSettings, 
+    updateAccountFields, 
+    getKdfSalt, 
+    updateNotificationSettings, 
+    updatePrivacySettings,
+    type UpdatePrivacySettingsRequest } from "../api/userSettings";
+    
 import DeleteAccountModal from "./DeleteAccountModal";
 
 interface ProfilePanelProps {
@@ -13,6 +19,7 @@ interface ProfilePanelProps {
 
 type Section = "main" | "account" | "notifications" | "privacy" | "chats";
 type SaveStatus = "idle" | "saving" | "saved" | "error";
+type PrivacyField = "showLastSeen" | "showOnlineStatus" | "readReceipts" | "showPhoneNumber" | "whoCanAddMe";
 
 // Mirrors Entities.UserSettings, plus a few visual-only extras below.
 // Not persisted yet — wiring to GET/PUT /api/users/me/settings is next.
@@ -187,6 +194,16 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
 
     const [notifSaveStatus, setNotifSaveStatus] = useState<SaveStatus>("idle");
 
+    const [privacySaveStatus, setPrivacySaveStatus] = useState<SaveStatus>("idle");
+     
+    const privacyApiFieldMap: Record<PrivacyField, keyof UpdatePrivacySettingsRequest> = {
+        showLastSeen: "showLastSeen",
+        showOnlineStatus: "showOnlineStatus",
+        readReceipts: "readReceiptsEnabled",
+        showPhoneNumber: "showPhoneNumber",
+        whoCanAddMe: "whoCanAddMe",
+    };
+
     const patch = (partial: Partial<SettingsState>) =>
         setSettings((prev) => ({ ...prev, ...partial }));
 
@@ -267,6 +284,21 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
         }
     };
 
+    const handlePrivacyChange = async <K extends PrivacyField>(field: K, value: SettingsState[K]) => {
+        const prevValue = settings[field];
+        patch({ [field]: value } as Partial<SettingsState>);
+        setPrivacySaveStatus("saving");
+
+        try {
+            await updatePrivacySettings({ [privacyApiFieldMap[field]]: value });
+            setPrivacySaveStatus("saved");
+            window.setTimeout(() => setPrivacySaveStatus((s) => (s === "saved" ? "idle" : s)), 1500);
+        } catch {
+            patch({ [field]: prevValue } as Partial<SettingsState>);
+            setPrivacySaveStatus("error");
+        }
+    };
+
     const navigateTo = (target: Section) => {
         if (animating || target === section) return;
 
@@ -308,6 +340,12 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                     notificationsEnabled: data.notificationsEnabled,
                     groupNotifications: data.groupNotifications,
                     notificationSound: data.notificationSound,
+                    totpEnabled: data.totpEnabled,
+                    showLastSeen: data.showLastSeen,
+                    showOnlineStatus: data.showOnlineStatus,
+                    readReceipts: data.readReceiptsEnabled,
+                    showPhoneNumber: data.showPhoneNumber,
+                    whoCanAddMe: data.whoCanAddMe,
                 }));
                 setSettingsLoaded(true);
             })
@@ -502,13 +540,20 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
             case "privacy":
                 return (
                     <div className={styles.subPage}>
+                        <div className={styles.saveStatusRow}>
+                            {privacySaveStatus === "saving" && <span className={styles.saveStatusSaving}>Saving...</span>}
+                            {privacySaveStatus === "saved" && <span className={styles.saveStatusSaved}>Saved</span>}
+                            {privacySaveStatus === "error" && <span className={styles.saveStatusError}>Failed to save</span>}
+                        </div>
+
                         <label className={styles.row}>
                             <span>Enable TOTP</span>
                             <input
                                 className={styles.switch}
                                 type="checkbox"
                                 checked={settings.totpEnabled}
-                                onChange={(e) => patch({ totpEnabled: e.target.checked })}
+                                disabled
+                                title="Coming soon — needs a dedicated setup flow"
                             />
                         </label>
 
@@ -519,7 +564,8 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                                 className={styles.switch}
                                 type="checkbox"
                                 checked={settings.showLastSeen}
-                                onChange={(e) => patch({ showLastSeen: e.target.checked })}
+                                disabled={!settingsLoaded}
+                                onChange={(e) => handlePrivacyChange("showLastSeen", e.target.checked)}
                             />
                         </label>
                         <label className={styles.row}>
@@ -528,7 +574,8 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                                 className={styles.switch}
                                 type="checkbox"
                                 checked={settings.showOnlineStatus}
-                                onChange={(e) => patch({ showOnlineStatus: e.target.checked })}
+                                disabled={!settingsLoaded}
+                                onChange={(e) => handlePrivacyChange("showOnlineStatus", e.target.checked)}
                             />
                         </label>
                         <label className={styles.row}>
@@ -537,7 +584,8 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                                 className={styles.switch}
                                 type="checkbox"
                                 checked={settings.readReceipts}
-                                onChange={(e) => patch({ readReceipts: e.target.checked })}
+                                disabled={!settingsLoaded}
+                                onChange={(e) => handlePrivacyChange("readReceipts", e.target.checked)}
                             />
                         </label>
 
@@ -547,7 +595,8 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                                 <button
                                     key={opt.id}
                                     className={styles.optionRow}
-                                    onClick={() => patch({ showPhoneNumber: opt.id })}
+                                    disabled={!settingsLoaded}
+                                    onClick={() => handlePrivacyChange("showPhoneNumber", opt.id)}
                                 >
                                     <span>{opt.label}</span>
                                     {settings.showPhoneNumber === opt.id && (
@@ -565,7 +614,8 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                                 <button
                                     key={opt.id}
                                     className={styles.optionRow}
-                                    onClick={() => patch({ whoCanAddMe: opt.id })}
+                                    disabled={!settingsLoaded}
+                                    onClick={() => handlePrivacyChange("whoCanAddMe", opt.id)}
                                 >
                                     <span>{opt.label}</span>
                                     {settings.whoCanAddMe === opt.id && (
