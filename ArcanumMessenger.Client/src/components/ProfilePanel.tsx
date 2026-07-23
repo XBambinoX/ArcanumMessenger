@@ -24,6 +24,7 @@ interface SettingsState {
     messagePreview: boolean;
     groupNotifications: boolean;
     notificationSound: string;
+    totpEnabled: boolean;
     showLastSeen: boolean;
     showOnlineStatus: boolean;
     showPhoneNumber: "everyone" | "contacts" | "nobody";
@@ -43,6 +44,7 @@ const defaultSettings: SettingsState = {
     messagePreview: true,
     groupNotifications: true,
     notificationSound: "Default",
+    totpEnabled: false,
     showLastSeen: true,
     showOnlineStatus: true,
     showPhoneNumber: "contacts",
@@ -494,15 +496,22 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                             <span>Notification sound</span>
                             <span className={styles.menuValue}>{settings.notificationSound}</span>
                         </div>
-                        <p className={styles.fieldHint}>
-                            Sound picker isn't wired up yet — will list uploaded/system tones.
-                        </p>
                     </div>
                 );
 
             case "privacy":
                 return (
                     <div className={styles.subPage}>
+                        <label className={styles.row}>
+                            <span>Enable TOTP</span>
+                            <input
+                                className={styles.switch}
+                                type="checkbox"
+                                checked={settings.totpEnabled}
+                                onChange={(e) => patch({ totpEnabled: e.target.checked })}
+                            />
+                        </label>
+
                         <span className={styles.subGroupTitle}>Presence</span>
                         <label className={styles.row}>
                             <span>Show last seen</span>
