@@ -90,7 +90,7 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
                             u.PublicIdEnc,
                             u.LastSeen,
                             u.WrappedDek,
-                            u.PublicEmailEnc,
+                            u.UserSettings.EmailEnc,
                         })
                         .FirstOrDefaultAsync(ct);
 
@@ -100,7 +100,7 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
         var dek = encryption.UnwrapDek(user.WrappedDek);
         var username = encryption.Decrypt(user.UsernameEnc, dek);
         var publicId = encryption.Decrypt(user.PublicIdEnc, dek);
-        var publicEmail = string.IsNullOrEmpty(user.PublicEmailEnc) ? null : encryption.Decrypt(user.PublicEmailEnc, dek);
+        var publicEmail = string.IsNullOrEmpty(user.EmailEnc) ? null : encryption.Decrypt(user.EmailEnc, dek);
         var isContact = id != callerId && await db.Contacts.AnyAsync(c => c.UserId == callerId && c.ContactId == id, ct);
 
         return new GetUserResponce(username, publicId, user.LastSeen, publicEmail, isContact, success: true, reason: null);

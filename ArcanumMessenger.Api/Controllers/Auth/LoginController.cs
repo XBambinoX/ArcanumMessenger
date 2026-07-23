@@ -117,13 +117,13 @@ public class LoginController(
         if (session is null)
             return StatusCode(StatusCodes.Status410Gone, new CompleteLoginResponse(Success: false, Reason: "session_expired"));
 
-        var user = await authService.GetUserAsync(u => u.EmailHash == session.EmailHash, ct);
+        var user = await authService.GetUserAsync(u => u.EmailHash == session.EmailHash, ct, includeSettings: true);
         if (user is null)
             return StatusCode(StatusCodes.Status410Gone, new CompleteLoginResponse(Success: false, Reason: "session_expired"));
 
         logger.LogInformation("CompleteLogin session step: {Step}", session.Step);
 
-        var expectedStep = user.TwoFactorEnabled ? 2 : 1;
+        var expectedStep = user.UserSettings.TwoFactorEnabled ? 2 : 1;
         if (session.Step != expectedStep)
             return BadRequest(new CompleteLoginResponse(Success: false, Reason: "invalid_step"));
 

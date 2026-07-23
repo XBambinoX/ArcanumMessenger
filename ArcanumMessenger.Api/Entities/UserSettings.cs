@@ -8,6 +8,7 @@ public class UserSettings
     public string UsernameEnc { get; set; } = null!;
     public string? BioEnc { get; set; }
     public string? PhoneEnc { get; set; }
+    public string? EmailEnc { get; set; }
 
     // Notifications
     public bool NotificationsEnabled { get; set; } = true;
@@ -21,6 +22,11 @@ public class UserSettings
     public bool ReadReceiptsEnabled { get; set; } = true;
     public PhoneVisibility ShowPhoneNumber { get; set; } = PhoneVisibility.Contacts;
     public AddPermission WhoCanAddMe { get; set; } = AddPermission.Everyone;
+    public bool TwoFactorEnabled { get; set; } = false;
+    // Base32 TOTP secret, encrypted with this user's DEK (same pattern as
+    // the other *Enc fields). Unlike PasswordHash, this must be reversible —
+    // verifying a code means decrypting it back, not hashing and comparing.
+    public string? TwoFactorSecretEnc { get; set; }
 
     // Chat appearance
     public string Theme { get; set; } = "system";

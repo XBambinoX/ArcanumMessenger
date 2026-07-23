@@ -28,12 +28,15 @@ public class AuthService(AppDbContext db, EncryptionService encryption, TotpServ
 
     public async Task<(bool IsCorrect, bool RequiresTotp)> CheckPassAsync(string emailHash, string AuthKey, CancellationToken ct)
     {
-        var user = await GetUserAsync(u => u.EmailHash == emailHash, ct);
+        var user = await GetUserAsync(
+            u => u.EmailHash == emailHash,
+            ct,
+            includeSettings: true);
 
         var passHash = user?.PasswordHash ?? PasswordHasher.DummyPasswordHash;
         var isCorrect = PasswordHasher.Verify(AuthKey, passHash);
 
-        return (isCorrect, isCorrect && (user?.TwoFactorEnabled ?? false));
+        return (isCorrect, isCorrect && (user?.UserSettings.TwoFactorEnabled ?? false));
     }
 
 
@@ -41,11 +44,11 @@ public class AuthService(AppDbContext db, EncryptionService encryption, TotpServ
     {
         var user = await GetUserAsync(u => u.EmailHash == emailHash, ct);
 
-        if (user is null || !user.TwoFactorEnabled || user.TwoFactorSecretEnc is null)
+        if (user is null || !user.UserSettings.TwoFactorEnabled || user.UserSettings.TwoFactorSecretEnc is null)
             return false;
 
         var dek = encryption.UnwrapDek(user.WrappedDek);
-        var secret = encryption.Decrypt(user.TwoFactorSecretEnc, dek);
+        var secret = encryption.Decrypt(user.UserSettings.TwoFactorSecretEnc, dek);
 
         return totp.VerifyCode(secret, code);
     }

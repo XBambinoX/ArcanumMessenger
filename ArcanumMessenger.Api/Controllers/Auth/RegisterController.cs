@@ -308,7 +308,6 @@ public class RegisterController(
             RecoveryPhrase1Hash = session.RecoveryPhrase1Hash,
             RecoveryPhrase2Hash = session.RecoveryPhrase2Hash,
             WrappedDek = wrappedDek,
-            PublicEmailEnc = publicEmailEnc,
             LastSeen = now,
             CreatedAt = now,
             IsDeleted = false,
@@ -317,6 +316,7 @@ public class RegisterController(
             {
                 UserId = userId,
                 UsernameEnc = usernameEnc,
+                EmailEnc = publicEmailEnc,
                 UpdatedAt = now
             }
         };
