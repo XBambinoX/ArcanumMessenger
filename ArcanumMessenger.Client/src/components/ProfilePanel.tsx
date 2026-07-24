@@ -53,7 +53,7 @@ const defaultSettings: SettingsState = {
     notificationsEnabled: true,
     messagePreview: true,
     groupNotifications: true,
-    notificationSound: "Default",
+    notificationSound: "Bubble",
     totpEnabled: false,
     showLastSeen: true,
     showOnlineStatus: true,
@@ -157,6 +157,12 @@ const phoneVisibilityOptions: { id: SettingsState["showPhoneNumber"]; label: str
     { id: "nobody", label: "Nobody" },
 ];
 
+const notificationSoundOptions: { id: string; label: string; file: string }[] = [
+    { id: "bubble", label: "Bubble", file: "/sounds/notification_bubble.mp3" },
+    { id: "chime", label: "Chime", file: "/sounds/notification_chime.mp3" },
+    { id: "bell", label: "Bell", file: "/sounds/notification_bell.mp3" },  
+];
+
 const addMeOptions: { id: SettingsState["whoCanAddMe"]; label: string }[] = [
     { id: "everyone", label: "Everyone" },
     { id: "contacts", label: "My Contacts Only" },
@@ -196,10 +202,10 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
     const pendingFields = useRef<Partial<{ username: string; bio: string; phone: string }>>({});
 
     const [notifSaveStatus, setNotifSaveStatus] = useState<SaveStatus>("idle");
-
     const [privacySaveStatus, setPrivacySaveStatus] = useState<SaveStatus>("idle");
-
     const [chatsSaveStatus, setChatsSaveStatus] = useState<SaveStatus>("idle");
+
+    const soundPreviewRef = useRef<HTMLAudioElement | null>(null);
      
     const privacyApiFieldMap: Record<PrivacyField, keyof UpdatePrivacySettingsRequest> = {
         showLastSeen: "showLastSeen",
@@ -325,6 +331,34 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
         } catch {
             patch({ [field]: prevValue } as Partial<SettingsState>);
             setChatsSaveStatus("error");
+        }
+    };
+
+    const playSoundPreview = (file: string) => {
+        if (!file) return;
+        if (!soundPreviewRef.current) {
+            soundPreviewRef.current = new Audio();
+        }
+        soundPreviewRef.current.src = file;
+        soundPreviewRef.current.currentTime = 0;
+        soundPreviewRef.current.play().catch(() => { });
+    };
+
+    const handleNotificationSoundChange = async (soundId: string) => {
+        const prevValue = settings.notificationSound;
+        patch({ notificationSound: soundId });
+
+        const option = notificationSoundOptions.find((o) => o.id === soundId);
+        if (option) playSoundPreview(option.file);
+
+        setNotifSaveStatus("saving");
+        try {
+            await updateNotificationSettings({ notificationSound: soundId });
+            setNotifSaveStatus("saved");
+            window.setTimeout(() => setNotifSaveStatus((s) => (s === "saved" ? "idle" : s)), 1500);
+        } catch {
+            patch({ notificationSound: prevValue });
+            setNotifSaveStatus("error");
         }
     };
 
@@ -563,9 +597,22 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                         </label>
 
                         <span className={styles.subGroupTitle}>Sound</span>
-                        <div className={styles.row}>
-                            <span>Notification sound</span>
-                            <span className={styles.menuValue}>{settings.notificationSound}</span>
+                        <div className={styles.optionList}>
+                            {notificationSoundOptions.map((opt) => (
+                                <button
+                                    key={opt.id}
+                                    className={styles.optionRow}
+                                    disabled={!settingsLoaded}
+                                    onClick={() => handleNotificationSoundChange(opt.id)}
+                                >
+                                    <span>{opt.label}</span>
+                                    {settings.notificationSound === opt.id && (
+                                        <span className={styles.optionCheck}>
+                                            <CheckIcon />
+                                        </span>
+                                    )}
+                                </button>
+                            ))}
                         </div>
                     </div>
                 );

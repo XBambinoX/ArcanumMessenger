@@ -51,4 +51,14 @@ internal static class PrivacyEnumConverters
         }
     }
 
+    public static bool TryParseNotifications(string value, out Notifications result)
+    {
+        switch (value)
+        {
+            case "bubble" : result = Notifications.Bubble; return true;
+            case "chime" : result = Notifications.Chime; return true;
+            case "bell" : result = Notifications.Bell; return true;
+            default: result = default; return false;
+        }
+    }
 }

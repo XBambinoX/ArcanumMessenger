@@ -70,6 +70,7 @@ export async function getKdfSalt(): Promise<string> {
 export interface UpdateNotificationSettingsRequest {
     notificationsEnabled?: boolean;
     groupNotifications?: boolean;
+    notificationSound?: string;
 }
 
 export async function updateNotificationSettings(

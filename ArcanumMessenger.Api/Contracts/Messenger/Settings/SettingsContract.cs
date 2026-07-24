@@ -30,7 +30,8 @@ public record KdfSaltResponse(string KdfSalt);
 
 public record UpdateNotificationSettingsRequest(
     bool? NotificationsEnabled,
-    bool? GroupNotifications
+    bool? GroupNotifications,
+    string? NotificationSound
 );
 
 public record UpdatePrivacySettingsRequest(

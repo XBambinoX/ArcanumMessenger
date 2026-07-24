@@ -14,7 +14,7 @@ public class UserSettings
     public bool NotificationsEnabled { get; set; } = true;
     public bool MessagePreviewEnabled { get; set; } = true;
     public bool GroupNotificationsEnabled { get; set; } = true;
-    public string NotificationSound { get; set; } = "default";
+    public string NotificationSound { get; set; } = "bubble";
 
     // Privacy
     public bool ShowLastSeen { get; set; } = true;
@@ -58,4 +58,11 @@ public enum Themes
     System,
     Dark,
     Light
+}
+
+public enum Notifications
+{
+    Bubble,
+    Chime,
+    Bell
 }

@@ -165,6 +165,14 @@ public class SettingsController(AppDbContext db, EncryptionService encryption, T
         if (request.GroupNotifications is not null)
             settings.GroupNotificationsEnabled = request.GroupNotifications.Value;
 
+        if (request.NotificationSound is not null)
+        {
+            if (!PrivacyEnumConverters.TryParseNotifications(request.NotificationSound, out var notification))
+                return BadRequest(new { reason = "invalid_sound" });
+
+            settings.NotificationSound = request.NotificationSound;
+        }
+
         settings.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync(ct);
