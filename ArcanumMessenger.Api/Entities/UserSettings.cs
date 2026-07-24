@@ -32,7 +32,7 @@ public class UserSettings
     public string Theme { get; set; } = "system";
     public string Language { get; set; } = "en";
     public string Wallpaper { get; set; } = "default";
-    public int FontSize { get; set; } = 15;
+    public bool LinkPreviewsEnabled { get; set; } = true;
     public bool AutoDownloadMedia { get; set; } = true;
 
     public DateTime UpdatedAt { get; set; }
