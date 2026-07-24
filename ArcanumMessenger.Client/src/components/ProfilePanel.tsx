@@ -6,7 +6,9 @@ import { getUserSettings,
     getKdfSalt, 
     updateNotificationSettings, 
     updatePrivacySettings,
-    type UpdatePrivacySettingsRequest } from "../api/userSettings";
+    updateChatSettings,
+    type UpdatePrivacySettingsRequest,
+    type UpdateChatSettingsRequest } from "../api/userSettings";
     
 import DeleteAccountModal from "./DeleteAccountModal";
 
@@ -20,6 +22,7 @@ interface ProfilePanelProps {
 type Section = "main" | "account" | "notifications" | "privacy" | "chats";
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 type PrivacyField = "showLastSeen" | "showOnlineStatus" | "readReceipts" | "showPhoneNumber" | "whoCanAddMe" | "totpEnabled";
+type ChatField = "theme" | "wallpaper" | "linkPreviews" | "autoDownloadMedia";
 
 // Mirrors Entities.UserSettings, plus a few visual-only extras below.
 // Not persisted yet — wiring to GET/PUT /api/users/me/settings is next.
@@ -39,7 +42,7 @@ interface SettingsState {
     readReceipts: boolean;
     theme: "system" | "dark" | "light";
     wallpaper: string;
-    fontSize: number;
+    linkPreviews: boolean;
     autoDownloadMedia: boolean;
 }
 
@@ -59,7 +62,7 @@ const defaultSettings: SettingsState = {
     readReceipts: true,
     theme: "system",
     wallpaper: "Default",
-    fontSize: 15,
+    linkPreviews: true,
     autoDownloadMedia: true,
 };
 
@@ -195,6 +198,8 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
     const [notifSaveStatus, setNotifSaveStatus] = useState<SaveStatus>("idle");
 
     const [privacySaveStatus, setPrivacySaveStatus] = useState<SaveStatus>("idle");
+
+    const [chatsSaveStatus, setChatsSaveStatus] = useState<SaveStatus>("idle");
      
     const privacyApiFieldMap: Record<PrivacyField, keyof UpdatePrivacySettingsRequest> = {
         showLastSeen: "showLastSeen",
@@ -204,6 +209,14 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
         whoCanAddMe: "whoCanAddMe",
         totpEnabled: "totpEnabled",
     };
+
+    const chatsApiFieldMap: Record<ChatField, keyof UpdateChatSettingsRequest> = {
+        theme: "theme",
+        wallpaper: "wallpaper",
+        linkPreviews: "linkPreviewsEnabled",
+        autoDownloadMedia: "autoDownloadMedia",
+    };
+
 
     const patch = (partial: Partial<SettingsState>) =>
         setSettings((prev) => ({ ...prev, ...partial }));
@@ -300,6 +313,21 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
         }
     };
 
+    const handleChatSettingChange = async <K extends ChatField>(field: K, value: SettingsState[K]) => {
+        const prevValue = settings[field];
+        patch({ [field]: value } as Partial<SettingsState>);
+        setChatsSaveStatus("saving");
+
+        try {
+            await updateChatSettings({ [chatsApiFieldMap[field]]: value });
+            setChatsSaveStatus("saved");
+            window.setTimeout(() => setChatsSaveStatus((s) => (s === "saved" ? "idle" : s)), 1500);
+        } catch {
+            patch({ [field]: prevValue } as Partial<SettingsState>);
+            setChatsSaveStatus("error");
+        }
+    };
+
     const navigateTo = (target: Section) => {
         if (animating || target === section) return;
 
@@ -347,6 +375,10 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                     readReceipts: data.readReceiptsEnabled,
                     showPhoneNumber: data.showPhoneNumber,
                     whoCanAddMe: data.whoCanAddMe,
+                    theme: data.theme,
+                    wallpaper: data.wallpaper,
+                    linkPreviews: data.linkPreviewsEnabled,
+                    autoDownloadMedia: data.autoDownloadMedia,
                 }));
                 setSettingsLoaded(true);
             })
@@ -639,13 +671,20 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
             case "chats":
                 return (
                     <div className={styles.subPage}>
+                        <div className={styles.saveStatusRow}>
+                            {chatsSaveStatus === "saving" && <span className={styles.saveStatusSaving}>Saving...</span>}
+                            {chatsSaveStatus === "saved" && <span className={styles.saveStatusSaved}>Saved</span>}
+                            {chatsSaveStatus === "error" && <span className={styles.saveStatusError}>Failed to save</span>}
+                        </div>
+
                         <span className={styles.subGroupTitle}>Theme</span>
                         <div className={styles.optionList}>
                             {themeOptions.map((opt) => (
                                 <button
                                     key={opt.id}
                                     className={styles.optionRow}
-                                    onClick={() => patch({ theme: opt.id })}
+                                    disabled={!settingsLoaded}
+                                    onClick={() => handleChatSettingChange("theme", opt.id)}
                                 >
                                     <span>{opt.label}</span>
                                     {settings.theme === opt.id && (
@@ -662,21 +701,16 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                             <span>Chat wallpaper</span>
                             <span className={styles.menuValue}>{settings.wallpaper}</span>
                         </div>
-                        <div className={styles.fontSizeRow}>
-                            <div className={styles.fontSizeLabelRow}>
-                                <span>Message text size</span>
-                                <span className={styles.menuValue}>{settings.fontSize}px</span>
-                            </div>
+                        <label className={styles.row}>
+                            <span>Show link previews</span>
                             <input
-                                className={styles.rangeInput}
-                                type="range"
-                                min={12}
-                                max={20}
-                                step={1}
-                                value={settings.fontSize}
-                                onChange={(e) => patch({ fontSize: Number(e.target.value) })}
+                                className={styles.switch}
+                                type="checkbox"
+                                checked={settings.linkPreviews}
+                                disabled={!settingsLoaded}
+                                onChange={(e) => handleChatSettingChange("linkPreviews", e.target.checked)}
                             />
-                        </div>
+                        </label>
 
                         <span className={styles.subGroupTitle}>Data Usage</span>
                         <label className={styles.row}>
@@ -685,7 +719,8 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                                 className={styles.switch}
                                 type="checkbox"
                                 checked={settings.autoDownloadMedia}
-                                onChange={(e) => patch({ autoDownloadMedia: e.target.checked })}
+                                disabled={!settingsLoaded}
+                                onChange={(e) => handleChatSettingChange("autoDownloadMedia", e.target.checked)}
                             />
                         </label>
                     </div>

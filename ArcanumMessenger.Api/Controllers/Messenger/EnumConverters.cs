@@ -39,4 +39,16 @@ internal static class PrivacyEnumConverters
             default: result = default; return false;
         }
     }
+
+    public static bool TryParseThemes(string value, out Themes result)
+    {
+        switch (value)
+        {
+            case "system": result = Themes.System; return true;
+            case "dark": result = Themes.Dark; return true;
+            case "light" : result = Themes.Light; return true;
+            default: result = default; return false;
+        }
+    }
+
 }

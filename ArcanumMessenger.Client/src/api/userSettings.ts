@@ -14,6 +14,10 @@ export interface UserSettingsResponse {
     readReceiptsEnabled: boolean;
     showPhoneNumber: "everyone" | "contacts" | "nobody";
     whoCanAddMe: "everyone" | "contacts";
+    theme: "system" | "dark" | "light";
+    wallpaper: string;
+    linkPreviewsEnabled: boolean;
+    autoDownloadMedia: boolean;
 }
 
 export interface UpdateAccountFieldsRequest {
@@ -90,6 +94,22 @@ export async function updatePrivacySettings(
     payload: UpdatePrivacySettingsRequest,
 ): Promise<void> {
     await apiFetch("/api/settings/privacy", {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+    });
+}
+
+export interface UpdateChatSettingsRequest {
+    theme?: "system" | "dark" | "light";
+    wallpaper?: string;
+    linkPreviewsEnabled?: boolean;
+    autoDownloadMedia?: boolean;
+}
+
+export async function updateChatSettings(
+    payload: UpdateChatSettingsRequest,
+): Promise<void> {
+    await apiFetch("/api/settings/chats", {
         method: "PATCH",
         body: JSON.stringify(payload),
     });

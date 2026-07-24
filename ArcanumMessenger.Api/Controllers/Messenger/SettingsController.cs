@@ -43,7 +43,11 @@ public class SettingsController(AppDbContext db, EncryptionService encryption, T
             ShowOnlineStatus: settings.ShowOnlineStatus,
             ReadReceiptsEnabled: settings.ReadReceiptsEnabled,
             ShowPhoneNumber: settings.ShowPhoneNumber.ToApiString(),
-            WhoCanAddMe: settings.WhoCanAddMe.ToApiString()
+            WhoCanAddMe: settings.WhoCanAddMe.ToApiString(),
+            Theme: settings.Theme,
+            Wallpaper: settings.Wallpaper,
+            LinkPreviewsEnabled: settings.LinkPreviewsEnabled,
+            AutoDownloadMedia: settings.AutoDownloadMedia
         );
 
         logger.LogInformation("User settings fetched successfully for user {UserId}", userId);
@@ -208,6 +212,41 @@ public class SettingsController(AppDbContext db, EncryptionService encryption, T
 
         if (request.TotpEnabled is not null)
             settings.TwoFactorEnabled = request.TotpEnabled.Value;
+
+        settings.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+
+        return NoContent();
+    }
+
+    [HttpPatch("chats")]
+    [Authorize]
+    public async Task<IActionResult> UpdateChatSettings(
+        [FromBody] UpdateChatSettingsRequest request,
+        CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var settings = await db.UserSettings.FirstOrDefaultAsync(s => s.UserId == userId, ct);
+        if (settings is null)
+            return NotFound();
+
+        if (request.Theme is not null)
+        {
+            if (!PrivacyEnumConverters.TryParseThemes(request.Theme, out var theme))
+                return BadRequest(new { reason = "invalid_theme" });
+            settings.Theme = request.Theme;
+        }
+
+        if (request.Wallpaper is not null)
+            settings.Wallpaper = request.Wallpaper;
+
+        if (request.LinkPreviewsEnabled is not null)
+            settings.LinkPreviewsEnabled = request.LinkPreviewsEnabled.Value;
+
+        if (request.AutoDownloadMedia is not null)
+            settings.AutoDownloadMedia = request.AutoDownloadMedia.Value;
 
         settings.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);

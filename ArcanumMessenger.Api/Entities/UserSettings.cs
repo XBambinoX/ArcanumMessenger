@@ -52,3 +52,10 @@ public enum AddPermission
     Everyone,
     Contacts
 }
+
+public enum Themes
+{
+    System,
+    Dark,
+    Light
+}

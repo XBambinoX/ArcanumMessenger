@@ -12,7 +12,11 @@ public record UserSettingsResponse(
     bool ShowOnlineStatus,
     bool ReadReceiptsEnabled,
     string ShowPhoneNumber,   // "everyone" | "contacts" | "nobody"
-    string WhoCanAddMe        // "everyone" | "contacts"
+    string WhoCanAddMe,       // "everyone" | "contacts"
+    string Theme,
+    string Wallpaper,
+    bool LinkPreviewsEnabled,
+    bool AutoDownloadMedia
 );
 
 public record UpdateAccountFieldsRequest(
@@ -36,4 +40,11 @@ public record UpdatePrivacySettingsRequest(
     string? ShowPhoneNumber,
     string? WhoCanAddMe,
     bool? TotpEnabled
+);
+
+public record UpdateChatSettingsRequest(
+    string? Theme,
+    string? Wallpaper,
+    bool? LinkPreviewsEnabled,
+    bool? AutoDownloadMedia
 );
