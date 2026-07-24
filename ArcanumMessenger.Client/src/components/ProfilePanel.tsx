@@ -53,7 +53,7 @@ const defaultSettings: SettingsState = {
     notificationsEnabled: true,
     messagePreview: true,
     groupNotifications: true,
-    notificationSound: "Bubble",
+    notificationSound: "bubble",
     totpEnabled: false,
     showLastSeen: true,
     showOnlineStatus: true,
@@ -89,6 +89,11 @@ const BellIcon = ({ color }: IconProps) => (
     <svg {...iconProps} style={{ color }}>
         <path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6" />
         <path d="M10 20a2 2 0 0 0 4 0" />
+    </svg>
+);
+const SoundWaveIcon = () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 10v4M8 6v12M12 3v18M16 6v12M20 10v4" />
     </svg>
 );
 const LockIcon = ({ color }: IconProps) => (
@@ -611,20 +616,18 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                         </label>
 
                         <span className={styles.subGroupTitle}>Sound</span>
-                        <div className={styles.optionList}>
+                        <div className={styles.soundPicker}>
                             {notificationSoundOptions.map((opt) => (
                                 <button
                                     key={opt.id}
-                                    className={styles.optionRow}
+                                    className={`${styles.soundOption} ${settings.notificationSound === opt.id ? styles.soundOptionActive : ""}`}
                                     disabled={!settingsLoaded}
                                     onClick={() => handleNotificationSoundChange(opt.id)}
                                 >
-                                    <span>{opt.label}</span>
-                                    {settings.notificationSound === opt.id && (
-                                        <span className={styles.optionCheck}>
-                                            <CheckIcon />
-                                        </span>
-                                    )}
+                                    <span className={styles.soundOptionIcon}>
+                                        <SoundWaveIcon />
+                                    </span>
+                                    <span className={styles.soundOptionLabel}>{opt.label}</span>
                                 </button>
                             ))}
                         </div>
