@@ -19,12 +19,17 @@ interface ServerErrorDetails {
     timestamp: string;
 }
 
-export async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
+export async function apiFetch(
+    path: string,
+    init?: RequestInit,
+    _isRetry = false,
+): Promise<Response> {
     let res: Response;
 
     try {
         res = await fetch(path, {
             headers: { "Content-Type": "application/json", ...init?.headers },
+            credentials: "include",
             ...init,
         });
     } catch (networkErr) {

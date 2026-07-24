@@ -36,6 +36,7 @@ export default function AppPage() {
 
     const [chats, setChats] = useState<ChatSummary[]>([]);
     const [profile, setProfile] = useState<User | null>(null);
+    const [displayName, setDisplayName] = useState<string | null>(null);
     const [folder, setFolder] = useState<ChatFolder>("all");
     const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
     const [search, setSearch] = useState("");
@@ -47,7 +48,10 @@ export default function AppPage() {
 
     useEffect(() => {
         getChats().then(setChats);
-        getMe().then(setProfile);
+        getMe().then((me) => {
+            setProfile(me);
+            setDisplayName(me!.name);
+        });
     }, []);
 
     useEffect(() => {
@@ -59,8 +63,6 @@ export default function AppPage() {
                 if (!cancelled) setConnection(conn);
             })
             .catch(() => {
-                // Expected under StrictMode's mount->cleanup->mount in dev:
-                // the cleanup below stops the connection before start() finishes.
             });
 
         return () => {
@@ -200,10 +202,11 @@ export default function AppPage() {
                             title="Profile"
                         >
                             <span className={styles.avatarBtn}>
-                                {(profile?.name ?? "?").charAt(0).toUpperCase()}
+                                {(displayName ?? profile?.name ?? "?").charAt(0).toUpperCase()}
                             </span>
+
                             <span className={styles.profileName}>
-                                {profile?.name ?? "..."}
+                                {displayName ?? profile?.name ?? "Loading..."}
                             </span>
                         </button>
                         <button
@@ -317,6 +320,7 @@ export default function AppPage() {
                     profile={profile}
                     onClose={() => setProfileOpen(false)}
                     onLogout={handleLogout}
+                    onUsernameChange={(username) => setDisplayName(username || profile.name)}
                 />
             )}
 

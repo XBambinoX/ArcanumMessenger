@@ -5,21 +5,36 @@
     background: rgba(6, 4, 16, 0.55);
     backdrop-filter: blur(2px);
     display: flex;
-    justify-content: flex-end;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
 }
 
 .panel {
     box-sizing: border-box;
-    width: 340px;
-    max-width: 90vw;
-    height: 100%;
+    width: 420px;
+    max-width: 100%;
+    max-height: 85vh;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
     background: #12102a;
-    border-left: 1px solid rgba(124, 58, 237, 0.2);
-    box-shadow: -20px 0 60px rgba(0, 0, 0, 0.45);
-    padding: 18px;
+    border: 1px solid rgba(124, 58, 237, 0.2);
+    border-radius: 16px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+    padding: 20px;
+    animation: panelPop 0.16s ease-out;
+}
+
+@keyframes panelPop {
+    from {
+        opacity: 0;
+        transform: scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 .header {
@@ -27,6 +42,7 @@
     align-items: center;
     justify-content: space-between;
     margin-bottom: 6px;
+    flex-shrink: 0;
 }
 
 .title {
@@ -156,7 +172,6 @@
     background: rgba(124, 58, 237, 0.07);
 }
 
-/* Checkbox styled as a switch */
 .switch {
     appearance: none;
     width: 40px;
@@ -233,4 +248,515 @@
 .logoutBtn:hover {
     background: rgba(248, 113, 113, 0.15);
     border-color: rgba(248, 113, 113, 0.5);
+}
+
+.menuList {
+    display: flex;
+    flex-direction: column;
+    padding: 4px 0;
+}
+
+.menuRow {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 10px 8px;
+    border: none;
+    background: transparent;
+    color: rgba(226, 232, 240, 0.95);
+    font-family: inherit;
+    font-size: 14.5px;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: background 0.15s;
+}
+
+.menuRow:hover {
+    background: rgba(124, 58, 237, 0.08);
+}
+
+.menuIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+}
+
+.menuLabel {
+    flex: 1;
+    min-width: 0;
+}
+
+.menuValue {
+    color: #54a9eb;
+    font-size: 13.5px;
+    flex-shrink: 0;
+}
+
+.sectionDivider {
+    height: 8px;
+    margin: 10px -20px;
+    background: rgba(0, 0, 0, 0.18);
+}
+
+.scaleGroup {
+    padding: 4px 0;
+}
+
+.scaleSliderRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 8px 10px 44px;
+}
+
+.rangeInput {
+    flex: 1;
+    height: 4px;
+    border-radius: 2px;
+    appearance: none;
+    background: rgba(148, 163, 184, 0.25);
+    outline: none;
+    cursor: pointer;
+}
+
+.rangeInput::-webkit-slider-thumb {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    cursor: pointer;
+    border: 2px solid #12102a;
+}
+
+.rangeInput::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    cursor: pointer;
+    border: 2px solid #12102a;
+}
+
+.scaleValue {
+    min-width: 40px;
+    text-align: right;
+    font-size: 13px;
+    color: rgba(148, 163, 184, 0.8);
+}
+
+.menuRow:disabled {
+    cursor: default;
+    opacity: 0.55;
+}
+
+.menuRow:disabled:hover {
+    background: transparent;
+}
+
+.menuChevron {
+    display: flex;
+    align-items: center;
+    color: rgba(148, 163, 184, 0.5);
+    flex-shrink: 0;
+}
+
+.backBtn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border: none;
+    background: transparent;
+    color: rgba(226, 232, 240, 0.95);
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 4px 4px 4px 0;
+}
+
+.backBtn:hover {
+    color: #a78bfa;
+}
+
+/* ── Slide transition ── */
+.slideViewport {
+    position: relative;
+    overflow: hidden;
+    transition: height 0.25s ease;
+    flex-shrink: 0;
+}
+
+.slidePanel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+}
+
+.staticPanel {
+    position: relative;
+    width: 100%;
+}
+
+@keyframes slideOutLeft {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(-30%); opacity: 0; }
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideOutRight {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(30%); opacity: 0; }
+}
+
+@keyframes slideInLeft {
+    from { transform: translateX(-100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.slideOutLeft {
+    animation: slideOutLeft 0.25s ease forwards;
+}
+
+.slideInRight {
+    animation: slideInRight 0.25s ease forwards;
+}
+
+.slideOutRight {
+    animation: slideOutRight 0.25s ease forwards;
+}
+
+.slideInLeft {
+    animation: slideInLeft 0.25s ease forwards;
+}
+
+/* ── Sub-page fields ── */
+.subPage {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px 4px 4px;
+}
+
+.fieldLabel {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: rgba(167, 139, 250, 0.6);
+    margin: 12px 0 6px;
+}
+
+.fieldLabel:first-child {
+    margin-top: 0;
+}
+
+.textInput,
+.textArea {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(124, 58, 237, 0.25);
+    background: rgba(124, 58, 237, 0.06);
+    color: rgba(226, 232, 240, 0.95);
+    font-family: inherit;
+    font-size: 14px;
+    outline: none;
+    resize: none;
+    transition: border-color 0.2s;
+}
+
+.textInput:focus,
+.textArea:focus {
+    border-color: rgba(167, 139, 250, 0.5);
+}
+
+.fieldHint {
+    margin: 8px 0 0;
+    font-size: 12px;
+    color: rgba(148, 163, 184, 0.55);
+}
+
+.optionList {
+    display: flex;
+    flex-direction: column;
+}
+
+.optionRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 12px 10px;
+    border: none;
+    background: transparent;
+    color: rgba(226, 232, 240, 0.95);
+    font-family: inherit;
+    font-size: 14.5px;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: background 0.15s;
+}
+
+.optionRow:hover {
+    background: rgba(124, 58, 237, 0.08);
+}
+
+.optionCheck {
+    display: flex;
+    color: #7c9bfa;
+}
+
+.subGroupTitle {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(167, 139, 250, 0.6);
+    margin: 18px 4px 4px;
+}
+
+.subGroupTitle:first-child {
+    margin-top: 2px;
+}
+
+.avatarEditRow {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 6px 4px 14px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid rgba(124, 58, 237, 0.12);
+}
+
+.avatarEditPic {
+    position: relative;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.avatarEditOverlay {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.45);
+    color: #fff;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.avatarEditPic:hover .avatarEditOverlay {
+    opacity: 1;
+}
+
+.avatarEditHint {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.avatarEditTitle {
+    font-size: 14px;
+    font-weight: 600;
+    color: #7c9bfa;
+}
+
+.avatarEditSub {
+    font-size: 12px;
+    color: rgba(148, 163, 184, 0.55);
+}
+
+.dangerRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 8px;
+    border: none;
+    background: transparent;
+    color: #f87171;
+    font-family: inherit;
+    font-size: 14.5px;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: background 0.15s;
+}
+
+.dangerRow:hover {
+    background: rgba(248, 113, 113, 0.08);
+}
+
+.row[data-disabled],
+.switch:disabled {
+    opacity: 0.5;
+}
+
+.fontSizeRow {
+    padding: 8px 8px 4px;
+}
+
+.fontSizeLabelRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.panel::-webkit-scrollbar {
+    width: 6px;
+}
+
+.panel::-webkit-scrollbar-thumb {
+    background: rgba(124, 58, 237, 0.35);
+    border-radius: 3px;
+}
+
+.panel::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.textInput:disabled,
+.textArea:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.saveStatus {
+    margin-left: auto;
+    flex-shrink: 0;
+    font-size: 16px;
+    text-align: right;
+    min-width: 60px;
+}
+
+.saveStatusSaving {
+    color: rgba(148, 163, 184, 0.7);
+}
+
+.saveStatusSaved {
+    color: #4fb85c;
+}
+
+.saveStatusError {
+    color: #f87171;
+}
+
+.saveStatusRow {
+    min-height: 18px;
+    margin: 0 4px 4px;
+    font-size: 12px;
+    text-align: right;
+}
+
+.dangerTitle {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #f87171;
+    margin: 18px 4px 4px;
+}
+
+.chipGroup {
+    display: flex;
+    gap: 8px;
+    padding: 4px 4px 8px;
+}
+
+.chipButton {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 8px;
+    border: 1px solid rgba(124, 58, 237, 0.25);
+    border-radius: 12px;
+    background: rgba(124, 58, 237, 0.06);
+    color: rgba(226, 232, 240, 0.85);
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.chipButton:hover:not(:disabled) {
+    background: rgba(124, 58, 237, 0.12);
+    border-color: rgba(167, 139, 250, 0.4);
+}
+
+.chipButton:active:not(:disabled) {
+    transform: scale(0.97);
+}
+
+.chipButton:disabled {
+    cursor: default;
+    opacity: 0.5;
+}
+
+.chipButtonActive {
+    border-color: rgba(167, 139, 250, 0.7);
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.22), rgba(79, 70, 229, 0.22));
+}
+
+.chipIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: rgba(124, 58, 237, 0.1);
+    color: rgba(167, 139, 250, 0.75);
+    transition: background 0.15s, color 0.15s;
+}
+
+.chipButtonActive .chipIcon {
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    color: #fff;
+}
+
+.chipLabel {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: rgba(226, 232, 240, 0.9);
+    text-align: center;
+    line-height: 1.2;
+}
+
+.profileBio {
+    max-width: 100%;
+    margin-bottom: 8px;
+    font-size: 13px;
+    line-height: 1.4;
+    color: rgba(148, 163, 184, 0.75);
+    word-break: break-word;
+    white-space: pre-wrap;
 }

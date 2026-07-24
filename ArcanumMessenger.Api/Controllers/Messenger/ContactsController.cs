@@ -19,7 +19,7 @@ public class ContactsController(AppDbContext db, EncryptionService encryption) :
 
         var contacts = await db.Contacts.AsNoTracking()
             .Where(c => c.UserId == userId && !c.ContactUser.IsDeleted)
-            .Select(c => new { c.ContactId, c.ContactUser.UsernameEnc, c.ContactUser.PublicIdEnc, c.ContactUser.WrappedDek })
+            .Select(c => new { c.ContactId, c.ContactUser.UserSettings.UsernameEnc, c.ContactUser.PublicIdEnc, c.ContactUser.WrappedDek })
             .ToListAsync(ct);
 
         var results = contacts.Select(c =>

@@ -48,7 +48,7 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
             var fullHash = publicIdHasher.Hash(normalized);
             var exact = await db.Users.AsNoTracking()
                 .Where(u => u.PublicIdHash == fullHash && u.Id != callerId && !u.IsDeleted)
-                .Select(u => new { u.Id, u.UsernameEnc, u.PublicIdEnc, u.WrappedDek })
+                .Select(u => new { u.Id, u.UserSettings.UsernameEnc, u.PublicIdEnc, u.WrappedDek })
                 .FirstOrDefaultAsync(ct);
 
             if (exact is null)
@@ -63,7 +63,7 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
         var prefixHash = publicIdHasher.HashPrefix(normalized);
         var candidates = await db.Users.AsNoTracking()
             .Where(u => u.PublicIdPrefixHash == prefixHash && u.Id != callerId && !u.IsDeleted)
-            .Select(u => new { u.Id, u.UsernameEnc, u.PublicIdEnc, u.WrappedDek })
+            .Select(u => new { u.Id, u.UserSettings.UsernameEnc, u.PublicIdEnc, u.WrappedDek })
             .ToListAsync(ct);
 
         var results = new List<UserSearchResultDto>();
@@ -85,29 +85,24 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
                         .Where(u => u.Id == id)
                         .Select(u => new
                         {
-                            u.UsernameEnc,
+                            u.UserSettings.UsernameEnc,
                             u.IsDeleted,
                             u.PublicIdEnc,
                             u.LastSeen,
                             u.WrappedDek,
-                            u.PublicBioEnc,
-                            u.PublicEmailEnc,
-                            u.PublicPhoneEnc
+                            u.UserSettings.EmailEnc,
                         })
                         .FirstOrDefaultAsync(ct);
 
         if (user is null || user.IsDeleted)
-            return new GetUserResponce(Name: null, Id: null, LastSeen: null, PublicEmail: null, PublicBio: null, PublicPhone: null, IsContact: false, success: false, reason: "not_found");
+            return new GetUserResponce(Name: null, Id: null, LastSeen: null, PublicEmail: null, IsContact: false, success: false, reason: "not_found");
 
         var dek = encryption.UnwrapDek(user.WrappedDek);
         var username = encryption.Decrypt(user.UsernameEnc, dek);
         var publicId = encryption.Decrypt(user.PublicIdEnc, dek);
-        var publicbio = string.IsNullOrEmpty(user.PublicBioEnc) ? null : encryption.Decrypt(user.PublicBioEnc, dek);
-        var publicEmail = string.IsNullOrEmpty(user.PublicEmailEnc) ? null : encryption.Decrypt(user.PublicEmailEnc, dek);
-        var publicPhone = string.IsNullOrEmpty(user.PublicPhoneEnc) ? null : encryption.Decrypt(user.PublicPhoneEnc, dek);
-
+        var publicEmail = string.IsNullOrEmpty(user.EmailEnc) ? null : encryption.Decrypt(user.EmailEnc, dek);
         var isContact = id != callerId && await db.Contacts.AnyAsync(c => c.UserId == callerId && c.ContactId == id, ct);
 
-        return new GetUserResponce(username, publicId, user.LastSeen, publicEmail, publicbio, publicPhone, isContact, success: true, reason: null);
+        return new GetUserResponce(username, publicId, user.LastSeen, publicEmail, isContact, success: true, reason: null);
     }
 }

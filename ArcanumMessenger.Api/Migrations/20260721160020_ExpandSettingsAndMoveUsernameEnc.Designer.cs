@@ -3,6 +3,7 @@ using System;
 using ArcanumMessenger.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ArcanumMessenger.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260721160020_ExpandSettingsAndMoveUsernameEnc")]
+    partial class ExpandSettingsAndMoveUsernameEnc
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -242,6 +245,9 @@ namespace ArcanumMessenger.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("PublicEmailEnc")
+                        .HasColumnType("text");
+
                     b.Property<string>("PublicIdEnc")
                         .IsRequired()
                         .HasColumnType("text");
@@ -260,6 +266,12 @@ namespace ArcanumMessenger.Migrations
 
                     b.Property<string>("RecoveryPhrase2Hash")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("TwoFactorEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("TwoFactorSecretEnc")
                         .HasColumnType("text");
 
                     b.Property<string>("WrappedDek")
@@ -290,8 +302,8 @@ namespace ArcanumMessenger.Migrations
                     b.Property<string>("BioEnc")
                         .HasColumnType("text");
 
-                    b.Property<string>("EmailEnc")
-                        .HasColumnType("text");
+                    b.Property<int>("FontSize")
+                        .HasColumnType("integer");
 
                     b.Property<bool>("GroupNotificationsEnabled")
                         .HasColumnType("boolean");
@@ -299,9 +311,6 @@ namespace ArcanumMessenger.Migrations
                     b.Property<string>("Language")
                         .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<bool>("LinkPreviewsEnabled")
-                        .HasColumnType("boolean");
 
                     b.Property<bool>("MessagePreviewEnabled")
                         .HasColumnType("boolean");
@@ -330,12 +339,6 @@ namespace ArcanumMessenger.Migrations
 
                     b.Property<string>("Theme")
                         .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<bool>("TwoFactorEnabled")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("TwoFactorSecretEnc")
                         .HasColumnType("text");
 
                     b.Property<DateTime>("UpdatedAt")

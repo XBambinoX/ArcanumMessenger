@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using ArcanumMessenger.Contracts.Auth.Totp;
 using ArcanumMessenger.Data;
 using ArcanumMessenger.Services.AuthServices;
@@ -28,16 +27,16 @@ public class TotpController(
         if (!Guid.TryParse(userIdClaim, out var userId))
             return Unauthorized();
 
-        var user = await authService.GetUserAsync(u => u.Id == userId, ct);
+        var user = await authService.GetUserAsync(u => u.Id == userId, ct, includeSettings: true);
 
         if (user is null)
             return NotFound(new StartTotpSetupResponse(Success: false, SessionId: null, Secret: null, OtpauthUri: null, Reason: "user_not_found"));
 
-        if (user.TwoFactorEnabled)
+        if (user.UserSettings.TwoFactorEnabled)
             return BadRequest(new StartTotpSetupResponse(Success: false, SessionId: null, Secret: null, OtpauthUri: null, Reason: "already_enabled"));
 
         var dek = encryption.UnwrapDek(user.WrappedDek);
-        var username = encryption.Decrypt(user.UsernameEnc, dek);
+        var username = encryption.Decrypt(user.UserSettings.UsernameEnc, dek);
 
         var secret = totp.GenerateSecret();
         var otpauthUri = totp.BuildOtpauthUri(username, secret);
@@ -74,8 +73,8 @@ public class TotpController(
             return NotFound(new ConfirmTotpSetupResponse(Success: false, Reason: "user_not_found"));
 
         var dek = encryption.UnwrapDek(user.WrappedDek);
-        user.TwoFactorSecretEnc = encryption.Encrypt(session.Secret, dek);
-        user.TwoFactorEnabled = true;
+        user.UserSettings.TwoFactorSecretEnc = encryption.Encrypt(session.Secret, dek);
+        user.UserSettings.TwoFactorEnabled = true;
         await db.SaveChangesAsync(ct);
 
         await totpSession.DeleteAsync(request.SessionId, ct);

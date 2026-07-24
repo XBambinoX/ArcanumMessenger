@@ -17,7 +17,7 @@ public class UserDisplayNameService(AppDbContext db, EncryptionService encryptio
 
         var rows = await db.Users.AsNoTracking()
             .Where(u => ids.Contains(u.Id))
-            .Select(u => new { u.Id, u.UsernameEnc, u.WrappedDek })
+            .Select(u => new { u.Id, u.UserSettings.UsernameEnc, u.WrappedDek })
             .ToListAsync(ct);
 
         return rows.ToDictionary(

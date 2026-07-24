@@ -294,10 +294,11 @@ public class RegisterController(
         var normalizedId = PublicIdHasher.Normalize(id);
         var publicIdHash = publicIdHasher.Hash(normalizedId);
         var publicIdPrefixHash = publicIdHasher.HashPrefix(normalizedId);
+        var userId = Guid.NewGuid();
 
         var user = new User
         {
-            UsernameEnc = usernameEnc,
+            Id = userId,
             PublicIdEnc = publicIdEnc,
             PublicIdHash = publicIdHash,
             PublicIdPrefixHash = publicIdPrefixHash,
@@ -307,10 +308,17 @@ public class RegisterController(
             RecoveryPhrase1Hash = session.RecoveryPhrase1Hash,
             RecoveryPhrase2Hash = session.RecoveryPhrase2Hash,
             WrappedDek = wrappedDek,
-            PublicEmailEnc = publicEmailEnc,
             LastSeen = now,
             CreatedAt = now,
             IsDeleted = false,
+
+            UserSettings = new UserSettings
+            {
+                UserId = userId,
+                UsernameEnc = usernameEnc,
+                EmailEnc = publicEmailEnc,
+                UpdatedAt = now
+            }
         };
 
         db.Users.Add(user);

@@ -3,6 +3,7 @@ using System;
 using ArcanumMessenger.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ArcanumMessenger.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260720181513_NumberAndBioMove")]
+    partial class NumberAndBioMove
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -242,6 +245,9 @@ namespace ArcanumMessenger.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("PublicEmailEnc")
+                        .HasColumnType("text");
+
                     b.Property<string>("PublicIdEnc")
                         .IsRequired()
                         .HasColumnType("text");
@@ -259,6 +265,16 @@ namespace ArcanumMessenger.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("RecoveryPhrase2Hash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("TwoFactorEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("TwoFactorSecretEnc")
+                        .HasColumnType("text");
+
+                    b.Property<string>("UsernameEnc")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -284,29 +300,10 @@ namespace ArcanumMessenger.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
-                    b.Property<bool>("AutoDownloadMedia")
-                        .HasColumnType("boolean");
-
                     b.Property<string>("BioEnc")
                         .HasColumnType("text");
 
-                    b.Property<string>("EmailEnc")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("GroupNotificationsEnabled")
-                        .HasColumnType("boolean");
-
                     b.Property<string>("Language")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<bool>("LinkPreviewsEnabled")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("MessagePreviewEnabled")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("NotificationSound")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -316,41 +313,18 @@ namespace ArcanumMessenger.Migrations
                     b.Property<string>("PhoneEnc")
                         .HasColumnType("text");
 
-                    b.Property<bool>("ReadReceiptsEnabled")
-                        .HasColumnType("boolean");
-
                     b.Property<bool>("ShowLastSeen")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("ShowOnlineStatus")
                         .HasColumnType("boolean");
 
-                    b.Property<int>("ShowPhoneNumber")
-                        .HasColumnType("integer");
-
                     b.Property<string>("Theme")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<bool>("TwoFactorEnabled")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("TwoFactorSecretEnc")
-                        .HasColumnType("text");
-
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("UsernameEnc")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Wallpaper")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("WhoCanAddMe")
-                        .HasColumnType("integer");
 
                     b.HasKey("UserId");
 
@@ -446,7 +420,7 @@ namespace ArcanumMessenger.Migrations
             modelBuilder.Entity("ArcanumMessenger.Entities.UserSettings", b =>
                 {
                     b.HasOne("ArcanumMessenger.Entities.User", "User")
-                        .WithOne("UserSettings")
+                        .WithOne()
                         .HasForeignKey("ArcanumMessenger.Entities.UserSettings", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -459,12 +433,6 @@ namespace ArcanumMessenger.Migrations
                     b.Navigation("Members");
 
                     b.Navigation("Messages");
-                });
-
-            modelBuilder.Entity("ArcanumMessenger.Entities.User", b =>
-                {
-                    b.Navigation("UserSettings")
-                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }
