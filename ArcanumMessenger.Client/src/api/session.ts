@@ -6,7 +6,7 @@ export async function checkSession(): Promise<{ success: boolean; userId?: strin
 }
 
 export async function refreshSession(): Promise<{ success: boolean; reason?: string }> {
-    const res = await apiFetch("/api/auth/refresh", {
+    const res = await fetch("/api/auth/refresh", {
         method: "POST",
         credentials: "include",
     });

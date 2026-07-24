@@ -12,12 +12,34 @@ export class ApiError extends Error {
     }
 }
 
+let refreshPromise: Promise<Response> | null = null;
+
+async function refreshOnce(): Promise<Response> {
+    if (!refreshPromise) {
+        refreshPromise = fetch("/api/auth/refresh", {
+            method: "POST",
+            credentials: "include",
+        }).finally(() => {
+            refreshPromise = null;
+        });
+    }
+
+    return refreshPromise;
+}
+
 interface ServerErrorDetails {
     status: number;
     path: string;
     message: string;
     timestamp: string;
 }
+
+const skipRefresh = [
+    "/api/auth/login",
+    "/api/auth/register",
+    "/api/auth/refresh",
+    "/api/auth/logout",
+];
 
 export async function apiFetch(
     path: string,
@@ -42,17 +64,13 @@ export async function apiFetch(
         throw networkErr;
     }
 
-    if (res.status === 401 && !_isRetry) {
-        const refreshRes = await fetch("/api/auth/refresh", {
-            method: "POST",
-            credentials: "include",
-        });
+    if (res.status === 401 && !_isRetry && !skipRefresh.some(endpoint => path.startsWith(endpoint))) {
+        const refreshRes = await refreshOnce();
 
         if (refreshRes.ok) {
             return apiFetch(path, init, true);
         }
 
-        navigateTo("/login", { replace: false });
         return res;
     }
 
