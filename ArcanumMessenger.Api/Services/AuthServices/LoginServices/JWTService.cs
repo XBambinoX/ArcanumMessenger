@@ -10,7 +10,7 @@ public class JwtService(IConfiguration config)
     private readonly string _secret = config["Jwt:Secret"]
         ?? throw new InvalidOperationException("Jwt:Secret is not configured");
     private readonly string _issuer = config["Jwt:Issuer"] ?? "ArcanumMessenger";
-    public const int AccessTokenMinutes = 15;
+    public const int AccessTokenMinutes = 1;  //TEST
 
     public string GenerateAccessToken(Guid userId)
     {

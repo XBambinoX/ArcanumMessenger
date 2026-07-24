@@ -42,6 +42,20 @@ export async function apiFetch(
         throw networkErr;
     }
 
+    if (res.status === 401 && !_isRetry) {
+        const refreshRes = await fetch("/api/auth/refresh", {
+            method: "POST",
+            credentials: "include",
+        });
+
+        if (refreshRes.ok) {
+            return apiFetch(path, init, true);
+        }
+
+        navigateTo("/login", { replace: false });
+        return res;
+    }
+
     if (res.status >= 500) {
         let message = `Server error (${res.status})`;
         try {
