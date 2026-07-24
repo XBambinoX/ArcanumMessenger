@@ -79,6 +79,28 @@ const iconProps = {
     strokeLinejoin: "round" as const,
 };
 
+const EveryoneIcon = () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M3 12h18M12 3c2.5 2.5 3.5 5.5 3.5 9s-1 6.5-3.5 9c-2.5-2.5-3.5-5.5-3.5-9S9.5 5.5 12 3z" />
+    </svg>
+);
+
+const ContactsIcon = () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="9" cy="8" r="3" />
+        <path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" />
+        <circle cx="17" cy="9" r="2.3" />
+        <path d="M15.5 14.2c2.4.4 4.2 2.4 4.5 4.8" />
+    </svg>
+);
+
+const NobodyIcon = () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M6.5 6.5l11 11" />
+    </svg>
+);
 const AccountIcon = ({ color }: IconProps) => (
     <svg {...iconProps} style={{ color }}>
         <circle cx="12" cy="8" r="4" />
@@ -156,21 +178,21 @@ const themeOptions: { id: SettingsState["theme"]; label: string }[] = [
     { id: "light", label: "Light" },
 ];
 
-const phoneVisibilityOptions: { id: SettingsState["showPhoneNumber"]; label: string }[] = [
-    { id: "everyone", label: "Everyone" },
-    { id: "contacts", label: "My Contacts" },
-    { id: "nobody", label: "Nobody" },
+const phoneVisibilityOptions: { id: SettingsState["showPhoneNumber"]; label: string; icon: () => ReactElement }[] = [
+    { id: "everyone", label: "Everyone", icon: EveryoneIcon },
+    { id: "contacts", label: "My Contacts", icon: ContactsIcon },
+    { id: "nobody", label: "Nobody", icon: NobodyIcon },
 ];
 
-const notificationSoundOptions: { id: string; label: string; file: string }[] = [
-    { id: "bubble", label: "Bubble", file: "/sounds/notification_bubble.mp3" },
-    { id: "chime", label: "Chime", file: "/sounds/notification_chime.mp3" },
-    { id: "bell", label: "Bell", file: "/sounds/notification_bell.mp3" },  
+const notificationSoundOptions: { id: string; label: string; file: string; icon: () => ReactElement }[] = [
+    { id: "bubble", label: "Bubble", file: "/sounds/notification_bubble.mp3", icon: SoundWaveIcon },
+    { id: "chime", label: "Chime", file: "/sounds/notification_chime.mp3", icon: SoundWaveIcon },
+    { id: "bell", label: "Bell", file: "/sounds/notification_bell.mp3", icon: SoundWaveIcon },
 ];
 
-const addMeOptions: { id: SettingsState["whoCanAddMe"]; label: string }[] = [
-    { id: "everyone", label: "Everyone" },
-    { id: "contacts", label: "My Contacts Only" },
+const addMeOptions: { id: SettingsState["whoCanAddMe"]; label: string; icon: () => ReactElement }[] = [
+    { id: "everyone", label: "Everyone", icon: EveryoneIcon },
+    { id: "contacts", label: "My Contacts", icon: ContactsIcon },
 ];
 
 const sectionTitles: Record<Section, string> = {
@@ -616,18 +638,18 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                         </label>
 
                         <span className={styles.subGroupTitle}>Sound</span>
-                        <div className={styles.soundPicker}>
+                        <div className={styles.chipGroup}>
                             {notificationSoundOptions.map((opt) => (
                                 <button
                                     key={opt.id}
-                                    className={`${styles.soundOption} ${settings.notificationSound === opt.id ? styles.soundOptionActive : ""}`}
+                                    className={`${styles.chipButton} ${settings.notificationSound === opt.id ? styles.chipButtonActive : ""}`}
                                     disabled={!settingsLoaded}
                                     onClick={() => handleNotificationSoundChange(opt.id)}
                                 >
-                                    <span className={styles.soundOptionIcon}>
-                                        <SoundWaveIcon />
+                                    <span className={styles.chipIcon}>
+                                        <opt.icon />
                                     </span>
-                                    <span className={styles.soundOptionLabel}>{opt.label}</span>
+                                    <span className={styles.chipLabel}>{opt.label}</span>
                                 </button>
                             ))}
                         </div>
@@ -687,39 +709,35 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                         </label>
 
                         <span className={styles.subGroupTitle}>Who can see my phone number</span>
-                        <div className={styles.optionList}>
+                        <div className={styles.chipGroup}>
                             {phoneVisibilityOptions.map((opt) => (
                                 <button
                                     key={opt.id}
-                                    className={styles.optionRow}
+                                    className={`${styles.chipButton} ${settings.showPhoneNumber === opt.id ? styles.chipButtonActive : ""}`}
                                     disabled={!settingsLoaded}
                                     onClick={() => handlePrivacyChange("showPhoneNumber", opt.id)}
                                 >
-                                    <span>{opt.label}</span>
-                                    {settings.showPhoneNumber === opt.id && (
-                                        <span className={styles.optionCheck}>
-                                            <CheckIcon />
-                                        </span>
-                                    )}
+                                    <span className={styles.chipIcon}>
+                                        <opt.icon />
+                                    </span>
+                                    <span className={styles.chipLabel}>{opt.label}</span>
                                 </button>
                             ))}
                         </div>
 
                         <span className={styles.subGroupTitle}>Who can add me to chats</span>
-                        <div className={styles.optionList}>
+                        <div className={styles.chipGroup}>
                             {addMeOptions.map((opt) => (
                                 <button
                                     key={opt.id}
-                                    className={styles.optionRow}
+                                    className={`${styles.chipButton} ${settings.whoCanAddMe === opt.id ? styles.chipButtonActive : ""}`}
                                     disabled={!settingsLoaded}
                                     onClick={() => handlePrivacyChange("whoCanAddMe", opt.id)}
                                 >
-                                    <span>{opt.label}</span>
-                                    {settings.whoCanAddMe === opt.id && (
-                                        <span className={styles.optionCheck}>
-                                            <CheckIcon />
-                                        </span>
-                                    )}
+                                    <span className={styles.chipIcon}>
+                                        <opt.icon />
+                                    </span>
+                                    <span className={styles.chipLabel}>{opt.label}</span>
                                 </button>
                             ))}
                         </div>

@@ -685,13 +685,13 @@
     margin: 18px 4px 4px;
 }
 
-.soundPicker {
+.chipGroup {
     display: flex;
     gap: 8px;
     padding: 4px 4px 8px;
 }
 
-.soundOption {
+.chipButton {
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -707,26 +707,26 @@
     transition: background 0.15s, border-color 0.15s, transform 0.1s;
 }
 
-.soundOption:hover:not(:disabled) {
+.chipButton:hover:not(:disabled) {
     background: rgba(124, 58, 237, 0.12);
     border-color: rgba(167, 139, 250, 0.4);
 }
 
-.soundOption:active:not(:disabled) {
+.chipButton:active:not(:disabled) {
     transform: scale(0.97);
 }
 
-.soundOption:disabled {
+.chipButton:disabled {
     cursor: default;
     opacity: 0.5;
 }
 
-.soundOptionActive {
+.chipButtonActive {
     border-color: rgba(167, 139, 250, 0.7);
     background: linear-gradient(135deg, rgba(124, 58, 237, 0.22), rgba(79, 70, 229, 0.22));
 }
 
-.soundOptionIcon {
+.chipIcon {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -738,13 +738,15 @@
     transition: background 0.15s, color 0.15s;
 }
 
-.soundOptionActive .soundOptionIcon {
+.chipButtonActive .chipIcon {
     background: linear-gradient(135deg, #7c3aed, #4f46e5);
     color: #fff;
 }
 
-.soundOptionLabel {
+.chipLabel {
     font-size: 12.5px;
     font-weight: 600;
     color: rgba(226, 232, 240, 0.9);
+    text-align: center;
+    line-height: 1.2;
 }
