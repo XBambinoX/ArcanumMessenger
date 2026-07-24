@@ -85,7 +85,6 @@ const EveryoneIcon = () => (
         <path d="M3 12h18M12 3c2.5 2.5 3.5 5.5 3.5 9s-1 6.5-3.5 9c-2.5-2.5-3.5-5.5-3.5-9S9.5 5.5 12 3z" />
     </svg>
 );
-
 const ContactsIcon = () => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="9" cy="8" r="3" />
@@ -94,7 +93,23 @@ const ContactsIcon = () => (
         <path d="M15.5 14.2c2.4.4 4.2 2.4 4.5 4.8" />
     </svg>
 );
-
+const ThemeSystemIcon = () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="13" rx="2" />
+        <path d="M8 21h8M12 17v4" />
+    </svg>
+);
+const ThemeDarkIcon = () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" />
+    </svg>
+);
+const ThemeLightIcon = () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="4.5" />
+        <path d="M12 2.5v2M12 19.5v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2.5 12h2M19.5 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" />
+    </svg>
+);
 const NobodyIcon = () => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="9" />
@@ -129,7 +144,6 @@ const ChatIcon = ({ color }: IconProps) => (
         <path d="M4 12a8 6.5 0 1 1 3 5l-4 1.2 1.2-3.8A6.4 6.4 0 0 1 4 12z" />
     </svg>
 );
-
 const LanguageIcon = ({ color }: IconProps) => (
     <svg {...iconProps} style={{ color }}>
         <circle cx="12" cy="12" r="9" />
@@ -172,10 +186,10 @@ const menuItems: {
     { icon: LanguageIcon, color: "#3fbfae", label: "Language", value: "Coming soon :)" },
 ];
 
-const themeOptions: { id: SettingsState["theme"]; label: string }[] = [
-    { id: "system", label: "System" },
-    { id: "dark", label: "Dark" },
-    { id: "light", label: "Light" },
+const themeOptions: { id: SettingsState["theme"]; label: string; icon: () => ReactElement }[] = [
+    { id: "system", label: "System", icon: ThemeSystemIcon },
+    { id: "dark", label: "Dark", icon: ThemeDarkIcon },
+    { id: "light", label: "Light", icon: ThemeLightIcon },
 ];
 
 const phoneVisibilityOptions: { id: SettingsState["showPhoneNumber"]; label: string; icon: () => ReactElement }[] = [
@@ -760,20 +774,18 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                         </div>
 
                         <span className={styles.subGroupTitle}>Theme</span>
-                        <div className={styles.optionList}>
+                        <div className={styles.chipGroup}>
                             {themeOptions.map((opt) => (
                                 <button
                                     key={opt.id}
-                                    className={styles.optionRow}
+                                    className={`${styles.chipButton} ${settings.theme === opt.id ? styles.chipButtonActive : ""}`}
                                     disabled={!settingsLoaded}
                                     onClick={() => handleChatSettingChange("theme", opt.id)}
                                 >
-                                    <span>{opt.label}</span>
-                                    {settings.theme === opt.id && (
-                                        <span className={styles.optionCheck}>
-                                            <CheckIcon />
-                                        </span>
-                                    )}
+                                    <span className={styles.chipIcon}>
+                                        <opt.icon />
+                                    </span>
+                                    <span className={styles.chipLabel}>{opt.label}</span>
                                 </button>
                             ))}
                         </div>
