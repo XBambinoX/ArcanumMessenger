@@ -503,10 +503,13 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                                 {(settingsLoaded ? (settings.username || profile.name) : profile.name).charAt(0).toUpperCase()}
                             </div>
 
-                            <span className={styles.profileName}>
+                           <span className={styles.profileName}>
                                 {settingsLoaded ? (settings.username || profile.name) : profile.name}
                             </span>
 
+                            {settingsLoaded && settings.bio && (
+                                <span className={styles.profileBio}>{settings.bio}</span>
+                            )}
                             <button className={styles.idRow} onClick={handleCopyId} title="Copy ID">
                                 <span className={styles.idValue}>{profile.publicId}</span>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -514,9 +517,6 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                                     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                                 </svg>
                             </button>
-                            <span className={styles.copiedHint}>
-                                {copied ? "Copied" : "This is the ID others use to find you"}
-                            </span>
                         </div>
 
                         <nav className={styles.menuList}>
