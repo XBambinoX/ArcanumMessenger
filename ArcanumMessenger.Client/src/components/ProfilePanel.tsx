@@ -205,7 +205,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
     const [privacySaveStatus, setPrivacySaveStatus] = useState<SaveStatus>("idle");
     const [chatsSaveStatus, setChatsSaveStatus] = useState<SaveStatus>("idle");
 
-    const soundPreviewRef = useRef<HTMLAudioElement | null>(null);
+    const soundCacheRef = useRef<Record<string, HTMLAudioElement>>({});
      
     const privacyApiFieldMap: Record<PrivacyField, keyof UpdatePrivacySettingsRequest> = {
         showLastSeen: "showLastSeen",
@@ -334,22 +334,19 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
         }
     };
 
-    const playSoundPreview = (file: string) => {
-        if (!file) return;
-        if (!soundPreviewRef.current) {
-            soundPreviewRef.current = new Audio();
-        }
-        soundPreviewRef.current.src = file;
-        soundPreviewRef.current.currentTime = 0;
-        soundPreviewRef.current.play().catch(() => { });
+    const playSoundPreview = (soundId: string) => {
+        const cached = soundCacheRef.current[soundId];
+        if (!cached) return;
+
+        cached.currentTime = 0;
+        cached.play().catch(() => { });
     };
 
     const handleNotificationSoundChange = async (soundId: string) => {
         const prevValue = settings.notificationSound;
         patch({ notificationSound: soundId });
 
-        const option = notificationSoundOptions.find((o) => o.id === soundId);
-        if (option) playSoundPreview(option.file);
+        playSoundPreview(soundId);
 
         setNotifSaveStatus("saving");
         try {
@@ -435,6 +432,23 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
         return () => {
             if (saveTimer.current) window.clearTimeout(saveTimer.current);
             flushSave();
+        };
+    }, []);
+
+    useEffect(() => {
+        notificationSoundOptions.forEach((opt) => {
+            const audio = new Audio(opt.file);
+            audio.preload = "auto";
+            audio.load();
+            soundCacheRef.current[opt.id] = audio;
+        });
+
+        return () => {
+            Object.values(soundCacheRef.current).forEach((audio) => {
+                audio.pause();
+                audio.src = "";
+            });
+            soundCacheRef.current = {};
         };
     }, []);
 
