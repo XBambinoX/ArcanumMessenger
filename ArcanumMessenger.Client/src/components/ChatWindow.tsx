@@ -44,7 +44,7 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
     useEffect(() => {
         const interval = window.setInterval(() => {
             forceTick((n) => n + 1);
-        }, 1_000);
+        }, 100);
 
         return () => window.clearInterval(interval);
     }, []);

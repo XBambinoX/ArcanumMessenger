@@ -25,7 +25,7 @@ public class ChatHub(
     IHubContext<ChatHub, IChatClient> hubContext,
     ILogger<ChatHub> logger) : Hub<IChatClient>
 {
-    private static readonly TimeSpan OfflineGracePeriod = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan OfflineGracePeriod = TimeSpan.FromMilliseconds(100);
 
     public override async Task OnConnectedAsync()
     {
