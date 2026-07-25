@@ -138,7 +138,9 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                 </div>
                 <div className={styles.headerText}>
                     <span className={styles.title}>{chat.title}</span>
-                    <span className={styles.subtitle}>
+                    <span
+                        className={`${styles.subtitle} ${presence?.isOnline ? styles.subtitleOnline : ""}`}
+                    >
                         {chat.type === "group"
                             ? "group chat"
                             : presence?.isOnline

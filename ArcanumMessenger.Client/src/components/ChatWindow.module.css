@@ -257,3 +257,7 @@
     opacity: 0.4;
     cursor: not-allowed;
 }
+
+.subtitleOnline {
+    color: #4fb85c;
+}
