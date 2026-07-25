@@ -137,4 +137,47 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
 
         return Ok(new UserPresenceResponse(isOnline, isOnline ? null : user.LastSeen));
     }
+
+    [HttpPost("presence/bulk")]
+    [Authorize]
+    public async Task<ActionResult<BulkPresenceResponse>> GetPresenceBulk(
+        [FromBody] BulkPresenceRequest request, CancellationToken ct)
+    {
+        if (request.UserIds.Count == 0)
+            return Ok(new BulkPresenceResponse([]));
+
+        // Cap to something sane — this is meant for "all direct chats visible
+        // in the sidebar", not an arbitrary bulk-lookup endpoint.
+        var ids = request.UserIds.Distinct().Take(200).ToList();
+
+        var users = await db.Users
+            .AsNoTracking()
+            .Where(u => ids.Contains(u.Id) && !u.IsDeleted)
+            .Select(u => new
+            {
+                u.Id,
+                u.LastSeen,
+                ShowOnlineStatus = u.UserSettings.ShowOnlineStatus,
+                ShowLastSeen = u.UserSettings.ShowLastSeen,
+            })
+            .ToListAsync(ct);
+
+        var items = new List<BulkPresenceItem>();
+
+        foreach (var user in users)
+        {
+            var isOnline = await presence.IsOnlineAsync(user.Id);
+
+            if (!user.ShowOnlineStatus)
+            {
+                items.Add(new BulkPresenceItem(user.Id, false, null));
+                continue;
+            }
+
+            var lastSeen = (!user.ShowLastSeen || isOnline) ? null : user.LastSeen;
+            items.Add(new BulkPresenceItem(user.Id, isOnline, lastSeen));
+        }
+
+        return Ok(new BulkPresenceResponse(items));
+    }
 }

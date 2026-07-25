@@ -3,7 +3,7 @@ import type { HubConnection } from "@microsoft/signalr";
 import { useNavigate } from "react-router-dom";
 import { logout } from "../api/session";
 import { getChats, markChatRead, setChatArchived } from "../api/chats";
-import { getMe, getUserPresence } from "../api/users";
+import { getMe, getUserPresence, getPresenceBulk } from "../api/users";
 import { createChatHubConnection } from "../lib/chatHub";
 import { useAuth } from "../context/AuthContext";
 import ChatList from "../components/ChatList";
@@ -54,7 +54,26 @@ export default function AppPage() {
     const [presence, setPresence] = useState<Record<string, PresenceInfo>>({});
 
     useEffect(() => {
-        getChats().then(setChats);
+        getChats().then((loadedChats) => {
+            setChats(loadedChats);
+
+            const otherUserIds = loadedChats
+                .filter((c) => c.type === "direct" && c.otherUserId)
+                .map((c) => c.otherUserId!);
+
+            if (otherUserIds.length === 0) return;
+
+            getPresenceBulk(otherUserIds).then((items) => {
+                setPresence((prev) => {
+                    const next = { ...prev };
+                    for (const item of items) {
+                        next[item.userId] = { isOnline: item.isOnline, lastSeen: item.lastSeen };
+                    }
+                    return next;
+                });
+            });
+        });
+
         getMe().then((me) => {
             setProfile(me);
             setDisplayName(me!.name);

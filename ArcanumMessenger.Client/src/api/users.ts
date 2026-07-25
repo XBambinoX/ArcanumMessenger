@@ -52,3 +52,27 @@ export async function getUserPresence(userId: string): Promise<UserPresence | nu
     const data = await res.json();
     return { isOnline: data.isOnline, lastSeen: data.lastSeen };
 }
+
+export interface BulkPresenceItem {
+    userId: string;
+    isOnline: boolean;
+    lastSeen: string | null;
+}
+
+export async function getPresenceBulk(userIds: string[]): Promise<BulkPresenceItem[]> {
+    if (userIds.length === 0) return [];
+
+    const res = await apiFetch("/api/users/presence/bulk", {
+        method: "POST",
+        body: JSON.stringify({ userIds }),
+    });
+
+    if (!res.ok) return [];
+
+    const data = await res.json();
+    return data.items.map((item: any) => ({
+        userId: item.userId,
+        isOnline: item.isOnline,
+        lastSeen: item.lastSeen,
+    }));
+}
