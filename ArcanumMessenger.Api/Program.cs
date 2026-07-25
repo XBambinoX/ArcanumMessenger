@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using StackExchange.Redis;
 
 
 namespace ArcanumMessenger
@@ -30,6 +31,11 @@ namespace ArcanumMessenger
             {
                 options.Configuration = builder.Configuration.GetConnectionString("Redis");
             });
+
+            builder.Services.AddSingleton<IConnectionMultiplexer>(
+                _ => ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis")!));
+
+            builder.Services.AddSingleton<PresenceService>();
 
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
@@ -65,7 +71,11 @@ namespace ArcanumMessenger
             builder.Services.AddControllers();
             builder.Services.AddHealthChecks();
             builder.Services.AddSwaggerGen();
-            builder.Services.AddSignalR();
+            builder.Services.AddSignalR(options =>
+            {
+                options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+                options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
+            });
             builder.Services.AddSingleton<IUserIdProvider, SubjectUserIdProvider>();
 
             // Background jobs
