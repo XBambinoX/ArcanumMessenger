@@ -111,7 +111,7 @@ export default function AppPage() {
             }));
         };
 
-        const handleUserOffline = (userId: string, lastSeen: string) => {
+        const handleUserOffline = (userId: string, lastSeen: string | null) => {
             setPresence((prev) => ({
                 ...prev,
                 [userId]: { isOnline: false, lastSeen },

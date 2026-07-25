@@ -15,7 +15,7 @@ public interface IChatClient
     Task ReceiveMessage(ChatMessageDto message);
     Task ChatCreated(ChatSummaryDto chat);
     Task UserOnline(Guid userId);
-    Task UserOffline(Guid userId, DateTime lastSeen);
+    Task UserOffline(Guid userId, DateTime? lastSeen);
 }
 
 [Authorize]
@@ -99,26 +99,29 @@ public class ChatHub(
         using var scope = scopeFactory.CreateScope();
         var scopedDb = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var recipients = await GetRecipientsOrNullAsync(scopedDb, userId);
+        var (recipients, visibleLastSeen) = await ResolveBroadcastAsync(scopedDb, userId, lastSeen);
         if (recipients is null) return;
 
         if (isOnline)
             await Clients.Users(recipients).UserOnline(userId);
         else
-            await Clients.Users(recipients).UserOffline(userId, lastSeen!.Value);
+            await Clients.Users(recipients).UserOffline(userId, visibleLastSeen.Value);
     }
+
     private async Task BroadcastPresenceViaContextAsync(AppDbContext scopedDb, Guid userId, bool isOnline, DateTime? lastSeen)
     {
-        var recipients = await GetRecipientsOrNullAsync(scopedDb, userId);
+        var (recipients, visibleLastSeen) = await ResolveBroadcastAsync(scopedDb, userId, lastSeen);
         if (recipients is null) return;
 
         if (isOnline)
             await hubContext.Clients.Users(recipients).UserOnline(userId);
         else
-            await hubContext.Clients.Users(recipients).UserOffline(userId, lastSeen!.Value);
+            await hubContext.Clients.Users(recipients).UserOffline(userId, visibleLastSeen.Value);
     }
 
-    private async Task<List<string>?> GetRecipientsOrNullAsync(AppDbContext scopedDb, Guid userId)
+
+    private async Task<(List<string>? Recipients, DateTime? VisibleLastSeen)> ResolveBroadcastAsync(
+        AppDbContext scopedDb, Guid userId, DateTime? lastSeen)
     {
         var settings = await scopedDb.UserSettings
             .AsNoTracking()
@@ -127,8 +130,10 @@ public class ChatHub(
         if (settings is not null && !settings.ShowOnlineStatus)
         {
             logger.LogInformation("User {UserId} has ShowOnlineStatus=false, skipping broadcast", userId);
-            return null;
+            return (null, null);
         }
+
+        var visibleLastSeen = (settings is not null && !settings.ShowLastSeen) ? null : lastSeen;
 
         var coMemberIds = await scopedDb.ChatMembers
             .Where(cm => scopedDb.ChatMembers
@@ -144,9 +149,9 @@ public class ChatHub(
             userId, coMemberIds.Count, string.Join(",", coMemberIds));
 
         if (coMemberIds.Count == 0)
-            return null;
+            return (null, null);
 
-        return coMemberIds.Select(id => id.ToString()).ToList();
+        return (coMemberIds.Select(id => id.ToString()).ToList(), visibleLastSeen);
     }
 
     private Guid GetUserId()
