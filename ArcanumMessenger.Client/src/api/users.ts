@@ -40,3 +40,39 @@ export async function searchUsers(query: string): Promise<UserSearchResult[]> {
     const data = await res.json();
     return data.success ? (data.results ?? []) : [];
 }
+
+export interface UserPresence {
+    isOnline: boolean;
+    lastSeen: string | null;
+}
+
+export async function getUserPresence(userId: string): Promise<UserPresence | null> {
+    const res = await apiFetch(`/api/users/${userId}/presence`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return { isOnline: data.isOnline, lastSeen: data.lastSeen };
+}
+
+export interface BulkPresenceItem {
+    userId: string;
+    isOnline: boolean;
+    lastSeen: string | null;
+}
+
+export async function getPresenceBulk(userIds: string[]): Promise<BulkPresenceItem[]> {
+    if (userIds.length === 0) return [];
+
+    const res = await apiFetch("/api/users/presence/bulk", {
+        method: "POST",
+        body: JSON.stringify({ userIds }),
+    });
+
+    if (!res.ok) return [];
+
+    const data = await res.json();
+    return data.items.map((item: any) => ({
+        userId: item.userId,
+        isOnline: item.isOnline,
+        lastSeen: item.lastSeen,
+    }));
+}

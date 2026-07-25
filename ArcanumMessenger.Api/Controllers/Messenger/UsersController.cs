@@ -3,11 +3,13 @@ using ArcanumMessenger.Data;
 using ArcanumMessenger.Services.AuthServices;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
+using ArcanumMessenger.Services.MessengerServices;
 
 namespace ArcanumMessenger.Controllers.Messenger;
 
 [Route("api/users")]
-public class UsersController(AppDbContext db, EncryptionService encryption, PublicIdHasher publicIdHasher) : MessengerControllerBase
+public class UsersController(AppDbContext db, EncryptionService encryption, PublicIdHasher publicIdHasher, PresenceService presence) : MessengerControllerBase
 {
     [HttpGet("me")]
     public async Task<ActionResult<GetUserResponce>> GetMe(CancellationToken ct)
@@ -104,5 +106,78 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
         var isContact = id != callerId && await db.Contacts.AnyAsync(c => c.UserId == callerId && c.ContactId == id, ct);
 
         return new GetUserResponce(username, publicId, user.LastSeen, publicEmail, isContact, success: true, reason: null);
+    }
+
+    [HttpGet("{targetUserId:guid}/presence")]
+    [Authorize]
+    public async Task<ActionResult<UserPresenceResponse>> GetPresence(
+        Guid targetUserId, CancellationToken ct)
+    {
+        var user = await db.Users
+            .AsNoTracking()
+            .Where(u => u.Id == targetUserId && !u.IsDeleted)
+            .Select(u => new
+            {
+                u.LastSeen,
+                ShowOnlineStatus = u.UserSettings.ShowOnlineStatus,
+                ShowLastSeen = u.UserSettings.ShowLastSeen,
+            })
+            .FirstOrDefaultAsync(ct);
+
+        if (user is null)
+            return NotFound();
+
+        var isOnline = await presence.IsOnlineAsync(targetUserId);
+
+        if (!user.ShowOnlineStatus)
+            return Ok(new UserPresenceResponse(false, null));
+
+        if (!user.ShowLastSeen)
+            return Ok(new UserPresenceResponse(isOnline, null));
+
+        return Ok(new UserPresenceResponse(isOnline, isOnline ? null : user.LastSeen));
+    }
+
+    [HttpPost("presence/bulk")]
+    [Authorize]
+    public async Task<ActionResult<BulkPresenceResponse>> GetPresenceBulk(
+        [FromBody] BulkPresenceRequest request, CancellationToken ct)
+    {
+        if (request.UserIds.Count == 0)
+            return Ok(new BulkPresenceResponse([]));
+
+        // Cap to something sane — this is meant for "all direct chats visible
+        // in the sidebar", not an arbitrary bulk-lookup endpoint.
+        var ids = request.UserIds.Distinct().Take(200).ToList();
+
+        var users = await db.Users
+            .AsNoTracking()
+            .Where(u => ids.Contains(u.Id) && !u.IsDeleted)
+            .Select(u => new
+            {
+                u.Id,
+                u.LastSeen,
+                ShowOnlineStatus = u.UserSettings.ShowOnlineStatus,
+                ShowLastSeen = u.UserSettings.ShowLastSeen,
+            })
+            .ToListAsync(ct);
+
+        var items = new List<BulkPresenceItem>();
+
+        foreach (var user in users)
+        {
+            var isOnline = await presence.IsOnlineAsync(user.Id);
+
+            if (!user.ShowOnlineStatus)
+            {
+                items.Add(new BulkPresenceItem(user.Id, false, null));
+                continue;
+            }
+
+            var lastSeen = (!user.ShowLastSeen || isOnline) ? null : user.LastSeen;
+            items.Add(new BulkPresenceItem(user.Id, isOnline, lastSeen));
+        }
+
+        return Ok(new BulkPresenceResponse(items));
     }
 }
