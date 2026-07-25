@@ -40,3 +40,15 @@ export async function searchUsers(query: string): Promise<UserSearchResult[]> {
     const data = await res.json();
     return data.success ? (data.results ?? []) : [];
 }
+
+export interface UserPresence {
+    isOnline: boolean;
+    lastSeen: string | null;
+}
+
+export async function getUserPresence(userId: string): Promise<UserPresence | null> {
+    const res = await apiFetch(`/api/users/${userId}/presence`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return { isOnline: data.isOnline, lastSeen: data.lastSeen };
+}

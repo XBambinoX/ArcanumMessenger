@@ -1,0 +1,1 @@
+public record UserPresenceResponse(bool IsOnline, DateTime? LastSeen);

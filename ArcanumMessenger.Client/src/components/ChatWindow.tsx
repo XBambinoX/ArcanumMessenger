@@ -3,7 +3,7 @@ import type { HubConnection } from "@microsoft/signalr";
 import type { ChatMessage, ChatSummary, User } from "../types/messenger";
 import { getMessageHistory, sendMessage } from "../api/messages";
 import { getUser } from "../api/users";
-import { formatMessageTime } from "../lib/time";
+import { formatMessageTime, formatChatTime } from "../lib/time";
 import UserInfoPanel from "./UserInfoPanel";
 import ChatInfoPanel from "./ChatInfoPanel";
 import styles from "./ChatWindow.module.css";
@@ -12,6 +12,7 @@ interface ChatWindowProps {
     chat: ChatSummary;
     connection: HubConnection | null;
     onStartChat: (chat: ChatSummary) => void;
+    presence?: { isOnline: boolean; lastSeen: string | null };
 }
 
 function dayLabel(iso: string): string {
@@ -27,7 +28,7 @@ function dayLabel(iso: string): string {
     });
 }
 
-export default function ChatWindow({ chat, connection, onStartChat }: ChatWindowProps) {
+export default function ChatWindow({ chat, connection, onStartChat, presence }: ChatWindowProps) {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [hasMore, setHasMore] = useState(false);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -128,7 +129,13 @@ export default function ChatWindow({ chat, connection, onStartChat }: ChatWindow
                 <div className={styles.headerText}>
                     <span className={styles.title}>{chat.title}</span>
                     <span className={styles.subtitle}>
-                        {chat.type === "group" ? "group chat" : "direct chat"}
+                        {chat.type === "group"
+                            ? "group chat"
+                            : presence?.isOnline
+                            ? "online"
+                            : presence?.lastSeen
+                                ? `last seen ${formatChatTime(presence.lastSeen)}`
+                                : "offline"}
                     </span>
                 </div>
                 <button

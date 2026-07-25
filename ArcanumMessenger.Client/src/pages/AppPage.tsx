@@ -3,7 +3,7 @@ import type { HubConnection } from "@microsoft/signalr";
 import { useNavigate } from "react-router-dom";
 import { logout } from "../api/session";
 import { getChats, markChatRead, setChatArchived } from "../api/chats";
-import { getMe } from "../api/users";
+import { getMe, getUserPresence } from "../api/users";
 import { createChatHubConnection } from "../lib/chatHub";
 import { useAuth } from "../context/AuthContext";
 import ChatList from "../components/ChatList";
@@ -12,6 +12,11 @@ import ProfilePanel from "../components/ProfilePanel";
 import NewChatPanel from "../components/NewChatPanel";
 import type { ChatFolder, ChatMessage, ChatSummary, User } from "../types/messenger";
 import styles from "./AppPage.module.css";
+
+interface PresenceInfo {
+    isOnline: boolean;
+    lastSeen: string | null;
+}
 
 const folders: { id: ChatFolder; label: string }[] = [
     { id: "all", label: "All" },
@@ -45,6 +50,8 @@ export default function AppPage() {
     const [connection, setConnection] = useState<HubConnection | null>(null);
     const [sidebarWidth, setSidebarWidth] = useState(readStoredSidebarWidth);
     const sidebarWidthRef = useRef(sidebarWidth);
+    
+    const [presence, setPresence] = useState<Record<string, PresenceInfo>>({});
 
     useEffect(() => {
         getChats().then(setChats);
@@ -97,12 +104,30 @@ export default function AppPage() {
             setChats((prev) => [chat, ...prev]);
         };
 
+        const handleUserOnline = (userId: string) => {
+            setPresence((prev) => ({
+                ...prev,
+                [userId]: { isOnline: true, lastSeen: null },
+            }));
+        };
+
+        const handleUserOffline = (userId: string, lastSeen: string) => {
+            setPresence((prev) => ({
+                ...prev,
+                [userId]: { isOnline: false, lastSeen },
+            }));
+        };
+
         connection.on("ReceiveMessage", handleReceiveMessage);
         connection.on("ChatCreated", handleChatCreated);
+        connection.on("UserOnline", handleUserOnline);
+        connection.on("UserOffline", handleUserOffline);
 
         return () => {
             connection.off("ReceiveMessage", handleReceiveMessage);
             connection.off("ChatCreated", handleChatCreated);
+            connection.off("UserOnline", handleUserOnline);
+            connection.off("UserOffline", handleUserOffline);
         };
     }, [connection, selectedChatId]);
 
@@ -141,12 +166,25 @@ export default function AppPage() {
         setSelectedChatId(chatId);
 
         const chat = chats.find((c) => c.id === chatId);
-        if (!chat || chat.unreadCount === 0) return;
+        if (!chat) return;
 
-        setChats((prev) =>
-            prev.map((c) => (c.id === chatId ? { ...c, unreadCount: 0 } : c)),
-        );
-        markChatRead(chatId);
+        if (chat.unreadCount > 0) {
+            setChats((prev) =>
+                prev.map((c) => (c.id === chatId ? { ...c, unreadCount: 0 } : c)),
+            );
+            markChatRead(chatId);
+        }
+
+        if (chat.type === "direct" && chat.otherUserId) {
+            const otherUserId = chat.otherUserId;
+            getUserPresence(otherUserId).then((data) => {
+                if (!data) return;
+                setPresence((prev) => ({
+                    ...prev,
+                    [otherUserId]: data,
+                }));
+            });
+        }
     };
 
     const handleStartChat = (chat: ChatSummary) => {
@@ -271,6 +309,7 @@ export default function AppPage() {
                         chat={selectedChat}
                         connection={connection}
                         onStartChat={handleStartChat}
+                        presence={selectedChat.otherUserId ? presence[selectedChat.otherUserId] : undefined}
                     />
                 ) : (
                     <div className={styles.emptyState}>
