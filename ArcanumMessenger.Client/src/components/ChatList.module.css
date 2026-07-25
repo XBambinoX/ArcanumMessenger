@@ -43,6 +43,7 @@
 }
 
 .avatar {
+    position: relative;
     width: 46px;
     height: 46px;
     border-radius: 50%;
@@ -156,4 +157,16 @@
 
 .badgeMuted {
     background: rgba(148, 163, 184, 0.35);
+}
+
+.onlineDot {
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #4fb85c;
+    border: 2.5px solid #0f0c1e;
+    box-sizing: border-box;
 }

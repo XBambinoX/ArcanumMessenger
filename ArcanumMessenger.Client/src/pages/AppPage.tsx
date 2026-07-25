@@ -298,6 +298,7 @@ export default function AppPage() {
                         selectedChatId={selectedChatId}
                         onSelect={handleSelectChat}
                         onToggleArchive={toggleArchive}
+                        presence={presence}
                     />
                 </div>
             </aside>
