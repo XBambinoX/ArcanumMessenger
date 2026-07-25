@@ -39,6 +39,16 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
     const messagesRef = useRef<HTMLDivElement | null>(null);
     const prependingRef = useRef(false);
 
+    const [, forceTick] = useState(0);
+
+    useEffect(() => {
+        const interval = window.setInterval(() => {
+            forceTick((n) => n + 1);
+        }, 1_000);
+
+        return () => window.clearInterval(interval);
+    }, []);
+
     useEffect(() => {
         let cancelled = false;
 

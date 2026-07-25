@@ -19,20 +19,24 @@ public interface IChatClient
 }
 
 [Authorize]
-public class ChatHub(PresenceService presence, IServiceScopeFactory scopeFactory) : Hub<IChatClient>
+public class ChatHub(
+    PresenceService presence,
+    IServiceScopeFactory scopeFactory,
+    IHubContext<ChatHub, IChatClient> hubContext,
+    ILogger<ChatHub> logger) : Hub<IChatClient>
 {
-    // How long to wait after a user's last connection drops before treating
-    // them as actually offline.
     private static readonly TimeSpan OfflineGracePeriod = TimeSpan.FromSeconds(5);
 
     public override async Task OnConnectedAsync()
     {
         var userId = GetUserId();
+        logger.LogInformation("Connected: user={UserId} connection={ConnectionId}", userId, Context.ConnectionId);
 
         var justCameOnline = await presence.AddConnectionAsync(userId, Context.ConnectionId);
 
         if (justCameOnline)
         {
+            logger.LogInformation("User {UserId} came online", userId);
             await BroadcastPresenceAsync(userId, isOnline: true, lastSeen: null);
         }
 
@@ -42,51 +46,90 @@ public class ChatHub(PresenceService presence, IServiceScopeFactory scopeFactory
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         var userId = GetUserId();
+        logger.LogInformation(
+            "Disconnected: user={UserId} connection={ConnectionId} exception={Exception}",
+            userId, Context.ConnectionId, exception?.Message);
 
         var mightBeOffline = await presence.RemoveConnectionAsync(userId, Context.ConnectionId);
+        logger.LogInformation("mightBeOffline={MightBeOffline} for user {UserId}", mightBeOffline, userId);
 
         if (mightBeOffline)
         {
-            // Don't broadcast yet — give a reconnect a chance to land first.
             _ = Task.Run(async () =>
             {
-                await Task.Delay(OfflineGracePeriod);
-
-                if (await presence.IsOnlineAsync(userId))
-                    return;
-
-                var now = DateTime.UtcNow;
-
-                using var scope = scopeFactory.CreateScope();
-                var scopedDb = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-                var user = await scopedDb.Users.FirstOrDefaultAsync(u => u.Id == userId);
-                if (user is not null)
+                try
                 {
-                    user.LastSeen = now;
-                    await scopedDb.SaveChangesAsync();
-                }
+                    await Task.Delay(OfflineGracePeriod);
 
-                await BroadcastPresenceAsync(userId, isOnline: false, lastSeen: now);
+                    if (await presence.IsOnlineAsync(userId))
+                    {
+                        logger.LogInformation("User {UserId} reconnected during grace period, skipping offline broadcast", userId);
+                        return;
+                    }
+
+                    var now = DateTime.UtcNow;
+
+                    using var scope = scopeFactory.CreateScope();
+                    var scopedDb = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+                    var user = await scopedDb.Users.FirstOrDefaultAsync(u => u.Id == userId);
+                    if (user is not null)
+                    {
+                        user.LastSeen = now;
+                        await scopedDb.SaveChangesAsync();
+                    }
+
+                    logger.LogInformation("Broadcasting offline for user {UserId}", userId);
+                    await BroadcastPresenceViaContextAsync(scopedDb, userId, isOnline: false, lastSeen: now);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Failed to process offline transition for user {UserId}", userId);
+                }
             });
         }
 
         await base.OnDisconnectedAsync(exception);
     }
 
+    // Used from within a live hub method (OnConnectedAsync) — this.Clients
+    // is safe here since the hub instance is still alive.
     private async Task BroadcastPresenceAsync(Guid userId, bool isOnline, DateTime? lastSeen)
     {
         using var scope = scopeFactory.CreateScope();
         var scopedDb = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
+        var recipients = await GetRecipientsOrNullAsync(scopedDb, userId);
+        if (recipients is null) return;
+
+        if (isOnline)
+            await Clients.Users(recipients).UserOnline(userId);
+        else
+            await Clients.Users(recipients).UserOffline(userId, lastSeen!.Value);
+    }
+    private async Task BroadcastPresenceViaContextAsync(AppDbContext scopedDb, Guid userId, bool isOnline, DateTime? lastSeen)
+    {
+        var recipients = await GetRecipientsOrNullAsync(scopedDb, userId);
+        if (recipients is null) return;
+
+        if (isOnline)
+            await hubContext.Clients.Users(recipients).UserOnline(userId);
+        else
+            await hubContext.Clients.Users(recipients).UserOffline(userId, lastSeen!.Value);
+    }
+
+    private async Task<List<string>?> GetRecipientsOrNullAsync(AppDbContext scopedDb, Guid userId)
+    {
         var settings = await scopedDb.UserSettings
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.UserId == userId);
 
         if (settings is not null && !settings.ShowOnlineStatus)
-            return;
+        {
+            logger.LogInformation("User {UserId} has ShowOnlineStatus=false, skipping broadcast", userId);
+            return null;
+        }
 
-        // Notify everyone who shares an active chat with this user
         var coMemberIds = await scopedDb.ChatMembers
             .Where(cm => scopedDb.ChatMembers
                 .Where(m => m.UserId == userId)
@@ -97,15 +140,13 @@ public class ChatHub(PresenceService presence, IServiceScopeFactory scopeFactory
             .Distinct()
             .ToListAsync();
 
+        logger.LogInformation("Broadcasting presence for {UserId} to {Count} co-members: {Recipients}",
+            userId, coMemberIds.Count, string.Join(",", coMemberIds));
+
         if (coMemberIds.Count == 0)
-            return;
+            return null;
 
-        var recipients = coMemberIds.Select(id => id.ToString()).ToList();
-
-        if (isOnline)
-            await Clients.Users(recipients).UserOnline(userId);
-        else
-            await Clients.Users(recipients).UserOffline(userId, lastSeen!.Value);
+        return coMemberIds.Select(id => id.ToString()).ToList();
     }
 
     private Guid GetUserId()
