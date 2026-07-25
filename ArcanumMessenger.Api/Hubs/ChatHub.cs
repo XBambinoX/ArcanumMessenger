@@ -19,7 +19,7 @@ public interface IChatClient
 }
 
 [Authorize]
-public class ChatHub(AppDbContext db, PresenceService presence, IServiceScopeFactory scopeFactory) : Hub<IChatClient>
+public class ChatHub(PresenceService presence, IServiceScopeFactory scopeFactory) : Hub<IChatClient>
 {
     // How long to wait after a user's last connection drops before treating
     // them as actually offline.
@@ -83,20 +83,24 @@ public class ChatHub(AppDbContext db, PresenceService presence, IServiceScopeFac
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.UserId == userId);
 
-        // Respect the privacy toggle: if the user has hidden their online
-        // status, don't tell anyone it changed at all.
         if (settings is not null && !settings.ShowOnlineStatus)
             return;
 
-        var contactIds = await scopedDb.Contacts
-            .Where(c => c.UserId == userId)
-            .Select(c => c.ContactId)
+        // Notify everyone who shares an active chat with this user
+        var coMemberIds = await scopedDb.ChatMembers
+            .Where(cm => scopedDb.ChatMembers
+                .Where(m => m.UserId == userId)
+                .Select(m => m.ChatId)
+                .Contains(cm.ChatId))
+            .Where(cm => cm.UserId != userId)
+            .Select(cm => cm.UserId)
+            .Distinct()
             .ToListAsync();
 
-        if (contactIds.Count == 0)
+        if (coMemberIds.Count == 0)
             return;
 
-        var recipients = contactIds.Select(id => id.ToString()).ToList();
+        var recipients = coMemberIds.Select(id => id.ToString()).ToList();
 
         if (isOnline)
             await Clients.Users(recipients).UserOnline(userId);
