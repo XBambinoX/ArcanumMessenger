@@ -102,15 +102,7 @@ namespace ArcanumMessenger
 
             var app = builder.Build();
 
-            app.UseExceptionHandler(errApp =>
-                {
-                    errApp.Run(async context =>
-                    {
-                        context.Response.ContentType = "application/json";
-                        context.Response.StatusCode = 500;
-                        await context.Response.WriteAsJsonAsync(new { message = "Internal server error" });
-                    });
-                });
+            app.UseMiddleware<ExceptionHandlingMiddleware>();
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
