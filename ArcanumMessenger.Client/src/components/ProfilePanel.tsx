@@ -17,6 +17,7 @@ interface ProfilePanelProps {
     onClose: () => void;
     onLogout: () => void;
     onUsernameChange?: (username: string) => void;
+    onNotificationSettingsChange?: (sound: string, notificationsEnabled: boolean, groupNotifications: boolean) => void;
 }
 
 type Section = "main" | "account" | "notifications" | "privacy" | "chats";
@@ -215,7 +216,7 @@ const sectionTitles: Record<Section, string> = {
 const MAX_PHONE_DIGITS = 15;
 const ANIMATION_MS = 250;
 
-export default function ProfilePanel({ profile, onClose, onLogout, onUsernameChange }: ProfilePanelProps) {
+export default function ProfilePanel({ profile, onClose, onLogout, onUsernameChange, onNotificationSettingsChange }: ProfilePanelProps) {
     const [copied, setCopied] = useState(false);
     const [settings, setSettings] = useState<SettingsState>(defaultSettings);
     const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -333,8 +334,10 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
             await updateNotificationSettings({ [field]: value });
             setNotifSaveStatus("saved");
             window.setTimeout(() => setNotifSaveStatus((s) => (s === "saved" ? "idle" : s)), 1500);
+
+            const next = { ...settings, [field]: value };
+            onNotificationSettingsChange?.(next.notificationSound, next.notificationsEnabled, next.groupNotifications);
         } catch {
-            // Roll back optimistic update on failure
             patch({ [field]: !value } as Partial<SettingsState>);
             setNotifSaveStatus("error");
         }
@@ -389,11 +392,13 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
             await updateNotificationSettings({ notificationSound: soundId });
             setNotifSaveStatus("saved");
             window.setTimeout(() => setNotifSaveStatus((s) => (s === "saved" ? "idle" : s)), 1500);
+
+            onNotificationSettingsChange?.(soundId, settings.notificationsEnabled, settings.groupNotifications);
         } catch {
             patch({ notificationSound: prevValue });
             setNotifSaveStatus("error");
         }
-    };
+};
 
     const navigateTo = (target: Section) => {
         if (animating || target === section) return;

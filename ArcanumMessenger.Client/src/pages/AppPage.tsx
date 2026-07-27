@@ -59,6 +59,18 @@ export default function AppPage() {
     const chatsRef = useRef<ChatSummary[]>([]);
     const notificationSettingsRef = useRef<UserSettingsResponse | null>(null);
 
+    const handleNotificationSettingsChange = (
+        sound: string,
+        notificationsEnabled: boolean,
+        groupNotifications: boolean,
+    ) => {
+        setNotificationSettings((prev) =>
+            prev
+                ? { ...prev, notificationSound: sound, notificationsEnabled, groupNotifications }
+                : prev,
+        );
+    };
+
     useEffect(() => {
         chatsRef.current = chats;
     }, [chats]);
@@ -412,6 +424,7 @@ export default function AppPage() {
                     onClose={() => setProfileOpen(false)}
                     onLogout={handleLogout}
                     onUsernameChange={(username) => setDisplayName(username || profile.name)}
+                    onNotificationSettingsChange={handleNotificationSettingsChange}
                 />
             )}
 
