@@ -5,6 +5,8 @@ import { logout } from "../api/session";
 import { getChats, markChatRead, setChatArchived } from "../api/chats";
 import { getMe, getUserPresence, getPresenceBulk } from "../api/users";
 import { createChatHubConnection } from "../lib/chatHub";
+import { type UserSettingsResponse, getUserSettings  } from "../api/userSettings";
+import { playNotificationSound } from "../lib/notificationSound";
 import { useAuth } from "../context/AuthContext";
 import ChatList from "../components/ChatList";
 import ChatWindow from "../components/ChatWindow";
@@ -53,6 +55,18 @@ export default function AppPage() {
     
     const [presence, setPresence] = useState<Record<string, PresenceInfo>>({});
 
+    const [notificationSettings, setNotificationSettings] = useState<UserSettingsResponse | null>(null);
+    const chatsRef = useRef<ChatSummary[]>([]);
+    const notificationSettingsRef = useRef<UserSettingsResponse | null>(null);
+
+    useEffect(() => {
+        chatsRef.current = chats;
+    }, [chats]);
+
+    useEffect(() => {
+        notificationSettingsRef.current = notificationSettings;
+    }, [notificationSettings]);
+
     useEffect(() => {
         getChats().then((loadedChats) => {
             setChats(loadedChats);
@@ -78,6 +92,10 @@ export default function AppPage() {
             setProfile(me);
             setDisplayName(me!.name);
         });
+
+        getUserSettings().then((settings) => {
+            if (settings) setNotificationSettings(settings);
+        });
     }, []);
 
     useEffect(() => {
@@ -100,23 +118,37 @@ export default function AppPage() {
     useEffect(() => {
         if (!connection) return;
 
-        const handleReceiveMessage = (message: ChatMessage) => {
+    const handleReceiveMessage = (message: ChatMessage) => {
             const isOpen = message.chatId === selectedChatId;
 
             setChats((prev) =>
                 prev.map((c) =>
                     c.id === message.chatId
                         ? {
-                              ...c,
-                              lastMessageText: message.content,
-                              lastMessageAt: message.createdAt,
-                              unreadCount: isOpen ? c.unreadCount : c.unreadCount + 1,
-                          }
+                            ...c,
+                            lastMessageText: message.content,
+                            lastMessageAt: message.createdAt,
+                            unreadCount: isOpen ? c.unreadCount : c.unreadCount + 1,
+                        }
                         : c,
                 ),
             );
 
-            if (isOpen) markChatRead(message.chatId);
+            if (isOpen) {
+                markChatRead(message.chatId);
+            } else if (!message.isOwn) {
+                const chat = chatsRef.current.find((c) => c.id === message.chatId);
+                const settings = notificationSettingsRef.current;
+
+                if (chat && !chat.isMuted && settings) {
+                    const enabled =
+                        chat.type === "group"
+                            ? settings.groupNotifications
+                            : settings.notificationsEnabled;
+
+                    if (enabled) playNotificationSound(settings.notificationSound);
+                }
+            }
         };
 
         const handleChatCreated = (chat: ChatSummary) => {
