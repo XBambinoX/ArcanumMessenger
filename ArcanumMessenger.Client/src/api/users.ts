@@ -6,9 +6,9 @@ function toUser(data: {
     name: string | null;
     id: string | null;
     lastSeen: string | null;
-    publicBio: string | null;
-    publicEmail: string | null;
-    publicPhone: string | null;
+    bio: string | null;
+    email: string | null;
+    phone: string | null;
     isContact: boolean;
 }): User | null {
     if (!data.success || data.name === null || data.id === null) return null;
@@ -16,12 +16,13 @@ function toUser(data: {
         name: data.name,
         publicId: data.id,
         lastSeen: data.lastSeen,
-        bio: data.publicBio,
-        email: data.publicEmail,
-        phone: data.publicPhone,
+        bio: data.bio,
+        email: data.email,
+        phone: data.phone,
         isContact: data.isContact,
     };
 }
+
 
 export async function getMe(): Promise<User | null> {
     const res = await apiFetch("/api/users/me", { credentials: "include" });

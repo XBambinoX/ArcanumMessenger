@@ -276,6 +276,7 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                     user={userInfo.user}
                     onClose={() => setUserInfo(null)}
                     onStartChat={onStartChat}
+                    presence={presence}
                 />
             )}
 

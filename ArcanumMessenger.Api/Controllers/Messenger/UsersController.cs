@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using ArcanumMessenger.Services.MessengerServices;
+using ArcanumMessenger.Entities;
 
 namespace ArcanumMessenger.Controllers.Messenger;
 
@@ -93,19 +94,50 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
                             u.LastSeen,
                             u.WrappedDek,
                             u.UserSettings.EmailEnc,
+                            u.UserSettings.BioEnc,
+                            u.UserSettings.PhoneEnc,
+                            u.UserSettings.ShowPhoneNumber,
                         })
                         .FirstOrDefaultAsync(ct);
 
         if (user is null || user.IsDeleted)
-            return new GetUserResponce(Name: null, Id: null, LastSeen: null, PublicEmail: null, IsContact: false, success: false, reason: "not_found");
+            return new GetUserResponce(Name: null, 
+                                       Id: null, 
+                                       LastSeen: null, 
+                                       Email: null, 
+                                       IsContact: false, 
+                                       success: false, 
+                                       reason: "not_found", 
+                                       Bio: null,
+                                       Phone: null );
 
         var dek = encryption.UnwrapDek(user.WrappedDek);
         var username = encryption.Decrypt(user.UsernameEnc, dek);
         var publicId = encryption.Decrypt(user.PublicIdEnc, dek);
         var publicEmail = string.IsNullOrEmpty(user.EmailEnc) ? null : encryption.Decrypt(user.EmailEnc, dek);
         var isContact = id != callerId && await db.Contacts.AnyAsync(c => c.UserId == callerId && c.ContactId == id, ct);
+        var bio = string.IsNullOrEmpty(user.BioEnc) ? null : encryption.Decrypt(user.BioEnc, dek);
+        var showPhoneToThisViewer = user.ShowPhoneNumber switch
+        {
+            PhoneVisibility.Everyone => true,
+            PhoneVisibility.Contacts => isContact || id == callerId,
+            PhoneVisibility.Nobody => id == callerId,
+            _ => false
+        };
 
-        return new GetUserResponce(username, publicId, user.LastSeen, publicEmail, isContact, success: true, reason: null);
+        var phone = (!string.IsNullOrEmpty(user.PhoneEnc) && showPhoneToThisViewer)
+            ? encryption.Decrypt(user.PhoneEnc, dek)
+            : null;
+    
+        return new GetUserResponce(Name:username, 
+                                   Id: publicId, 
+                                   LastSeen:user.LastSeen, 
+                                   Email:publicEmail, 
+                                   IsContact:isContact,
+                                   success: true, 
+                                   reason: null,
+                                   Bio: bio,
+                                   Phone: phone);
     }
 
     [HttpGet("{targetUserId:guid}/presence")]
