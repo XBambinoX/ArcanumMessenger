@@ -115,29 +115,27 @@ export default function UserInfoPanel({
                 </div>
 
                 <section className={styles.infoSection}>
-                    <div className={styles.infoRow}>
-                        <span className={styles.infoLabel}>Bio</span>
-                        <span className={styles.infoValue}>
-                            {user.bio ?? "No bio yet"}
-                        </span>
-                    </div>
-                    <div className={styles.infoRow}>
-                        <span className={styles.infoLabel}>Email</span>
-                        <span className={styles.infoValue}>
-                            {user.email ?? "Not shared"}
-                        </span>
-                    </div>
-                    <div className={styles.infoRow}>
-                        <span className={styles.infoLabel}>Phone</span>
-                        <span className={styles.infoValue}>
-                            {user.phone ?? "Not shared"}
-                        </span>
-                    </div>
+                    {user.bio && (
+                        <div className={styles.infoRow}>
+                            <span className={styles.infoLabel}>Bio</span>
+                            <span className={styles.infoValue}>{user.bio}</span>
+                        </div>
+                    )}
+                    {user.email && (
+                        <div className={styles.infoRow}>
+                            <span className={styles.infoLabel}>Email</span>
+                            <span className={styles.infoValue}>{user.email}</span>
+                        </div>
+                    )}
+                    {user.phone && (
+                        <div className={styles.infoRow}>
+                            <span className={styles.infoLabel}>Phone</span>
+                            <span className={styles.infoValue}>{user.phone}</span>
+                        </div>
+                    )}
                     <div className={styles.infoRow}>
                         <span className={styles.infoLabel}>ID</span>
-                        <span className={styles.infoValue}>
-                            {user.publicId}
-                        </span>
+                        <span className={styles.infoValue}>{user.publicId}</span>
                     </div>
                 </section>
             </aside>
