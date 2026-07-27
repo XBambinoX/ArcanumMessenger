@@ -151,3 +151,7 @@
     color: rgba(226, 232, 240, 0.9);
     word-break: break-word;
 }
+
+.lastSeenOnline {
+    color: var(--color-online, #4caf50);
+}

@@ -10,6 +10,7 @@ interface UserInfoPanelProps {
     user: User;
     onClose: () => void;
     onStartChat: (chat: ChatSummary) => void;
+    presence?: { isOnline: boolean; lastSeen: string | null };
 }
 
 export default function UserInfoPanel({
@@ -17,6 +18,7 @@ export default function UserInfoPanel({
     user,
     onClose,
     onStartChat,
+    presence
 }: UserInfoPanelProps) {
     const [isContact, setIsContact] = useState(user.isContact);
 
@@ -64,10 +66,16 @@ export default function UserInfoPanel({
                         {user.name.charAt(0).toUpperCase()}
                     </div>
                     <span className={styles.profileName}>{user.name}</span>
-                    <span className={styles.lastSeen}>
-                        {user.lastSeen
-                            ? `Last seen ${formatChatTime(user.lastSeen)}`
-                            : "Last seen a while ago"}
+                    <span
+                        className={`${styles.lastSeen} ${presence?.isOnline ? styles.lastSeenOnline : ""}`}
+                    >
+                        {presence?.isOnline
+                            ? "online"
+                            : presence?.lastSeen
+                                ? `Last seen ${formatChatTime(presence.lastSeen)}`
+                                : user.lastSeen
+                                    ? `Last seen ${formatChatTime(user.lastSeen)}`
+                                    : "Last seen a while ago"}
                     </span>
                 </div>
 
