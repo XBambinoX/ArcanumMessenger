@@ -15,6 +15,8 @@ interface ChatWindowProps {
     presence?: { isOnline: boolean; lastSeen: string | null };
 }
 
+const ANIMATE_MS = 260;
+
 function dayLabel(iso: string): string {
     const date = new Date(iso);
     const today = new Date();
@@ -38,8 +40,21 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
     const scrollAnchor = useRef<HTMLDivElement | null>(null);
     const messagesRef = useRef<HTMLDivElement | null>(null);
     const prependingRef = useRef(false);
+    const [animatingIds, setAnimatingIds] = useState<Set<string>>(new Set());
+
 
     const [, forceTick] = useState(0);
+
+    const markAnimated = (id: string) => {
+        setAnimatingIds((prev) => new Set(prev).add(id));
+        window.setTimeout(() => {
+            setAnimatingIds((prev) => {
+                const next = new Set(prev);
+                next.delete(id);
+                return next;
+            });
+        }, ANIMATE_MS);
+    };
 
     useEffect(() => {
         const interval = window.setInterval(() => {
@@ -69,6 +84,7 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
         const handleReceiveMessage = (message: ChatMessage) => {
             if (message.chatId !== chat.id) return;
             setMessages((prev) => [...prev, message]);
+            markAnimated(message.id);
         };
 
         connection.on("ReceiveMessage", handleReceiveMessage);
@@ -114,7 +130,10 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
 
         setDraft("");
         const sent = await sendMessage(chat.id, content);
-        if (sent) setMessages((prev) => [...prev, sent]);
+        if (sent) {
+            setMessages((prev) => [...prev, sent]);
+            markAnimated(sent.id);
+        }
     };
 
     const findMessage = (id: string | null) =>
@@ -197,7 +216,9 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                                 </div>
                             )}
                             <div
-                                className={`${styles.bubbleRow} ${message.isOwn ? styles.own : ""}`}
+                                className={`${styles.bubbleRow} ${message.isOwn ? styles.own : ""} ${
+                                    animatingIds.has(message.id) ? styles.bubbleEnter : ""
+                                }`}
                             >
                                 <div className={styles.bubble}>
                                     {chat.type === "group" &&
