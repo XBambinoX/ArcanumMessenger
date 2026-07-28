@@ -7,3 +7,7 @@ public record ContactsListResponse(bool Success, IReadOnlyList<UserSearchResultD
 public record AddContactRequest(Guid ContactId);
 
 public record AddContactResponse(bool Success, string? Reason = null);
+
+public record BlockedUsersListResponse(bool Success, IReadOnlyList<UserSearchResultDto>? Blocked, string? Reason = null);
+
+public record BlockUserResponse(bool Success, string? Reason = null);

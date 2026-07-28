@@ -3,13 +3,14 @@ using ArcanumMessenger.Contracts.Messenger.Users;
 using ArcanumMessenger.Data;
 using ArcanumMessenger.Entities;
 using ArcanumMessenger.Services.AuthServices;
+using ArcanumMessenger.Services.MessengerServices;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace ArcanumMessenger.Controllers.Messenger;
 
 [Route("api/contacts")]
-public class ContactsController(AppDbContext db, EncryptionService encryption) : MessengerControllerBase
+public class ContactsController(AppDbContext db, EncryptionService encryption, BlockService blocks) : MessengerControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<ContactsListResponse>> List(CancellationToken ct)
@@ -18,7 +19,7 @@ public class ContactsController(AppDbContext db, EncryptionService encryption) :
             return Unauthorized();
 
         var contacts = await db.Contacts.AsNoTracking()
-            .Where(c => c.UserId == userId && !c.ContactUser.IsDeleted)
+            .Where(c => c.UserId == userId && !c.IsBlocked && !c.ContactUser.IsDeleted)
             .Select(c => new { c.ContactId, c.ContactUser.UserSettings.UsernameEnc, c.ContactUser.PublicIdEnc, c.ContactUser.WrappedDek })
             .ToListAsync(ct);
 
@@ -71,5 +72,54 @@ public class ContactsController(AppDbContext db, EncryptionService encryption) :
         }
 
         return Ok(new AddContactResponse(true));
+    }
+
+    [HttpGet("blocked")]
+    public async Task<ActionResult<BlockedUsersListResponse>> ListBlocked(CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var blocked = await db.Contacts.AsNoTracking()
+            .Where(c => c.UserId == userId && c.IsBlocked && !c.ContactUser.IsDeleted)
+            .Select(c => new { c.ContactId, c.ContactUser.UserSettings.UsernameEnc, c.ContactUser.PublicIdEnc, c.ContactUser.WrappedDek })
+            .ToListAsync(ct);
+
+        var results = blocked.Select(c =>
+        {
+            var dek = encryption.UnwrapDek(c.WrappedDek);
+            return new UserSearchResultDto(
+                c.ContactId,
+                encryption.Decrypt(c.UsernameEnc, dek),
+                encryption.Decrypt(c.PublicIdEnc, dek));
+        }).ToList();
+
+        return Ok(new BlockedUsersListResponse(true, results));
+    }
+
+    [HttpPost("{contactId:guid}/block")]
+    public async Task<ActionResult<BlockUserResponse>> Block(Guid contactId, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        if (contactId == userId)
+            return BadRequest(new BlockUserResponse(false, "self_block"));
+
+        if (!await db.Users.AnyAsync(u => u.Id == contactId && !u.IsDeleted, ct))
+            return NotFound(new BlockUserResponse(false, "not_found"));
+
+        await blocks.BlockAsync(userId, contactId, ct);
+        return Ok(new BlockUserResponse(true));
+    }
+
+    [HttpPost("{contactId:guid}/unblock")]
+    public async Task<ActionResult<BlockUserResponse>> Unblock(Guid contactId, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        await blocks.UnblockAsync(userId, contactId, ct);
+        return Ok(new BlockUserResponse(true));
     }
 }

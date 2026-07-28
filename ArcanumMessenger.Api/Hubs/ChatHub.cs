@@ -141,6 +141,9 @@ public class ChatHub(
                 .Select(m => m.ChatId)
                 .Contains(cm.ChatId))
             .Where(cm => cm.UserId != userId)
+            .Where(cm => !scopedDb.Contacts.Any(c => c.IsBlocked &&
+                ((c.UserId == userId && c.ContactId == cm.UserId) ||
+                 (c.UserId == cm.UserId && c.ContactId == userId))))
             .Select(cm => cm.UserId)
             .Distinct()
             .ToListAsync();

@@ -9,7 +9,8 @@ public record ChatSummaryDto(
     int UnreadCount,
     bool IsMuted,
     bool IsArchived,
-    Guid? OtherUserId);
+    Guid? OtherUserId,
+    bool IsBlocked);
 
 public record ChatListResponse(bool Success, IReadOnlyList<ChatSummaryDto>? Chats, string? Reason = null);
 

@@ -51,6 +51,8 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
             var fullHash = publicIdHasher.Hash(normalized);
             var exact = await db.Users.AsNoTracking()
                 .Where(u => u.PublicIdHash == fullHash && u.Id != callerId && !u.IsDeleted)
+                .Where(u => !db.Contacts.Any(c => c.IsBlocked &&
+                    ((c.UserId == callerId && c.ContactId == u.Id) || (c.UserId == u.Id && c.ContactId == callerId))))
                 .Select(u => new { u.Id, u.UserSettings.UsernameEnc, u.PublicIdEnc, u.WrappedDek })
                 .FirstOrDefaultAsync(ct);
 
@@ -66,6 +68,8 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
         var prefixHash = publicIdHasher.HashPrefix(normalized);
         var candidates = await db.Users.AsNoTracking()
             .Where(u => u.PublicIdPrefixHash == prefixHash && u.Id != callerId && !u.IsDeleted)
+            .Where(u => !db.Contacts.Any(c => c.IsBlocked &&
+                ((c.UserId == callerId && c.ContactId == u.Id) || (c.UserId == u.Id && c.ContactId == callerId))))
             .Select(u => new { u.Id, u.UserSettings.UsernameEnc, u.PublicIdEnc, u.WrappedDek })
             .ToListAsync(ct);
 
@@ -101,13 +105,15 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
                         .FirstOrDefaultAsync(ct);
 
         if (user is null || user.IsDeleted)
-            return new GetUserResponce(Name: null, 
-                                       Id: null, 
-                                       LastSeen: null, 
-                                       Email: null, 
-                                       IsContact: false, 
-                                       success: false, 
-                                       reason: "not_found", 
+            return new GetUserResponce(Name: null,
+                                       Id: null,
+                                       LastSeen: null,
+                                       Email: null,
+                                       IsContact: false,
+                                       IsBlocked: false,
+                                       IsBlockedByOther: false,
+                                       success: false,
+                                       reason: "not_found",
                                        Bio: null,
                                        Phone: null );
 
@@ -115,7 +121,9 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
         var username = encryption.Decrypt(user.UsernameEnc, dek);
         var publicId = encryption.Decrypt(user.PublicIdEnc, dek);
         var publicEmail = string.IsNullOrEmpty(user.EmailEnc) ? null : encryption.Decrypt(user.EmailEnc, dek);
-        var isContact = id != callerId && await db.Contacts.AnyAsync(c => c.UserId == callerId && c.ContactId == id, ct);
+        var isBlocked = id != callerId && await db.Contacts.AnyAsync(c => c.UserId == callerId && c.ContactId == id && c.IsBlocked, ct);
+        var isBlockedByOther = id != callerId && await db.Contacts.AnyAsync(c => c.UserId == id && c.ContactId == callerId && c.IsBlocked, ct);
+        var isContact = id != callerId && await db.Contacts.AnyAsync(c => c.UserId == callerId && c.ContactId == id && !c.IsBlocked, ct);
         var bio = string.IsNullOrEmpty(user.BioEnc) ? null : encryption.Decrypt(user.BioEnc, dek);
         var showPhoneToThisViewer = user.ShowPhoneNumber switch
         {
@@ -129,12 +137,14 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
             ? encryption.Decrypt(user.PhoneEnc, dek)
             : null;
     
-        return new GetUserResponce(Name:username, 
-                                   Id: publicId, 
-                                   LastSeen:user.LastSeen, 
-                                   Email:publicEmail, 
+        return new GetUserResponce(Name:username,
+                                   Id: publicId,
+                                   LastSeen:user.LastSeen,
+                                   Email:publicEmail,
                                    IsContact:isContact,
-                                   success: true, 
+                                   IsBlocked: isBlocked,
+                                   IsBlockedByOther: isBlockedByOther,
+                                   success: true,
                                    reason: null,
                                    Bio: bio,
                                    Phone: phone);
@@ -145,6 +155,14 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
     public async Task<ActionResult<UserPresenceResponse>> GetPresence(
         Guid targetUserId, CancellationToken ct)
     {
+        if (!TryGetUserId(out var callerId))
+            return Unauthorized();
+
+        if (await db.Contacts.AnyAsync(c => c.IsBlocked &&
+                ((c.UserId == callerId && c.ContactId == targetUserId) ||
+                 (c.UserId == targetUserId && c.ContactId == callerId)), ct))
+            return Ok(new UserPresenceResponse(false, null));
+
         var user = await db.Users
             .AsNoTracking()
             .Where(u => u.Id == targetUserId && !u.IsDeleted)
@@ -175,12 +193,23 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
     public async Task<ActionResult<BulkPresenceResponse>> GetPresenceBulk(
         [FromBody] BulkPresenceRequest request, CancellationToken ct)
     {
+        if (!TryGetUserId(out var callerId))
+            return Unauthorized();
+
         if (request.UserIds.Count == 0)
             return Ok(new BulkPresenceResponse([]));
 
         // Cap to something sane — this is meant for "all direct chats visible
         // in the sidebar", not an arbitrary bulk-lookup endpoint.
         var ids = request.UserIds.Distinct().Take(200).ToList();
+
+        var blockedIds = await db.Contacts.AsNoTracking()
+            .Where(c => c.IsBlocked &&
+                ((c.UserId == callerId && ids.Contains(c.ContactId)) ||
+                 (c.ContactId == callerId && ids.Contains(c.UserId))))
+            .Select(c => c.UserId == callerId ? c.ContactId : c.UserId)
+            .ToListAsync(ct);
+        var blockedSet = blockedIds.ToHashSet();
 
         var users = await db.Users
             .AsNoTracking()
@@ -198,6 +227,12 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
 
         foreach (var user in users)
         {
+            if (blockedSet.Contains(user.Id))
+            {
+                items.Add(new BulkPresenceItem(user.Id, false, null));
+                continue;
+            }
+
             var isOnline = await presence.IsOnlineAsync(user.Id);
 
             if (!user.ShowOnlineStatus)

@@ -7,15 +7,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ArcanumMessenger.Services.MessengerServices;
 
-public class ChatService(AppDbContext db, UserDisplayNameService displayNames, IHubContext<ChatHub, IChatClient> hub)
+public class ChatService(
+    AppDbContext db, UserDisplayNameService displayNames, IHubContext<ChatHub, IChatClient> hub, BlockService blocks)
 {
     private sealed record RawChatSummary(
         Guid ChatId, string Type, string? Title, DateTime ChatCreatedAt,
         bool IsMuted, bool IsArchived,
         string? LastMessageContent, DateTime? LastMessageAt,
-        int UnreadCount, Guid? OtherMemberId);
+        int UnreadCount, Guid? OtherMemberId, bool IsBlocked);
 
-    private static IQueryable<RawChatSummary> ProjectSummaries(IQueryable<ChatMember> memberships, Guid callerId) =>
+    private static IQueryable<RawChatSummary> ProjectSummaries(AppDbContext db, IQueryable<ChatMember> memberships, Guid callerId) =>
         memberships
             .Where(cm => !cm.Chat.IsDeleted)
             .Select(cm => new RawChatSummary(
@@ -30,7 +31,11 @@ public class ChatService(AppDbContext db, UserDisplayNameService displayNames, I
                 cm.Chat.Messages.Count(m => !m.IsDeleted && m.SenderId != callerId && m.CreatedAt > cm.LastReadAt),
                 cm.Chat.Type == "direct"
                     ? cm.Chat.Members.Where(m => m.UserId != callerId).Select(m => (Guid?)m.UserId).FirstOrDefault()
-                    : null));
+                    : null,
+                cm.Chat.Type == "direct" && cm.Chat.Members.Any(m => m.UserId != callerId &&
+                    db.Contacts.Any(c => c.IsBlocked &&
+                        ((c.UserId == callerId && c.ContactId == m.UserId) ||
+                         (c.UserId == m.UserId && c.ContactId == callerId))))));
 
     private async Task<List<ChatSummaryDto>> MaterializeAsync(List<RawChatSummary> raw, CancellationToken ct)
     {
@@ -51,7 +56,8 @@ public class ChatService(AppDbContext db, UserDisplayNameService displayNames, I
                     r.UnreadCount,
                     r.IsMuted,
                     r.IsArchived,
-                    r.OtherMemberId),
+                    r.OtherMemberId,
+                    r.IsBlocked),
                 SortKey = r.LastMessageAt ?? r.ChatCreatedAt,
             })
             .OrderByDescending(x => x.SortKey)
@@ -61,7 +67,7 @@ public class ChatService(AppDbContext db, UserDisplayNameService displayNames, I
 
     public async Task<List<ChatSummaryDto>> GetChatSummariesAsync(Guid userId, CancellationToken ct)
     {
-        var raw = await ProjectSummaries(db.ChatMembers.AsNoTracking().Where(cm => cm.UserId == userId), userId)
+        var raw = await ProjectSummaries(db, db.ChatMembers.AsNoTracking().Where(cm => cm.UserId == userId), userId)
             .ToListAsync(ct);
         return await MaterializeAsync(raw, ct);
     }
@@ -69,7 +75,7 @@ public class ChatService(AppDbContext db, UserDisplayNameService displayNames, I
     public async Task<ChatSummaryDto?> GetChatSummaryAsync(Guid chatId, Guid userId, CancellationToken ct)
     {
         var raw = await ProjectSummaries(
-                db.ChatMembers.AsNoTracking().Where(cm => cm.UserId == userId && cm.ChatId == chatId), userId)
+                db, db.ChatMembers.AsNoTracking().Where(cm => cm.UserId == userId && cm.ChatId == chatId), userId)
             .FirstOrDefaultAsync(ct);
         if (raw is null)
             return null;
@@ -97,6 +103,9 @@ public class ChatService(AppDbContext db, UserDisplayNameService displayNames, I
 
         if (!await db.Users.AnyAsync(u => u.Id == otherUserId && !u.IsDeleted, ct))
             return (null, "user_not_found");
+
+        if (await blocks.IsBlockedEitherWayAsync(callerId, otherUserId, ct))
+            return (null, "blocked");
 
         var existingChatId = await db.ChatMembers.AsNoTracking()
             .Where(cm => cm.UserId == callerId && cm.Chat.Type == "direct" && !cm.Chat.IsDeleted)

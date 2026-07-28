@@ -7,7 +7,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ArcanumMessenger.Services.MessengerServices;
 
-public class MessageService(AppDbContext db, UserDisplayNameService displayNames, IHubContext<ChatHub, IChatClient> hub)
+public class MessageService(
+    AppDbContext db, UserDisplayNameService displayNames, IHubContext<ChatHub, IChatClient> hub, BlockService blocks)
 {
     private const int DefaultTake = 30;
     private const int MaxTake = 100;
@@ -61,6 +62,16 @@ public class MessageService(AppDbContext db, UserDisplayNameService displayNames
             return (null, "empty_content");
         if (trimmed.Length > MaxContentLength)
             return (null, "too_long");
+
+        if (membership.Chat.Type == "direct")
+        {
+            var otherId = await db.ChatMembers.AsNoTracking()
+                .Where(cm => cm.ChatId == membership.ChatId && cm.UserId != membership.UserId)
+                .Select(cm => (Guid?)cm.UserId)
+                .FirstOrDefaultAsync(ct);
+            if (otherId is { } other && await blocks.IsBlockedEitherWayAsync(membership.UserId, other, ct))
+                return (null, "blocked");
+        }
 
         if (replyToId is { } rid &&
             !await db.Messages.AnyAsync(m => m.Id == rid && m.ChatId == membership.ChatId && !m.IsDeleted, ct))
