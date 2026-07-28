@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState, useEffect, type ReactElement } from "react";
+import { useNavigate } from "react-router";
 import type { User, UserSearchResult } from "../types/messenger";
 import styles from "./ProfilePanel.module.css";
 import { getUserSettings,
@@ -218,6 +219,7 @@ const MAX_PHONE_DIGITS = 15;
 const ANIMATION_MS = 250;
 
 export default function ProfilePanel({ profile, onClose, onLogout, onUsernameChange, onNotificationSettingsChange }: ProfilePanelProps) {
+    const navigate = useNavigate();
     const [copied, setCopied] = useState(false);
     const [settings, setSettings] = useState<SettingsState>(defaultSettings);
     const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -359,6 +361,18 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
             patch({ [field]: prevValue } as Partial<SettingsState>);
             setPrivacySaveStatus("error");
         }
+    };
+
+    // Turning TOTP on needs a QR code scanned and a code confirmed first, or
+    // the account gets locked out of its own login - that setup lives on its
+    // own page. Turning it off doesn't need any of that.
+    const handleToggleTotp = (checked: boolean) => {
+        if (checked) {
+            onClose();
+            navigate("/2fa/setup");
+            return;
+        }
+        handlePrivacyChange("totpEnabled", false);
     };
 
     const handleChatSettingChange = async <K extends ChatField>(field: K, value: SettingsState[K]) => {
@@ -698,7 +712,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                                 type="checkbox"
                                 checked={settings.totpEnabled}
                                 disabled={!settingsLoaded}
-                                onChange={(e) => handlePrivacyChange("totpEnabled", e.target.checked)}
+                                onChange={(e) => handleToggleTotp(e.target.checked)}
                             />
                         </label>
                         

@@ -289,7 +289,7 @@ export default function TotpSetupPage() {
                         <div className={styles.actions}>
                             <button
                                 className={styles.btnPrimary}
-                                onClick={() => navigate("/welcome")}
+                                onClick={() => navigate("/app")}
                             >
                                 Done
                             </button>

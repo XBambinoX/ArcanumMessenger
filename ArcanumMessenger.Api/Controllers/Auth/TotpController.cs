@@ -67,7 +67,7 @@ public class TotpController(
         if (!totp.VerifyCode(session.Secret, request.Code))
             return BadRequest(new ConfirmTotpSetupResponse(Success: false, Reason: "invalid_code"));
 
-        var user = await authService.GetUserAsync(u => u.Id == session.UserId, ct);
+        var user = await authService.GetUserAsync(u => u.Id == session.UserId, ct, includeSettings: true);
 
         if (user is null)
             return NotFound(new ConfirmTotpSetupResponse(Success: false, Reason: "user_not_found"));

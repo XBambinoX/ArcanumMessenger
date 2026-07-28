@@ -42,7 +42,7 @@ public class AuthService(AppDbContext db, EncryptionService encryption, TotpServ
 
     public async Task<bool> CheckTotpAsync(string emailHash, string code, CancellationToken ct)
     {
-        var user = await GetUserAsync(u => u.EmailHash == emailHash, ct);
+        var user = await GetUserAsync(u => u.EmailHash == emailHash, ct, includeSettings: true);
 
         if (user is null || !user.UserSettings.TwoFactorEnabled || user.UserSettings.TwoFactorSecretEnc is null)
             return false;
