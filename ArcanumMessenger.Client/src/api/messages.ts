@@ -32,3 +32,12 @@ export async function sendMessage(
     const data = await res.json();
     return data.success ? data.message : null;
 }
+
+export async function deleteMessage(chatId: string, messageId: string): Promise<boolean> {
+    const res = await apiFetch(`/api/chats/${chatId}/messages/${messageId}`, {
+        method: "DELETE",
+        credentials: "include",
+    });
+    const data = await res.json();
+    return data.success === true;
+}

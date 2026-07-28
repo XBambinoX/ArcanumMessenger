@@ -1,0 +1,50 @@
+.menu {
+    position: fixed;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    padding: 6px;
+    background: #12102a;
+    border: 1px solid rgba(124, 58, 237, 0.25);
+    border-radius: 12px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+    animation: menuPop 0.12s ease-out;
+}
+
+@keyframes menuPop {
+    from {
+        opacity: 0;
+        transform: scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.menuItem {
+    display: block;
+    width: 100%;
+    padding: 9px 12px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: rgba(226, 232, 240, 0.95);
+    font-family: inherit;
+    font-size: 13.5px;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.menuItem:hover {
+    background: rgba(124, 58, 237, 0.12);
+}
+
+.menuItemDanger {
+    color: #f87171;
+}
+
+.menuItemDanger:hover {
+    background: rgba(248, 113, 113, 0.12);
+}

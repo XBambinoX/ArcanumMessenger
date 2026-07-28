@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import type { HubConnection } from "@microsoft/signalr";
 import type { ChatMessage, ChatSummary, MediaAsset, User } from "../types/messenger";
-import { getMessageHistory, sendMessage } from "../api/messages";
+import { getMessageHistory, sendMessage, deleteMessage } from "../api/messages";
 import { getUser } from "../api/users";
 import { uploadMedia, getMediaUrl, getMediaThumbnailUrl, getSavedGifs, saveGif, unsaveGif } from "../api/media";
 import { formatMessageTime, formatChatTime } from "../lib/time";
 import UserInfoPanel from "./UserInfoPanel";
 import ChatInfoPanel from "./ChatInfoPanel";
 import GifPicker from "./GifPicker";
+import MessageContextMenu, { type MessageContextMenuItem } from "./MessageContextMenu";
 import styles from "./ChatWindow.module.css";
 
 // "Send as GIF" keeps the file as a real video (still efficient, still has
@@ -58,6 +59,7 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
     const [uploadingFile, setUploadingFile] = useState(false);
     const [gifPickerOpen, setGifPickerOpen] = useState(false);
     const [savedGifIds, setSavedGifIds] = useState<Set<string>>(new Set());
+    const [contextMenu, setContextMenu] = useState<{ message: ChatMessage; x: number; y: number } | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const scrollAnchor = useRef<HTMLDivElement | null>(null);
     const messagesRef = useRef<HTMLDivElement | null>(null);
@@ -113,9 +115,16 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
             markAnimated(message.id);
         };
 
+        const handleMessageDeleted = (chatId: string, messageId: string) => {
+            if (chatId !== chat.id) return;
+            setMessages((prev) => prev.filter((m) => m.id !== messageId));
+        };
+
         connection.on("ReceiveMessage", handleReceiveMessage);
+        connection.on("MessageDeleted", handleMessageDeleted);
         return () => {
             connection.off("ReceiveMessage", handleReceiveMessage);
+            connection.off("MessageDeleted", handleMessageDeleted);
         };
     }, [connection, chat.id]);
 
@@ -202,6 +211,48 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
         });
     };
 
+    const handleDeleteMessage = async (messageId: string) => {
+        const ok = await deleteMessage(chat.id, messageId);
+        if (ok) setMessages((prev) => prev.filter((m) => m.id !== messageId));
+    };
+
+    const handleSaveAs = (media: MediaAsset) => {
+        const link = document.createElement("a");
+        link.href = getMediaUrl(media.id);
+        link.download = media.fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+    };
+
+    const handleContextMenu = (e: React.MouseEvent, message: ChatMessage) => {
+        e.preventDefault();
+        setContextMenu({ message, x: e.clientX, y: e.clientY });
+    };
+
+    const buildMenuItems = (message: ChatMessage): MessageContextMenuItem[] => {
+        const items: MessageContextMenuItem[] = [];
+        const media = message.media;
+
+        if (message.type === "gif" && media) {
+            const isSaved = savedGifIds.has(media.id);
+            items.push({
+                label: isSaved ? "Remove from GIFs" : "Save to GIFs",
+                onClick: () => handleToggleSaveGif(media.id),
+            });
+        }
+
+        if (media) {
+            items.push({ label: "Save as…", onClick: () => handleSaveAs(media) });
+        }
+
+        if (message.isOwn) {
+            items.push({ label: "Delete message", danger: true, onClick: () => handleDeleteMessage(message.id) });
+        }
+
+        return items;
+    };
+
     const findMessage = (id: string | null) =>
         id ? messages.find((m) => m.id === id) : undefined;
 
@@ -286,7 +337,7 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                                     animatingIds.has(message.id) ? styles.bubbleEnter : ""
                                 }`}
                             >
-                                <div className={styles.bubble}>
+                                <div className={styles.bubble} onContextMenu={(e) => handleContextMenu(e, message)}>
                                     {chat.type === "group" &&
                                         !message.isOwn && (
                                             <span className={styles.sender}>
@@ -323,48 +374,25 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                                         />
                                     )}
                                     {message.type === "gif" && message.media && (
-                                        <div className={styles.gifWrapper}>
-                                            {isVideoMime(message.media.mimeType) ? (
-                                                <video
-                                                    className={styles.mediaImage}
-                                                    src={getMediaUrl(message.media.id)}
-                                                    autoPlay
-                                                    loop
-                                                    muted
-                                                    playsInline
-                                                />
-                                            ) : (
-                                                <img
-                                                    className={styles.mediaImage}
-                                                    src={message.media.hasThumbnail
-                                                        ? getMediaThumbnailUrl(message.media.id)
-                                                        : getMediaUrl(message.media.id)}
-                                                    alt={message.media.fileName}
-                                                    onClick={() => window.open(getMediaUrl(message.media!.id), "_blank")}
-                                                />
-                                            )}
-                                            <button
-                                                className={`${styles.saveGifBtn} ${
-                                                    savedGifIds.has(message.media.id) ? styles.saveGifBtnActive : ""
-                                                }`}
-                                                onClick={() => handleToggleSaveGif(message.media!.id)}
-                                                aria-label={savedGifIds.has(message.media.id) ? "Remove from saved GIFs" : "Save GIF"}
-                                                title={savedGifIds.has(message.media.id) ? "Remove from saved GIFs" : "Save GIF"}
-                                            >
-                                                <svg
-                                                    width="14"
-                                                    height="14"
-                                                    viewBox="0 0 24 24"
-                                                    fill={savedGifIds.has(message.media.id) ? "currentColor" : "none"}
-                                                    stroke="currentColor"
-                                                    strokeWidth="2"
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                >
-                                                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                                                </svg>
-                                            </button>
-                                        </div>
+                                        isVideoMime(message.media.mimeType) ? (
+                                            <video
+                                                className={styles.mediaImage}
+                                                src={getMediaUrl(message.media.id)}
+                                                autoPlay
+                                                loop
+                                                muted
+                                                playsInline
+                                            />
+                                        ) : (
+                                            <img
+                                                className={styles.mediaImage}
+                                                src={message.media.hasThumbnail
+                                                    ? getMediaThumbnailUrl(message.media.id)
+                                                    : getMediaUrl(message.media.id)}
+                                                alt={message.media.fileName}
+                                                onClick={() => window.open(getMediaUrl(message.media!.id), "_blank")}
+                                            />
+                                        )
                                     )}
                                     {message.type === "video" && message.media && (
                                         <video
@@ -548,6 +576,15 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                 <GifPicker
                     onClose={() => setGifPickerOpen(false)}
                     onSelect={handleSendGif}
+                />
+            )}
+
+            {contextMenu && (
+                <MessageContextMenu
+                    x={contextMenu.x}
+                    y={contextMenu.y}
+                    items={buildMenuItems(contextMenu.message)}
+                    onClose={() => setContextMenu(null)}
                 />
             )}
         </div>
