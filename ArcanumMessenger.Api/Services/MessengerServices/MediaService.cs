@@ -1,3 +1,4 @@
+using System.Net;
 using Amazon.S3;
 using Amazon.S3.Model;
 using ArcanumMessenger.Data;
@@ -122,7 +123,10 @@ public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config)
         return (asset, null);
     }
 
-    public async Task<MediaStream> OpenReadStreamAsync(MediaAsset asset, MediaByteRange? range, CancellationToken ct)
+    // The DB row can outlive the actual object in storage (e.g. it was
+    // removed directly in the bucket) - that's a missing file, not a server
+    // error, so it should surface as a clean 404 rather than a crash.
+    public async Task<MediaStream?> OpenReadStreamAsync(MediaAsset asset, MediaByteRange? range, CancellationToken ct)
     {
         var request = new GetObjectRequest { BucketName = Bucket, Key = asset.StorageKey };
 
@@ -134,8 +138,15 @@ public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config)
             servedRange = new MediaByteRange(r.Start, end);
         }
 
-        var response = await s3.GetObjectAsync(request, ct);
-        return new MediaStream(response.ResponseStream, asset.MimeType, asset.SizeBytes, servedRange);
+        try
+        {
+            var response = await s3.GetObjectAsync(request, ct);
+            return new MediaStream(response.ResponseStream, asset.MimeType, asset.SizeBytes, servedRange);
+        }
+        catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
     }
 
     public async Task<MediaStream?> OpenThumbnailStreamAsync(MediaAsset asset, CancellationToken ct)
@@ -143,13 +154,20 @@ public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config)
         if (asset.ThumbnailStorageKey is null)
             return null;
 
-        var response = await s3.GetObjectAsync(new GetObjectRequest
+        try
         {
-            BucketName = Bucket,
-            Key = asset.ThumbnailStorageKey,
-        }, ct);
+            var response = await s3.GetObjectAsync(new GetObjectRequest
+            {
+                BucketName = Bucket,
+                Key = asset.ThumbnailStorageKey,
+            }, ct);
 
-        return new MediaStream(response.ResponseStream, "image/jpeg", response.ContentLength, null);
+            return new MediaStream(response.ResponseStream, "image/jpeg", response.ContentLength, null);
+        }
+        catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
     }
 
     public async Task EnsureBucketExistsAsync(CancellationToken ct)

@@ -43,6 +43,8 @@ public class MediaController(AppDbContext db, MediaService media, MediaAccessSer
 
         var range = ParseRange(Request.Headers.Range.ToString());
         var result = await media.OpenReadStreamAsync(asset, range, ct);
+        if (result is null)
+            return NotFound();
 
         Response.Headers.AcceptRanges = "bytes";
         if (result.ServedRange is { } served)
