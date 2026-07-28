@@ -126,6 +126,37 @@
     cursor: default;
 }
 
+.blockBtn {
+    width: 100%;
+    margin-bottom: 14px;
+    color: #f87171;
+    border-color: rgba(248, 113, 113, 0.3);
+    background: rgba(248, 113, 113, 0.08);
+}
+
+.blockBtn:hover {
+    background: rgba(248, 113, 113, 0.15);
+    border-color: rgba(248, 113, 113, 0.5);
+}
+
+.blockBtnActive {
+    color: rgba(226, 232, 240, 0.95);
+    border-color: rgba(124, 58, 237, 0.25);
+    background: rgba(124, 58, 237, 0.08);
+}
+
+.blockBtnActive:hover {
+    background: rgba(124, 58, 237, 0.15);
+    border-color: rgba(167, 139, 250, 0.4);
+}
+
+.blockNote {
+    margin: -6px 0 14px;
+    font-size: 12.5px;
+    color: #f87171;
+    text-align: center;
+}
+
 .infoSection {
     border-top: 1px solid rgba(124, 58, 237, 0.12);
     padding-top: 14px;

@@ -25,3 +25,27 @@ export async function removeContact(contactId: string): Promise<boolean> {
     const data = await res.json();
     return data.success === true;
 }
+
+export async function getBlockedUsers(): Promise<UserSearchResult[]> {
+    const res = await apiFetch("/api/contacts/blocked", { credentials: "include" });
+    const data = await res.json();
+    return data.success ? (data.blocked ?? []) : [];
+}
+
+export async function blockUser(userId: string): Promise<boolean> {
+    const res = await apiFetch(`/api/contacts/${userId}/block`, {
+        method: "POST",
+        credentials: "include",
+    });
+    const data = await res.json();
+    return data.success === true;
+}
+
+export async function unblockUser(userId: string): Promise<boolean> {
+    const res = await apiFetch(`/api/contacts/${userId}/unblock`, {
+        method: "POST",
+        credentials: "include",
+    });
+    const data = await res.json();
+    return data.success === true;
+}

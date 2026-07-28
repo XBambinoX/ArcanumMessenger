@@ -751,6 +751,83 @@
     line-height: 1.2;
 }
 
+.blockedEntryRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 12px;
+    padding: 10px 12px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: rgba(226, 232, 240, 0.95);
+    font-family: inherit;
+    font-size: 14px;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.blockedEntryRow:hover {
+    background: rgba(124, 58, 237, 0.07);
+}
+
+.blockedList {
+    display: flex;
+    flex-direction: column;
+    padding: 4px 0;
+}
+
+.blockedRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 4px;
+}
+
+.blockedAvatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+}
+
+.blockedName {
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.unblockBtn {
+    flex-shrink: 0;
+    padding: 7px 12px;
+    border-radius: 9px;
+    border: 1px solid rgba(124, 58, 237, 0.25);
+    background: rgba(124, 58, 237, 0.08);
+    color: rgba(226, 232, 240, 0.95);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.unblockBtn:hover {
+    background: rgba(124, 58, 237, 0.15);
+    border-color: rgba(167, 139, 250, 0.4);
+}
+
 .profileBio {
     max-width: 100%;
     margin-bottom: 8px;

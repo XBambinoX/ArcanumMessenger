@@ -258,6 +258,14 @@
     cursor: not-allowed;
 }
 
+.blockedNote {
+    flex: 1;
+    margin: 0;
+    text-align: center;
+    font-size: 13.5px;
+    color: rgba(148, 163, 184, 0.6);
+}
+
 .subtitleOnline {
     color: #4fb85c;
 }

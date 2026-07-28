@@ -10,6 +10,8 @@ function toUser(data: {
     email: string | null;
     phone: string | null;
     isContact: boolean;
+    isBlocked: boolean;
+    isBlockedByOther: boolean;
 }): User | null {
     if (!data.success || data.name === null || data.id === null) return null;
     return {
@@ -20,6 +22,8 @@ function toUser(data: {
         email: data.email,
         phone: data.phone,
         isContact: data.isContact,
+        isBlocked: data.isBlocked,
+        isBlockedByOther: data.isBlockedByOther,
     };
 }
 

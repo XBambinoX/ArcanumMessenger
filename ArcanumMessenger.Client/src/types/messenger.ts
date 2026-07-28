@@ -19,6 +19,7 @@ export interface ChatSummary {
     isMuted: boolean;
     isArchived: boolean;
     otherUserId: string | null; // the other member's real id, direct chats only
+    isBlocked: boolean; // blocked either way with the other member, direct chats only
 }
 
 export interface ChatMessage {
@@ -41,6 +42,8 @@ export interface User {
     email: string | null;
     phone: string | null;
     isContact: boolean;
+    isBlocked: boolean; // have I blocked them
+    isBlockedByOther: boolean; // have they blocked me
 }
 
 export interface UserSearchResult {

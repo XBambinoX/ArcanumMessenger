@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { ChatSummary, User } from "../types/messenger";
 import { createDirectChat } from "../api/chats";
-import { addContact, removeContact } from "../api/contacts";
+import { addContact, removeContact, blockUser, unblockUser } from "../api/contacts";
 import { formatChatTime } from "../lib/time";
 import styles from "./UserInfoPanel.module.css";
 
@@ -21,8 +21,11 @@ export default function UserInfoPanel({
     presence
 }: UserInfoPanelProps) {
     const [isContact, setIsContact] = useState(user.isContact);
+    const [isBlocked, setIsBlocked] = useState(user.isBlocked);
+    const canInteract = !isBlocked && !user.isBlockedByOther;
 
     const handleWrite = async () => {
+        if (!canInteract) return;
         const chat = await createDirectChat(userId);
         if (chat) {
             onStartChat(chat);
@@ -31,10 +34,18 @@ export default function UserInfoPanel({
     };
 
     const handleToggleContact = async () => {
+        if (!canInteract) return;
         const ok = isContact
             ? await removeContact(userId)
             : await addContact(userId);
         if (ok) setIsContact(!isContact);
+    };
+
+    const handleToggleBlock = async () => {
+        const ok = isBlocked
+            ? await unblockUser(userId)
+            : await blockUser(userId);
+        if (ok) setIsBlocked(!isBlocked);
     };
 
     return (
@@ -80,7 +91,7 @@ export default function UserInfoPanel({
                 </div>
 
                 <div className={styles.actionRow}>
-                    <button className={styles.actionBtn} onClick={handleWrite}>
+                    <button className={styles.actionBtn} onClick={handleWrite} disabled={!canInteract}>
                         <svg
                             width="16"
                             height="16"
@@ -99,6 +110,7 @@ export default function UserInfoPanel({
                     <button
                         className={styles.actionBtn}
                         onClick={handleToggleContact}
+                        disabled={!canInteract}
                     >
                         <svg
                             width="16"
@@ -121,6 +133,34 @@ export default function UserInfoPanel({
                         {isContact ? "Remove from contacts" : "Add to contacts"}
                     </button>
                 </div>
+
+                <button
+                    className={`${styles.actionBtn} ${styles.blockBtn} ${isBlocked ? styles.blockBtnActive : ""}`}
+                    onClick={handleToggleBlock}
+                >
+                    <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    >
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M6.5 6.5l11 11" />
+                    </svg>
+                    {isBlocked ? "Unblock" : "Block"}
+                </button>
+
+                {(isBlocked || user.isBlockedByOther) && (
+                    <p className={styles.blockNote}>
+                        {isBlocked
+                            ? "You've blocked this user."
+                            : "This user has blocked you."}
+                    </p>
+                )}
 
                 <section className={styles.infoSection}>
                     {user.bio && (

@@ -1,15 +1,15 @@
 import { useLayoutEffect, useRef, useState, useEffect, type ReactElement } from "react";
-import type { User } from "../types/messenger";
+import type { User, UserSearchResult } from "../types/messenger";
 import styles from "./ProfilePanel.module.css";
-import { getUserSettings, 
-    updateAccountFields, 
-    getKdfSalt, 
-    updateNotificationSettings, 
+import { getUserSettings,
+    updateAccountFields,
+    getKdfSalt,
+    updateNotificationSettings,
     updatePrivacySettings,
     updateChatSettings,
     type UpdatePrivacySettingsRequest,
     type UpdateChatSettingsRequest } from "../api/userSettings";
-    
+import { getBlockedUsers, unblockUser } from "../api/contacts";
 import DeleteAccountModal from "./DeleteAccountModal";
 
 interface ProfilePanelProps {
@@ -20,7 +20,7 @@ interface ProfilePanelProps {
     onNotificationSettingsChange?: (sound: string, notificationsEnabled: boolean, groupNotifications: boolean) => void;
 }
 
-type Section = "main" | "account" | "notifications" | "privacy" | "chats";
+type Section = "main" | "account" | "notifications" | "privacy" | "chats" | "blocked";
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 type PrivacyField = "showLastSeen" | "showOnlineStatus" | "readReceipts" | "showPhoneNumber" | "whoCanAddMe" | "totpEnabled";
 type ChatField = "theme" | "wallpaper" | "linkPreviews" | "autoDownloadMedia";
@@ -211,6 +211,7 @@ const sectionTitles: Record<Section, string> = {
     notifications: "Notifications and Sounds" ,
     privacy: "Privacy and Security",
     chats: "Chat Settings",
+    blocked: "Blocked Users",
 };
 
 const MAX_PHONE_DIGITS = 15;
@@ -234,6 +235,8 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
 
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [kdfSalt, setKdfSalt] = useState<string | null>(null);
+
+    const [blockedUsers, setBlockedUsers] = useState<UserSearchResult[]>([]);
 
     const saveTimer = useRef<number | null>(null);
     const pendingFields = useRef<Partial<{ username: string; bio: string; phone: string }>>({});
@@ -462,6 +465,15 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
             cancelled = true;
         };
     }, []);
+
+    useEffect(() => {
+        getBlockedUsers().then(setBlockedUsers);
+    }, []);
+
+    const handleUnblock = async (id: string) => {
+        const ok = await unblockUser(id);
+        if (ok) setBlockedUsers((prev) => prev.filter((u) => u.id !== id));
+    };
 
     useEffect(() => {
         if (settingsLoaded) {
@@ -757,10 +769,36 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                         </div>
 
                         <span className={styles.subGroupTitle}>Blocked Users</span>
-                        <div className={styles.row}>
+                        <button className={styles.blockedEntryRow} onClick={() => navigateTo("blocked")}>
                             <span>Blocked users</span>
-                            <span className={styles.menuValue}>0</span>
-                        </div>
+                            <span className={styles.menuValue}>{blockedUsers.length}</span>
+                        </button>
+                    </div>
+                );
+
+            case "blocked":
+                return (
+                    <div className={styles.subPage}>
+                        {blockedUsers.length === 0 ? (
+                            <p className={styles.fieldHint}>No blocked users.</p>
+                        ) : (
+                            <ul className={styles.blockedList}>
+                                {blockedUsers.map((u) => (
+                                    <li key={u.id} className={styles.blockedRow}>
+                                        <div className={styles.blockedAvatar}>
+                                            {u.name.charAt(0).toUpperCase()}
+                                        </div>
+                                        <span className={styles.blockedName}>{u.name}</span>
+                                        <button
+                                            className={styles.unblockBtn}
+                                            onClick={() => handleUnblock(u.id)}
+                                        >
+                                            Unblock
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
                     </div>
                 );
 
