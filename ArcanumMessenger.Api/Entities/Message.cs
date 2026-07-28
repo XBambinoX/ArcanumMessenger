@@ -8,6 +8,7 @@ public class Message
     public Guid? ReplyToId { get; set; }
     public string Type { get; set; } = "text";
     public string? Content { get; set; }
+    public Guid? MediaId { get; set; }
     public bool IsEdited { get; set; }
     public bool IsDeleted { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -16,5 +17,6 @@ public class Message
     public Chat Chat { get; set; } = null!;
     public User Sender { get; set; } = null!;
     public Message? ReplyTo { get; set; }
+    public MediaAsset? Media { get; set; }
     public ICollection<MessageRead> Reads { get; set; } = [];
 }
