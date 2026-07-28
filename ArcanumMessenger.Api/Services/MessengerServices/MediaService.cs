@@ -45,13 +45,14 @@ public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config)
 
         if (kind is "image" or "gif")
         {
-            // ImageSharp needs a seekable stream to decode, and the bytes get
-            // read twice (decode + re-upload), so buffer once up front.
-            var buffer = new MemoryStream();
+            // The bytes get read twice (decode + re-upload). Decoding from a
+            // byte[] rather than a Stream avoids SkiaSharp taking ownership
+            // of (and disposing) whatever stream it's handed.
+            using var buffer = new MemoryStream();
             await content.CopyToAsync(buffer, ct);
-            buffer.Position = 0;
+            var bytes = buffer.ToArray();
 
-            using (var original = SKBitmap.Decode(buffer))
+            using (var original = SKBitmap.Decode(bytes))
             {
                 if (original is not null)
                 {
@@ -63,8 +64,7 @@ public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config)
                     var thumbHeight = Math.Max(1, (int)Math.Round(original.Height * scale));
 
                     using var resized = original.Resize(new SKImageInfo(thumbWidth, thumbHeight), SKSamplingOptions.Default);
-                    using var thumbnailBitmap = resized ?? original;
-                    using var image = SKImage.FromBitmap(thumbnailBitmap);
+                    using var image = SKImage.FromBitmap(resized is not null ? resized : original);
                     using var encoded = image.Encode(SKEncodedImageFormat.Jpeg, 80);
 
                     using var thumbStream = new MemoryStream();
@@ -84,12 +84,12 @@ public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config)
                 // one - still store the file, just without a thumbnail/dimensions.
             }
 
-            buffer.Position = 0;
+            using var uploadStream = new MemoryStream(bytes);
             await s3.PutObjectAsync(new PutObjectRequest
             {
                 BucketName = Bucket,
                 Key = storageKey,
-                InputStream = buffer,
+                InputStream = uploadStream,
                 ContentType = mimeType,
             }, ct);
         }
