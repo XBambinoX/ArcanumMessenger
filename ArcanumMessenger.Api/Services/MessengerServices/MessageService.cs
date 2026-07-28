@@ -64,7 +64,7 @@ public class MessageService(
     }
 
     public async Task<(ChatMessageDto? Message, string? Reason)> SendMessageAsync(
-        ChatMember membership, string? content, Guid? replyToId, Guid? mediaId, CancellationToken ct)
+        ChatMember membership, string? content, Guid? replyToId, Guid? mediaId, bool asGif, CancellationToken ct)
     {
         var trimmed = content?.Trim() ?? "";
         if (trimmed.Length > MaxContentLength)
@@ -81,6 +81,19 @@ public class MessageService(
             media = await mediaAccess.GetAccessibleAsync(mid, membership.UserId, ct);
             if (media is null)
                 return (null, "invalid_media");
+
+            // "Send as GIF" is Telegram's own trick: the file stays a real
+            // video (still efficient, still has real dimensions/duration),
+            // it just gets classified and displayed as a gif from here on -
+            // autoplay/loop instead of playback controls, eligible to be
+            // saved to the gif shelf. Once reclassified this way it stays
+            // that way for every future message that reuses this media too.
+            if (asGif && media.Kind == "video")
+            {
+                await db.MediaAssets.Where(m => m.Id == media.Id)
+                    .ExecuteUpdateAsync(s => s.SetProperty(m => m.Kind, "gif"), ct);
+                media.Kind = "gif";
+            }
         }
 
         if (trimmed.Length == 0 && media is null)

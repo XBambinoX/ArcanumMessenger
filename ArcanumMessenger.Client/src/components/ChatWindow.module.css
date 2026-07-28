@@ -369,6 +369,17 @@
     white-space: nowrap;
 }
 
+.sendAsGifLabel {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+    font-size: 12px;
+    color: rgba(226, 232, 240, 0.85);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
 .pendingUploading {
     font-size: 13px;
     color: rgba(148, 163, 184, 0.7);

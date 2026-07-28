@@ -10,6 +10,14 @@ import ChatInfoPanel from "./ChatInfoPanel";
 import GifPicker from "./GifPicker";
 import styles from "./ChatWindow.module.css";
 
+// "Send as GIF" keeps the file as a real video (still efficient, still has
+// real dimensions) - it's just classified as a gif message. Rendering has
+// to pick the right tag either way: a real image/gif file plays natively
+// in <img>, but video bytes need an actual <video> element.
+function isVideoMime(mimeType: string): boolean {
+    return mimeType.startsWith("video/");
+}
+
 function formatFileSize(bytes: number): string {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -46,6 +54,7 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
     const [userInfo, setUserInfo] = useState<{ userId: string; user: User } | null>(null);
     const [chatInfoOpen, setChatInfoOpen] = useState(false);
     const [pendingMedia, setPendingMedia] = useState<MediaAsset | null>(null);
+    const [sendAsGif, setSendAsGif] = useState(false);
     const [uploadingFile, setUploadingFile] = useState(false);
     const [gifPickerOpen, setGifPickerOpen] = useState(false);
     const [savedGifIds, setSavedGifIds] = useState<Set<string>>(new Set());
@@ -147,8 +156,10 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
 
         setDraft("");
         const media = pendingMedia;
+        const asGif = sendAsGif;
         setPendingMedia(null);
-        const sent = await sendMessage(chat.id, content, media?.id);
+        setSendAsGif(false);
+        const sent = await sendMessage(chat.id, content, media?.id, asGif);
         if (sent) {
             setMessages((prev) => [...prev, sent]);
             markAnimated(sent.id);
@@ -166,6 +177,7 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
         const media = await uploadMedia(file);
         setUploadingFile(false);
         if (media) setPendingMedia(media);
+        setSendAsGif(false);
     };
 
     const handleSendGif = async (gif: MediaAsset) => {
@@ -312,14 +324,25 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                                     )}
                                     {message.type === "gif" && message.media && (
                                         <div className={styles.gifWrapper}>
-                                            <img
-                                                className={styles.mediaImage}
-                                                src={message.media.hasThumbnail
-                                                    ? getMediaThumbnailUrl(message.media.id)
-                                                    : getMediaUrl(message.media.id)}
-                                                alt={message.media.fileName}
-                                                onClick={() => window.open(getMediaUrl(message.media!.id), "_blank")}
-                                            />
+                                            {isVideoMime(message.media.mimeType) ? (
+                                                <video
+                                                    className={styles.mediaImage}
+                                                    src={getMediaUrl(message.media.id)}
+                                                    autoPlay
+                                                    loop
+                                                    muted
+                                                    playsInline
+                                                />
+                                            ) : (
+                                                <img
+                                                    className={styles.mediaImage}
+                                                    src={message.media.hasThumbnail
+                                                        ? getMediaThumbnailUrl(message.media.id)
+                                                        : getMediaUrl(message.media.id)}
+                                                    alt={message.media.fileName}
+                                                    onClick={() => window.open(getMediaUrl(message.media!.id), "_blank")}
+                                                />
+                                            )}
                                             <button
                                                 className={`${styles.saveGifBtn} ${
                                                     savedGifIds.has(message.media.id) ? styles.saveGifBtnActive : ""
@@ -417,9 +440,22 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                                             </span>
                                         )}
                                         <span className={styles.pendingName}>{pendingMedia.fileName}</span>
+                                        {pendingMedia.kind === "video" && (
+                                            <label className={styles.sendAsGifLabel}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={sendAsGif}
+                                                    onChange={(e) => setSendAsGif(e.target.checked)}
+                                                />
+                                                Send as GIF
+                                            </label>
+                                        )}
                                         <button
                                             className={styles.removeAttachmentBtn}
-                                            onClick={() => setPendingMedia(null)}
+                                            onClick={() => {
+                                                setPendingMedia(null);
+                                                setSendAsGif(false);
+                                            }}
                                             aria-label="Remove attachment"
                                         >
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">

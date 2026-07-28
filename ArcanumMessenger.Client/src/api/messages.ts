@@ -22,11 +22,12 @@ export async function sendMessage(
     chatId: string,
     content: string,
     mediaId?: string,
+    asGif?: boolean,
 ): Promise<ChatMessage | null> {
     const res = await apiFetch(`/api/chats/${chatId}/messages`, {
         method: "POST",
         credentials: "include",
-        body: JSON.stringify({ content, replyToId: null, mediaId: mediaId ?? null }),
+        body: JSON.stringify({ content, replyToId: null, mediaId: mediaId ?? null, asGif: asGif ?? false }),
     });
     const data = await res.json();
     return data.success ? data.message : null;

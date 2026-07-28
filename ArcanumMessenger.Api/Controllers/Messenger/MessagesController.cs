@@ -36,7 +36,7 @@ public class MessagesController(MessageService messageService, ChatAccessService
         if (membership is null)
             return NotFound(new SendMessageResponse(false, null, "not_found"));
 
-        var (message, reason) = await messageService.SendMessageAsync(membership, request.Content, request.ReplyToId, request.MediaId, ct);
+        var (message, reason) = await messageService.SendMessageAsync(membership, request.Content, request.ReplyToId, request.MediaId, request.AsGif, ct);
         if (message is null)
             return BadRequest(new SendMessageResponse(false, null, reason));
 

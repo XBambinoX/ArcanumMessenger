@@ -3,6 +3,13 @@ import type { MediaAsset } from "../types/messenger";
 import { getSavedGifs, getMediaThumbnailUrl, getMediaUrl } from "../api/media";
 import styles from "./GifPicker.module.css";
 
+// A gif "sent as video" has no thumbnail (thumbnails are only generated for
+// real image/gif files at upload time, before the sender's later choice to
+// treat it as a gif) - play the actual file muted/looped as its own preview.
+function isVideoMime(mimeType: string): boolean {
+    return mimeType.startsWith("video/");
+}
+
 interface GifPickerProps {
     onClose: () => void;
     onSelect: (gif: MediaAsset) => void;
@@ -41,10 +48,14 @@ export default function GifPicker({ onClose, onSelect }: GifPickerProps) {
                     <div className={styles.grid}>
                         {gifs.map((gif) => (
                             <button key={gif.id} className={styles.gifTile} onClick={() => onSelect(gif)}>
-                                <img
-                                    src={gif.hasThumbnail ? getMediaThumbnailUrl(gif.id) : getMediaUrl(gif.id)}
-                                    alt={gif.fileName}
-                                />
+                                {isVideoMime(gif.mimeType) ? (
+                                    <video src={getMediaUrl(gif.id)} autoPlay loop muted playsInline />
+                                ) : (
+                                    <img
+                                        src={gif.hasThumbnail ? getMediaThumbnailUrl(gif.id) : getMediaUrl(gif.id)}
+                                        alt={gif.fileName}
+                                    />
+                                )}
                             </button>
                         ))}
                     </div>

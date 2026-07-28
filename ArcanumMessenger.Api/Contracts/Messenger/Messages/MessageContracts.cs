@@ -17,6 +17,6 @@ public record ChatMessageDto(
 
 public record MessageHistoryResponse(bool Success, IReadOnlyList<ChatMessageDto>? Messages, bool HasMore = false, string? Reason = null);
 
-public record SendMessageRequest(string? Content, Guid? ReplyToId, Guid? MediaId);
+public record SendMessageRequest(string? Content, Guid? ReplyToId, Guid? MediaId, bool AsGif = false);
 
 public record SendMessageResponse(bool Success, ChatMessageDto? Message, string? Reason = null);
