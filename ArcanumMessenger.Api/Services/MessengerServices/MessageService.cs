@@ -70,14 +70,17 @@ public class MessageService(
         if (trimmed.Length > MaxContentLength)
             return (null, "too_long");
 
+        // Anyone who can already see this media (uploaded it themselves, or
+        // received it in a chat they're in) can attach it to a new message -
+        // that's how forwarding/resending a saved gif works. The same media
+        // can end up referenced by more than one message; nothing about
+        // storage or access control assumes it's used only once.
         MediaAsset? media = null;
         if (mediaId is { } mid)
         {
             media = await mediaAccess.GetAccessibleAsync(mid, membership.UserId, ct);
-            if (media is null || media.UploaderId != membership.UserId)
+            if (media is null)
                 return (null, "invalid_media");
-            if (await db.Messages.AnyAsync(m => m.MediaId == mid, ct))
-                return (null, "media_already_sent");
         }
 
         if (trimmed.Length == 0 && media is null)
