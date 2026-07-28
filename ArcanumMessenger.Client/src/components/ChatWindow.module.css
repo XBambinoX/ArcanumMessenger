@@ -197,6 +197,36 @@
     object-fit: cover;
 }
 
+.gifWrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.saveGifBtn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: none;
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.saveGifBtn:hover {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+.saveGifBtnActive {
+    color: #facc15;
+}
+
 .mediaVideo {
     display: block;
     max-width: 280px;

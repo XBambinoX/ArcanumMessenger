@@ -1,0 +1,55 @@
+import { useEffect, useState } from "react";
+import type { MediaAsset } from "../types/messenger";
+import { getSavedGifs, getMediaThumbnailUrl, getMediaUrl } from "../api/media";
+import styles from "./GifPicker.module.css";
+
+interface GifPickerProps {
+    onClose: () => void;
+    onSelect: (gif: MediaAsset) => void;
+}
+
+export default function GifPicker({ onClose, onSelect }: GifPickerProps) {
+    const [gifs, setGifs] = useState<MediaAsset[]>([]);
+    const [loaded, setLoaded] = useState(false);
+
+    useEffect(() => {
+        getSavedGifs().then((result) => {
+            setGifs(result);
+            setLoaded(true);
+        });
+    }, []);
+
+    return (
+        <div className={styles.overlay} onClick={onClose}>
+            <aside className={styles.panel} onClick={(e) => e.stopPropagation()}>
+                <header className={styles.header}>
+                    <h2 className={styles.title}>Saved GIFs</h2>
+                    <button className={styles.closeBtn} onClick={onClose} aria-label="Close">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                            <path d="M18 6L6 18M6 6l12 12" />
+                        </svg>
+                    </button>
+                </header>
+
+                {loaded && gifs.length === 0 && (
+                    <p className={styles.note}>
+                        No saved GIFs yet - send or receive one, then save it from the chat to see it here.
+                    </p>
+                )}
+
+                {gifs.length > 0 && (
+                    <div className={styles.grid}>
+                        {gifs.map((gif) => (
+                            <button key={gif.id} className={styles.gifTile} onClick={() => onSelect(gif)}>
+                                <img
+                                    src={gif.hasThumbnail ? getMediaThumbnailUrl(gif.id) : getMediaUrl(gif.id)}
+                                    alt={gif.fileName}
+                                />
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </aside>
+        </div>
+    );
+}
