@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import styles from "./LoginPage.module.css";
 import { deriveKeys } from "../crypto/kdf";
 import { useAuth } from "../context/AuthContext";

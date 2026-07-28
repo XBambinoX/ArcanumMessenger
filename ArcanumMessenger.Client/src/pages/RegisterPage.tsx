@@ -12,7 +12,7 @@ import {
 import { deriveKeys, generateKdfSalt } from "../crypto/kdf";
 import { generateRecoveryPhrase, hashPhrase } from "../crypto/phrases";
 
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import zxcvbn from "zxcvbn";
 import { downloadRecoveryPdf } from "../utils/recoveryPdf";
 

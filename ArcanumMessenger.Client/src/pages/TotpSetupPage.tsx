@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import QRCode from "qrcode";
 import styles from "./TotpSetupPage.module.css";
 import { startTotpSetup, confirmTotpSetup } from "../api/totp";

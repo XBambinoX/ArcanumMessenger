@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { startRecovery, verifyRecovery, resetPassword } from "../api/recovery";
 import { hashPhrase } from "../crypto/phrases";
 import { deriveKeys, generateKdfSalt } from "../crypto/kdf";

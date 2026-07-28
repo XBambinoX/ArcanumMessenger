@@ -6,7 +6,7 @@ import {
     type CSSProperties,
     type RefObject,
 } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import styles from "./WelcomePage.module.css";
 
 /* ── mouse glow ── */

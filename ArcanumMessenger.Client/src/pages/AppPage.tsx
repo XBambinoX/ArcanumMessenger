@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { HubConnection } from "@microsoft/signalr";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { logout } from "../api/session";
 import { getChats, markChatRead, setChatArchived } from "../api/chats";
 import { getMe, getUserPresence, getPresenceBulk } from "../api/users";
