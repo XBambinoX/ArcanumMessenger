@@ -1,3 +1,5 @@
+using Amazon.Runtime;
+using Amazon.S3;
 using ArcanumMessenger.Data;
 using Microsoft.EntityFrameworkCore;
 using ArcanumMessenger.Services.AuthServices;
@@ -18,7 +20,7 @@ namespace ArcanumMessenger
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
@@ -34,6 +36,14 @@ namespace ArcanumMessenger
 
             builder.Services.AddSingleton<IConnectionMultiplexer>(
                 _ => ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis")!));
+
+            builder.Services.AddSingleton<IAmazonS3>(_ => new AmazonS3Client(
+                new BasicAWSCredentials(builder.Configuration["Media:AccessKey"], builder.Configuration["Media:SecretKey"]),
+                new AmazonS3Config
+                {
+                    ServiceURL = builder.Configuration["Media:Endpoint"],
+                    ForcePathStyle = true,
+                }));
 
             builder.Services.AddSingleton<PresenceService>();
 
@@ -93,6 +103,8 @@ namespace ArcanumMessenger
             builder.Services.AddScoped<UserDisplayNameService>();
             builder.Services.AddScoped<MessageService>();
             builder.Services.AddScoped<BlockService>();
+            builder.Services.AddScoped<MediaService>();
+            builder.Services.AddScoped<MediaAccessService>();
             builder.Services.AddSingleton<EncryptionService>();
             builder.Services.AddSingleton<EmailHasher>();
             builder.Services.AddSingleton<PublicIdHasher>();
@@ -102,6 +114,12 @@ namespace ArcanumMessenger
             builder.Services.AddSingleton<RecoverySessionService>();
 
             var app = builder.Build();
+
+            using (var startupScope = app.Services.CreateScope())
+            {
+                var media = startupScope.ServiceProvider.GetRequiredService<MediaService>();
+                await media.EnsureBucketExistsAsync(CancellationToken.None);
+            }
 
             app.UseMiddleware<ExceptionHandlingMiddleware>();
 
@@ -120,7 +138,7 @@ namespace ArcanumMessenger
             app.MapHealthChecks("/health");
             app.MapHub<ChatHub>("/hubs/chat");
 
-            app.Run();
+            await app.RunAsync();
         }
     }
 }
