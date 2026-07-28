@@ -147,4 +147,30 @@ public class MessageService(
 
         return (dto, null);
     }
+
+    // Deletes for everyone - there's no per-viewer "delete for me" yet, just
+    // the one shared IsDeleted flag the rest of the app already filters on.
+    public async Task<(bool Success, string? Reason)> DeleteMessageAsync(
+        Guid chatId, Guid messageId, Guid callerId, CancellationToken ct)
+    {
+        var message = await db.Messages
+            .FirstOrDefaultAsync(m => m.Id == messageId && m.ChatId == chatId && !m.IsDeleted, ct);
+        if (message is null)
+            return (false, "not_found");
+        if (message.SenderId != callerId)
+            return (false, "forbidden");
+
+        message.IsDeleted = true;
+        await db.SaveChangesAsync(ct);
+
+        var otherMemberIds = await db.ChatMembers.AsNoTracking()
+            .Where(cm => cm.ChatId == chatId && cm.UserId != callerId)
+            .Select(cm => cm.UserId)
+            .ToListAsync(ct);
+
+        foreach (var id in otherMemberIds)
+            await hub.Clients.User(id.ToString()).MessageDeleted(chatId, messageId);
+
+        return (true, null);
+    }
 }

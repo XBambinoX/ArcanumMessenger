@@ -42,4 +42,18 @@ public class MessagesController(MessageService messageService, ChatAccessService
 
         return Ok(new SendMessageResponse(true, message));
     }
+
+    [HttpDelete("{messageId:guid}")]
+    public async Task<ActionResult<DeleteMessageResponse>> Delete(Guid chatId, Guid messageId, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var membership = await chatAccess.GetMembershipAsync(chatId, userId, ct);
+        if (membership is null)
+            return NotFound(new DeleteMessageResponse(false, "not_found"));
+
+        var (success, reason) = await messageService.DeleteMessageAsync(chatId, messageId, userId, ct);
+        return success ? Ok(new DeleteMessageResponse(true)) : BadRequest(new DeleteMessageResponse(false, reason));
+    }
 }

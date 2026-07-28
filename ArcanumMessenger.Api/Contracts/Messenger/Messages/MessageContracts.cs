@@ -20,3 +20,5 @@ public record MessageHistoryResponse(bool Success, IReadOnlyList<ChatMessageDto>
 public record SendMessageRequest(string? Content, Guid? ReplyToId, Guid? MediaId, bool AsGif = false);
 
 public record SendMessageResponse(bool Success, ChatMessageDto? Message, string? Reason = null);
+
+public record DeleteMessageResponse(bool Success, string? Reason = null);
