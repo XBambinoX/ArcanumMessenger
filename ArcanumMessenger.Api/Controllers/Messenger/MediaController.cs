@@ -12,10 +12,6 @@ public class MediaController(AppDbContext db, MediaService media, MediaAccessSer
 {
     private const long MaxUploadBytes = 210_000_000; // a bit above MediaService's own 200 MB ceiling
 
-    private static MediaAssetDto ToDto(MediaAsset asset) => new(
-        asset.Id, asset.Kind, asset.MimeType, asset.FileName, asset.SizeBytes,
-        asset.Width, asset.Height, asset.DurationSeconds, asset.ThumbnailStorageKey is not null);
-
     [HttpPost]
     [RequestSizeLimit(MaxUploadBytes)]
     public async Task<ActionResult<UploadMediaResponse>> Upload(IFormFile? file, CancellationToken ct)
@@ -32,7 +28,7 @@ public class MediaController(AppDbContext db, MediaService media, MediaAccessSer
 
         return asset is null
             ? BadRequest(new UploadMediaResponse(false, null, reason))
-            : Ok(new UploadMediaResponse(true, ToDto(asset)));
+            : Ok(new UploadMediaResponse(true, MediaAssetDto.FromEntity(asset)));
     }
 
     [HttpGet("{id:guid}")]
@@ -84,7 +80,7 @@ public class MediaController(AppDbContext db, MediaService media, MediaAccessSer
             .Select(s => s.Media)
             .ToListAsync(ct);
 
-        return Ok(new SavedGifsResponse(true, gifs.Select(ToDto).ToList()));
+        return Ok(new SavedGifsResponse(true, gifs.Select(MediaAssetDto.FromEntity).ToList()));
     }
 
     [HttpPost("{id:guid}/save")]

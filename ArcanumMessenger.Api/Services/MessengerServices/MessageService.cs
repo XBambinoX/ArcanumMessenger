@@ -1,3 +1,4 @@
+using ArcanumMessenger.Contracts.Messenger.Media;
 using ArcanumMessenger.Contracts.Messenger.Messages;
 using ArcanumMessenger.Data;
 using ArcanumMessenger.Entities;
@@ -8,7 +9,8 @@ using Microsoft.EntityFrameworkCore;
 namespace ArcanumMessenger.Services.MessengerServices;
 
 public class MessageService(
-    AppDbContext db, UserDisplayNameService displayNames, IHubContext<ChatHub, IChatClient> hub, BlockService blocks)
+    AppDbContext db, UserDisplayNameService displayNames, IHubContext<ChatHub, IChatClient> hub,
+    BlockService blocks, MediaAccessService mediaAccess)
 {
     private const int DefaultTake = 30;
     private const int MaxTake = 100;
@@ -38,7 +40,7 @@ public class MessageService(
         var page = await query
             .OrderByDescending(m => m.CreatedAt).ThenByDescending(m => m.Id)
             .Take(take + 1)
-            .Select(m => new { m.Id, m.ChatId, m.SenderId, m.ReplyToId, m.Content, m.IsEdited, m.CreatedAt })
+            .Select(m => new { m.Id, m.ChatId, m.SenderId, m.ReplyToId, m.Content, m.Type, m.MediaId, m.IsEdited, m.CreatedAt })
             .ToListAsync(ct);
 
         var hasMore = page.Count > take;
@@ -46,22 +48,40 @@ public class MessageService(
 
         var names = await displayNames.GetDisplayNamesAsync(trimmed.Select(m => m.SenderId), ct);
 
+        var mediaIds = trimmed.Where(m => m.MediaId.HasValue).Select(m => m.MediaId!.Value).ToList();
+        var mediaById = await db.MediaAssets.AsNoTracking()
+            .Where(m => mediaIds.Contains(m.Id))
+            .ToDictionaryAsync(m => m.Id, ct);
+
         var messages = trimmed.Select(m => new ChatMessageDto(
             m.Id, m.ChatId, m.SenderId, names.GetValueOrDefault(m.SenderId, "Unknown user"),
-            m.ReplyToId, m.Content ?? "", m.IsEdited, m.CreatedAt, m.SenderId == callerId
+            m.ReplyToId, m.Content ?? "", m.Type,
+            m.MediaId is { } mid && mediaById.TryGetValue(mid, out var asset) ? MediaAssetDto.FromEntity(asset) : null,
+            m.IsEdited, m.CreatedAt, m.SenderId == callerId
         )).ToList();
 
         return (messages, hasMore, null);
     }
 
     public async Task<(ChatMessageDto? Message, string? Reason)> SendMessageAsync(
-        ChatMember membership, string content, Guid? replyToId, CancellationToken ct)
+        ChatMember membership, string? content, Guid? replyToId, Guid? mediaId, CancellationToken ct)
     {
         var trimmed = content?.Trim() ?? "";
-        if (trimmed.Length == 0)
-            return (null, "empty_content");
         if (trimmed.Length > MaxContentLength)
             return (null, "too_long");
+
+        MediaAsset? media = null;
+        if (mediaId is { } mid)
+        {
+            media = await mediaAccess.GetAccessibleAsync(mid, membership.UserId, ct);
+            if (media is null || media.UploaderId != membership.UserId)
+                return (null, "invalid_media");
+            if (await db.Messages.AnyAsync(m => m.MediaId == mid, ct))
+                return (null, "media_already_sent");
+        }
+
+        if (trimmed.Length == 0 && media is null)
+            return (null, "empty_content");
 
         if (membership.Chat.Type == "direct")
         {
@@ -81,7 +101,9 @@ public class MessageService(
         {
             ChatId = membership.ChatId,
             SenderId = membership.UserId,
-            Content = trimmed,
+            Type = media?.Kind ?? "text",
+            Content = trimmed.Length > 0 ? trimmed : null,
+            MediaId = media?.Id,
             ReplyToId = replyToId,
         };
         db.Messages.Add(message);
@@ -93,7 +115,9 @@ public class MessageService(
         var dto = new ChatMessageDto(
             message.Id, message.ChatId, message.SenderId,
             names.GetValueOrDefault(membership.UserId, "Unknown user"),
-            message.ReplyToId, message.Content, message.IsEdited, message.CreatedAt, true
+            message.ReplyToId, message.Content ?? "", message.Type,
+            media is not null ? MediaAssetDto.FromEntity(media) : null,
+            message.IsEdited, message.CreatedAt, true
         );
 
         var otherMemberIds = await db.ChatMembers.AsNoTracking()

@@ -1,3 +1,5 @@
+using ArcanumMessenger.Entities;
+
 namespace ArcanumMessenger.Contracts.Messenger.Media;
 
 public record MediaAssetDto(
@@ -9,7 +11,12 @@ public record MediaAssetDto(
     int? Width,
     int? Height,
     double? DurationSeconds,
-    bool HasThumbnail);
+    bool HasThumbnail)
+{
+    public static MediaAssetDto FromEntity(MediaAsset asset) => new(
+        asset.Id, asset.Kind, asset.MimeType, asset.FileName, asset.SizeBytes,
+        asset.Width, asset.Height, asset.DurationSeconds, asset.ThumbnailStorageKey is not null);
+}
 
 public record UploadMediaResponse(bool Success, MediaAssetDto? Media, string? Reason = null);
 
