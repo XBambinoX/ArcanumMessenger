@@ -1,12 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import type { HubConnection } from "@microsoft/signalr";
-import type { ChatMessage, ChatSummary, User } from "../types/messenger";
+import type { ChatMessage, ChatSummary, MediaAsset, User } from "../types/messenger";
 import { getMessageHistory, sendMessage } from "../api/messages";
 import { getUser } from "../api/users";
+import { uploadMedia, getMediaUrl, getMediaThumbnailUrl } from "../api/media";
 import { formatMessageTime, formatChatTime } from "../lib/time";
 import UserInfoPanel from "./UserInfoPanel";
 import ChatInfoPanel from "./ChatInfoPanel";
 import styles from "./ChatWindow.module.css";
+
+function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 interface ChatWindowProps {
     chat: ChatSummary;
@@ -37,6 +44,9 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
     const [draft, setDraft] = useState("");
     const [userInfo, setUserInfo] = useState<{ userId: string; user: User } | null>(null);
     const [chatInfoOpen, setChatInfoOpen] = useState(false);
+    const [pendingMedia, setPendingMedia] = useState<MediaAsset | null>(null);
+    const [uploadingFile, setUploadingFile] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
     const scrollAnchor = useRef<HTMLDivElement | null>(null);
     const messagesRef = useRef<HTMLDivElement | null>(null);
     const prependingRef = useRef(false);
@@ -126,14 +136,29 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
 
     const handleSend = async () => {
         const content = draft.trim();
-        if (!content) return;
+        if (!content && !pendingMedia) return;
 
         setDraft("");
-        const sent = await sendMessage(chat.id, content);
+        const media = pendingMedia;
+        setPendingMedia(null);
+        const sent = await sendMessage(chat.id, content, media?.id);
         if (sent) {
             setMessages((prev) => [...prev, sent]);
             markAnimated(sent.id);
         }
+    };
+
+    const handleAttachClick = () => fileInputRef.current?.click();
+
+    const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        e.target.value = "";
+        if (!file) return;
+
+        setUploadingFile(true);
+        const media = await uploadMedia(file);
+        setUploadingFile(false);
+        if (media) setPendingMedia(media);
     };
 
     const findMessage = (id: string | null) =>
@@ -241,9 +266,53 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                                             </span>
                                         </div>
                                     )}
-                                    <span className={styles.content}>
-                                        {message.content}
-                                    </span>
+                                    {message.type === "text" && (
+                                        <span className={styles.content}>
+                                            {message.content}
+                                        </span>
+                                    )}
+                                    {(message.type === "image" || message.type === "gif") && message.media && (
+                                        <img
+                                            className={styles.mediaImage}
+                                            src={message.media.hasThumbnail
+                                                ? getMediaThumbnailUrl(message.media.id)
+                                                : getMediaUrl(message.media.id)}
+                                            alt={message.media.fileName}
+                                            onClick={() => window.open(getMediaUrl(message.media!.id), "_blank")}
+                                        />
+                                    )}
+                                    {message.type === "video" && message.media && (
+                                        <video
+                                            className={styles.mediaVideo}
+                                            src={getMediaUrl(message.media.id)}
+                                            controls
+                                        />
+                                    )}
+                                    {message.type === "file" && message.media && (
+                                        <a
+                                            className={styles.fileCard}
+                                            href={getMediaUrl(message.media.id)}
+                                            download={message.media.fileName}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                        >
+                                            <span className={styles.fileIcon}>
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                                    <path d="M14 2v6h6" />
+                                                </svg>
+                                            </span>
+                                            <span className={styles.fileInfo}>
+                                                <span className={styles.fileName}>{message.media.fileName}</span>
+                                                <span className={styles.fileSize}>{formatFileSize(message.media.sizeBytes)}</span>
+                                            </span>
+                                        </a>
+                                    )}
+                                    {message.type !== "text" && message.content && (
+                                        <span className={`${styles.content} ${styles.mediaCaption}`}>
+                                            {message.content}
+                                        </span>
+                                    )}
                                     <span className={styles.meta}>
                                         {message.isEdited && (
                                             <span className={styles.edited}>
@@ -265,34 +334,86 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                     <p className={styles.blockedNote}>You can't send messages in this chat</p>
                 ) : (
                     <>
-                        <input
-                            className={styles.input}
-                            type="text"
-                            placeholder="Message"
-                            value={draft}
-                            onChange={(e) => setDraft(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                        />
-                        <button
-                            className={styles.sendBtn}
-                            onClick={handleSend}
-                            disabled={!draft.trim()}
-                            aria-label="Send"
-                        >
-                            <svg
-                                width="18"
-                                height="18"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
+                        {(pendingMedia || uploadingFile) && (
+                            <div className={styles.pendingAttachment}>
+                                {uploadingFile ? (
+                                    <span className={styles.pendingUploading}>Uploading…</span>
+                                ) : pendingMedia && (
+                                    <>
+                                        {pendingMedia.hasThumbnail ? (
+                                            <img
+                                                className={styles.pendingThumb}
+                                                src={getMediaThumbnailUrl(pendingMedia.id)}
+                                                alt=""
+                                            />
+                                        ) : (
+                                            <span className={styles.pendingIcon}>
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                                    <path d="M14 2v6h6" />
+                                                </svg>
+                                            </span>
+                                        )}
+                                        <span className={styles.pendingName}>{pendingMedia.fileName}</span>
+                                        <button
+                                            className={styles.removeAttachmentBtn}
+                                            onClick={() => setPendingMedia(null)}
+                                            aria-label="Remove attachment"
+                                        >
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                                                <path d="M18 6L6 18M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        )}
+                        <div className={styles.inputRow}>
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                className={styles.hiddenFileInput}
+                                onChange={handleFileSelected}
+                            />
+                            <button
+                                className={styles.attachBtn}
+                                onClick={handleAttachClick}
+                                aria-label="Attach file"
+                                title="Attach file"
                             >
-                                <rect x="2" y="4" width="20" height="16" rx="3" />
-                                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-                            </svg>
-                        </button>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.33 3.33 0 0 1 4.71 4.71l-9.2 9.19a1.67 1.67 0 0 1-2.36-2.36l8.49-8.48" />
+                                </svg>
+                            </button>
+                            <input
+                                className={styles.input}
+                                type="text"
+                                placeholder="Message"
+                                value={draft}
+                                onChange={(e) => setDraft(e.target.value)}
+                                onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                            />
+                            <button
+                                className={styles.sendBtn}
+                                onClick={handleSend}
+                                disabled={!draft.trim() && !pendingMedia}
+                                aria-label="Send"
+                            >
+                                <svg
+                                    width="18"
+                                    height="18"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                >
+                                    <rect x="2" y="4" width="20" height="16" rx="3" />
+                                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                                </svg>
+                            </button>
+                        </div>
                     </>
                 )}
             </footer>
