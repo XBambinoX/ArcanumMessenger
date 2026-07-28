@@ -22,6 +22,20 @@ export interface ChatSummary {
     isBlocked: boolean; // blocked either way with the other member, direct chats only
 }
 
+export type MessageType = "text" | "image" | "video" | "gif" | "file";
+
+export interface MediaAsset {
+    id: string;
+    kind: "image" | "video" | "gif" | "file";
+    mimeType: string;
+    fileName: string;
+    sizeBytes: number;
+    width: number | null;
+    height: number | null;
+    durationSeconds: number | null;
+    hasThumbnail: boolean;
+}
+
 export interface ChatMessage {
     id: string;
     chatId: string;
@@ -29,6 +43,8 @@ export interface ChatMessage {
     senderName: string;
     replyToId: string | null;
     content: string;
+    type: MessageType;
+    media: MediaAsset | null;
     isEdited: boolean;
     createdAt: string; // ISO timestamp
     isOwn: boolean;

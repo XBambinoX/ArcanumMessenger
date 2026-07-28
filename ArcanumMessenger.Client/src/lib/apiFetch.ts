@@ -49,8 +49,15 @@ export async function apiFetch(
     let res: Response;
 
     try {
+        // A FormData body needs the browser to set its own multipart
+        // Content-Type (with the boundary) - forcing application/json here
+        // would break it.
+        const headers = init?.body instanceof FormData
+            ? init?.headers
+            : { "Content-Type": "application/json", ...init?.headers };
+
         res = await fetch(path, {
-            headers: { "Content-Type": "application/json", ...init?.headers },
+            headers,
             credentials: "include",
             ...init,
         });

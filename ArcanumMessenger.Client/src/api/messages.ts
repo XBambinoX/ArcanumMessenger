@@ -21,11 +21,12 @@ export async function getMessageHistory(
 export async function sendMessage(
     chatId: string,
     content: string,
+    mediaId?: string,
 ): Promise<ChatMessage | null> {
     const res = await apiFetch(`/api/chats/${chatId}/messages`, {
         method: "POST",
         credentials: "include",
-        body: JSON.stringify({ content, replyToId: null }),
+        body: JSON.stringify({ content, replyToId: null, mediaId: mediaId ?? null }),
     });
     const data = await res.json();
     return data.success ? data.message : null;
