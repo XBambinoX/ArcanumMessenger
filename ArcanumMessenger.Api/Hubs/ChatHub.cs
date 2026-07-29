@@ -92,6 +92,39 @@ public class ChatHub(
         await base.OnDisconnectedAsync(exception);
     }
 
+    public async Task GoIdle()
+    {
+        var userId = GetUserId();
+        var justWentOffline = await presence.RemoveConnectionAsync(userId, Context.ConnectionId);
+        if (!justWentOffline)
+            return;
+
+        var now = DateTime.UtcNow;
+
+        using var scope = scopeFactory.CreateScope();
+        var scopedDb = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var user = await scopedDb.Users.FirstOrDefaultAsync(u => u.Id == userId);
+        if (user is not null)
+        {
+            user.LastSeen = now;
+            await scopedDb.SaveChangesAsync();
+        }
+
+        await BroadcastPresenceViaContextAsync(scopedDb, userId, isOnline: false, lastSeen: now);
+    }
+
+    // Called by the client the moment activity resumes on an idle connection.
+    public async Task GoActive()
+    {
+        var userId = GetUserId();
+        var justCameOnline = await presence.AddConnectionAsync(userId, Context.ConnectionId);
+        if (!justCameOnline)
+            return;
+
+        await BroadcastPresenceAsync(userId, isOnline: true, lastSeen: null);
+    }
+
     // Used from within a live hub method (OnConnectedAsync) — this.Clients
     // is safe here since the hub instance is still alive.
     private async Task BroadcastPresenceAsync(Guid userId, bool isOnline, DateTime? lastSeen)

@@ -30,6 +30,9 @@ const MIN_SIDEBAR_WIDTH = 260;
 const MAX_SIDEBAR_WIDTH = 480;
 const DEFAULT_SIDEBAR_WIDTH = 340;
 
+const IDLE_TIMEOUT_MS = 30_000;
+const ACTIVITY_EVENTS = ["mousemove", "mousedown", "keydown", "wheel", "touchstart", "scroll"] as const;
+
 function readStoredSidebarWidth(): number {
     const saved = Number(localStorage.getItem("sidebarWidth"));
     return saved >= MIN_SIDEBAR_WIDTH && saved <= MAX_SIDEBAR_WIDTH
@@ -126,6 +129,35 @@ export default function AppPage() {
             conn.stop();
         };
     }, []);
+
+    useEffect(() => {
+        if (!connection) return;
+
+        let idleTimer: number | null = null;
+        let isIdle = false;
+
+        const goIdle = () => {
+            isIdle = true;
+            connection.invoke("GoIdle").catch(() => {});
+        };
+
+        const resetIdleTimer = () => {
+            if (isIdle) {
+                isIdle = false;
+                connection.invoke("GoActive").catch(() => {});
+            }
+            if (idleTimer) window.clearTimeout(idleTimer);
+            idleTimer = window.setTimeout(goIdle, IDLE_TIMEOUT_MS);
+        };
+
+        resetIdleTimer();
+        ACTIVITY_EVENTS.forEach((event) => window.addEventListener(event, resetIdleTimer));
+
+        return () => {
+            if (idleTimer) window.clearTimeout(idleTimer);
+            ACTIVITY_EVENTS.forEach((event) => window.removeEventListener(event, resetIdleTimer));
+        };
+    }, [connection]);
 
     useEffect(() => {
         if (!connection) return;
