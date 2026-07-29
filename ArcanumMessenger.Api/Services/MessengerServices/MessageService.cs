@@ -147,6 +147,11 @@ public class MessageService(
             .Select(cm => cm.UserId)
             .ToListAsync(ct);
 
+        // The sender gets their own copy back too, IsOwn: true - the HTTP
+        // response already has it for the open chat window, but the sidebar's
+        // chat list only learns about a new "last message" through this hub
+        // event, and it has no other way to find out about your own sends.
+        await hub.Clients.User(membership.UserId.ToString()).ReceiveMessage(dto);
         var dtoForOthers = dto with { IsOwn = false };
         foreach (var id in otherMemberIds)
             await hub.Clients.User(id.ToString()).ReceiveMessage(dtoForOthers);
@@ -169,13 +174,24 @@ public class MessageService(
         message.IsDeleted = true;
         await db.SaveChangesAsync(ct);
 
-        var otherMemberIds = await db.ChatMembers.AsNoTracking()
-            .Where(cm => cm.ChatId == chatId && cm.UserId != callerId)
+        // The chat list's preview only knows about a chat's "last message" as
+        // plain text/time, not which message id it came from - so deleting
+        // whatever that message actually was needs the real new one sent back,
+        // not just "something changed", or the sidebar can't tell whether the
+        // deleted message even was the one it's showing.
+        var newLast = await db.Messages.AsNoTracking()
+            .Where(m => m.ChatId == chatId && !m.IsDeleted)
+            .OrderByDescending(m => m.CreatedAt)
+            .Select(m => new { m.Content, m.CreatedAt })
+            .FirstOrDefaultAsync(ct);
+
+        var allMemberIds = await db.ChatMembers.AsNoTracking()
+            .Where(cm => cm.ChatId == chatId)
             .Select(cm => cm.UserId)
             .ToListAsync(ct);
 
-        foreach (var id in otherMemberIds)
-            await hub.Clients.User(id.ToString()).MessageDeleted(chatId, messageId);
+        foreach (var id in allMemberIds)
+            await hub.Clients.User(id.ToString()).MessageDeleted(chatId, messageId, newLast?.Content, newLast?.CreatedAt);
 
         return (true, null);
     }
@@ -215,6 +231,9 @@ public class MessageService(
             .Select(cm => cm.UserId)
             .ToListAsync(ct);
 
+        // The caller gets their own copy too - same reasoning as SendMessageAsync,
+        // the sidebar's chat list needs this event even for your own edits.
+        await hub.Clients.User(callerId.ToString()).MessageEdited(dto);
         var dtoForOthers = dto with { IsOwn = false };
         foreach (var id in otherMemberIds)
             await hub.Clients.User(id.ToString()).MessageEdited(dtoForOthers);
@@ -299,6 +318,9 @@ public class MessageService(
 
         foreach (var dto in dtos)
         {
+            // Same reasoning as a plain send - the forwarder's own sidebar
+            // needs this event to update the target chat's preview live too.
+            await hub.Clients.User(targetMembership.UserId.ToString()).ReceiveMessage(dto);
             var dtoForOthers = dto with { IsOwn = false };
             foreach (var id in otherMemberIds)
                 await hub.Clients.User(id.ToString()).ReceiveMessage(dtoForOthers);

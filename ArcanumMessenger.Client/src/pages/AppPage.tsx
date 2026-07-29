@@ -140,7 +140,7 @@ export default function AppPage() {
                             ...c,
                             lastMessageText: message.content,
                             lastMessageAt: message.createdAt,
-                            unreadCount: isOpen ? c.unreadCount : c.unreadCount + 1,
+                            unreadCount: isOpen || message.isOwn ? c.unreadCount : c.unreadCount + 1,
                         }
                         : c,
                 ),
@@ -163,6 +163,36 @@ export default function AppPage() {
             }
         };
 
+        // Your own sends/forwards now arrive here too (see MessageService),
+        // which is what makes the case above need the isOwn check - without
+        // it, forwarding into a chat you're not currently looking at would
+        // mark your own outgoing message as unread.
+
+        const handleMessageDeleted = (
+            chatId: string,
+            _messageId: string,
+            lastMessageText: string | null,
+            lastMessageAt: string | null,
+        ) => {
+            setChats((prev) =>
+                prev.map((c) => (c.id === chatId ? { ...c, lastMessageText, lastMessageAt } : c)),
+            );
+        };
+
+        // An edit only needs to touch the sidebar preview if it changed the
+        // message that's currently shown as the chat's last one - comparing
+        // timestamps (edits don't change createdAt) says exactly that without
+        // the chat list needing to track message ids at all.
+        const handleMessageEdited = (message: ChatMessage) => {
+            setChats((prev) =>
+                prev.map((c) =>
+                    c.id === message.chatId && c.lastMessageAt === message.createdAt
+                        ? { ...c, lastMessageText: message.content }
+                        : c,
+                ),
+            );
+        };
+
         const handleChatCreated = (chat: ChatSummary) => {
             setChats((prev) => [chat, ...prev]);
         };
@@ -182,12 +212,16 @@ export default function AppPage() {
         };
 
         connection.on("ReceiveMessage", handleReceiveMessage);
+        connection.on("MessageDeleted", handleMessageDeleted);
+        connection.on("MessageEdited", handleMessageEdited);
         connection.on("ChatCreated", handleChatCreated);
         connection.on("UserOnline", handleUserOnline);
         connection.on("UserOffline", handleUserOffline);
 
         return () => {
             connection.off("ReceiveMessage", handleReceiveMessage);
+            connection.off("MessageDeleted", handleMessageDeleted);
+            connection.off("MessageEdited", handleMessageEdited);
             connection.off("ChatCreated", handleChatCreated);
             connection.off("UserOnline", handleUserOnline);
             connection.off("UserOffline", handleUserOffline);

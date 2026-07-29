@@ -27,6 +27,16 @@ function formatFileSize(bytes: number): string {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+// The hub can echo a just-sent/forwarded message back before the HTTP
+// response for it even resolves (they're two independent channels racing
+// each other) - whichever side runs second has to skip it, or it lands in
+// the list twice. Every place that appends to `messages` goes through this.
+function appendUnique(prev: ChatMessage[], toAdd: ChatMessage[]): ChatMessage[] {
+    const existingIds = new Set(prev.map((m) => m.id));
+    const unique = toAdd.filter((m) => !existingIds.has(m.id));
+    return unique.length > 0 ? [...prev, ...unique] : prev;
+}
+
 // A reply/quote preview has no room for the full bubble, and a captionless
 // photo/video/gif has no text at all to show there otherwise.
 function replySnippet(message: ChatMessage): string {
@@ -162,7 +172,11 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
 
         const handleReceiveMessage = (message: ChatMessage) => {
             if (message.chatId !== chat.id) return;
-            setMessages((prev) => [...prev, message]);
+            // Own sends/forwards now echo back through this same event too (so
+            // the sidebar's chat list learns about them) - this window already
+            // added its own copy optimistically from the HTTP response, so a
+            // duplicate by id here is expected and just needs to be skipped.
+            setMessages((prev) => appendUnique(prev, [message]));
             markAnimated(message.id);
         };
 
@@ -241,7 +255,7 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
         setReplyTarget(null);
         const sent = await sendMessage(chat.id, content, media?.id, asGif, replyToId);
         if (sent) {
-            setMessages((prev) => [...prev, sent]);
+            setMessages((prev) => appendUnique(prev, [sent]));
             markAnimated(sent.id);
         }
     };
@@ -273,7 +287,7 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
         setReplyTarget(null);
         const sent = await sendMessage(chat.id, "", gif.id, false, replyToId);
         if (sent) {
-            setMessages((prev) => [...prev, sent]);
+            setMessages((prev) => appendUnique(prev, [sent]));
             markAnimated(sent.id);
         }
     };
@@ -347,7 +361,7 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
         setForwardIds(null);
         const forwarded = await forwardMessages(targetChatId, ids);
         if (forwarded && targetChatId === chat.id) {
-            setMessages((prev) => [...prev, ...forwarded]);
+            setMessages((prev) => appendUnique(prev, forwarded));
         }
         if (selectMode) handleCancelSelect();
     };
