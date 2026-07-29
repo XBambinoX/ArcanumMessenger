@@ -320,6 +320,38 @@
     gap: 10px;
 }
 
+.replyBar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    border-left: 2px solid rgba(167, 139, 250, 0.6);
+    background: rgba(124, 58, 237, 0.08);
+}
+
+.replyBarText {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.replyBarSender {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(167, 139, 250, 0.9);
+}
+
+.replyBarSnippet {
+    font-size: 12.5px;
+    color: rgba(148, 163, 184, 0.8);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .hiddenFileInput {
     display: none;
 }

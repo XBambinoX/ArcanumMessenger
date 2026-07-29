@@ -62,6 +62,7 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
     const [gifPickerOpen, setGifPickerOpen] = useState(false);
     const [savedGifIds, setSavedGifIds] = useState<Set<string>>(new Set());
     const [contextMenu, setContextMenu] = useState<{ message: ChatMessage; x: number; y: number } | null>(null);
+    const [replyTarget, setReplyTarget] = useState<ChatMessage | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const scrollAnchor = useRef<HTMLDivElement | null>(null);
     const messagesRef = useRef<HTMLDivElement | null>(null);
@@ -182,9 +183,11 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
         setDraft("");
         const media = pendingMedia;
         const asGif = sendAsGif;
+        const replyToId = replyTarget?.id ?? null;
         setPendingMedia(null);
         setSendAsGif(false);
-        const sent = await sendMessage(chat.id, content, media?.id, asGif);
+        setReplyTarget(null);
+        const sent = await sendMessage(chat.id, content, media?.id, asGif, replyToId);
         if (sent) {
             setMessages((prev) => [...prev, sent]);
             markAnimated(sent.id);
@@ -214,7 +217,9 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
     };
 
     const handleSendGif = async (gif: MediaAsset) => {
-        const sent = await sendMessage(chat.id, "", gif.id);
+        const replyToId = replyTarget?.id ?? null;
+        setReplyTarget(null);
+        const sent = await sendMessage(chat.id, "", gif.id, false, replyToId);
         if (sent) {
             setMessages((prev) => [...prev, sent]);
             markAnimated(sent.id);
@@ -256,6 +261,12 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
     const buildMenuItems = (message: ChatMessage): MessageContextMenuItem[] => {
         const items: MessageContextMenuItem[] = [];
         const media = message.media;
+
+        items.push({ label: "Reply", onClick: () => setReplyTarget(message) });
+
+        if (message.content) {
+            items.push({ label: "Copy text", onClick: () => navigator.clipboard.writeText(message.content) });
+        }
 
         if (message.type === "gif" && media) {
             const isSaved = savedGifIds.has(media.id);
@@ -497,6 +508,25 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                     <p className={styles.blockedNote}>You can't send messages in this chat</p>
                 ) : (
                     <>
+                        {replyTarget && (
+                            <div className={styles.replyBar}>
+                                <div className={styles.replyBarText}>
+                                    <span className={styles.replyBarSender}>{replyTarget.senderName}</span>
+                                    <span className={styles.replyBarSnippet}>
+                                        {replyTarget.content || "Media"}
+                                    </span>
+                                </div>
+                                <button
+                                    className={styles.removeAttachmentBtn}
+                                    onClick={() => setReplyTarget(null)}
+                                    aria-label="Cancel reply"
+                                >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                                        <path d="M18 6L6 18M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        )}
                         {(pendingMedia || uploadingFile || uploadProgress) && (
                             <div className={styles.pendingAttachment}>
                                 {uploadingFile ? (
