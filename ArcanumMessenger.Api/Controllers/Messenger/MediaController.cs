@@ -12,8 +12,12 @@ public class MediaController(AppDbContext db, MediaService media, MediaAccessSer
 {
     private const long MaxUploadBytes = 210_000_000; // a bit above MediaService's own 200 MB ceiling
 
+    // RequestSizeLimit alone isn't enough for a multipart upload - the form
+    // parser has its own, separate default of 128MB
+    // (FormOptions.MultipartBodyLengthLimit) that silently applied instead.
     [HttpPost]
     [RequestSizeLimit(MaxUploadBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = MaxUploadBytes)]
     public async Task<ActionResult<UploadMediaResponse>> Upload(IFormFile? file, CancellationToken ct)
     {
         if (!TryGetUserId(out var userId))
