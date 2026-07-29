@@ -4,6 +4,7 @@ import type { ChatMessage, ChatSummary, MediaAsset, User } from "../types/messen
 import { getMessageHistory, sendMessage, deleteMessage } from "../api/messages";
 import { getUser } from "../api/users";
 import { uploadMedia, getMediaUrl, getMediaThumbnailUrl, getSavedGifs, saveGif, unsaveGif } from "../api/media";
+import { uploadMediaChunked, CHUNK_THRESHOLD } from "../api/chunkedUpload";
 import { formatMessageTime, formatChatTime } from "../lib/time";
 import UserInfoPanel from "./UserInfoPanel";
 import ChatInfoPanel from "./ChatInfoPanel";
@@ -57,6 +58,7 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
     const [pendingMedia, setPendingMedia] = useState<MediaAsset | null>(null);
     const [sendAsGif, setSendAsGif] = useState(false);
     const [uploadingFile, setUploadingFile] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState<{ loaded: number; total: number } | null>(null);
     const [gifPickerOpen, setGifPickerOpen] = useState(false);
     const [savedGifIds, setSavedGifIds] = useState<Set<string>>(new Set());
     const [contextMenu, setContextMenu] = useState<{ message: ChatMessage; x: number; y: number } | null>(null);
@@ -182,9 +184,17 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
         e.target.value = "";
         if (!file) return;
 
-        setUploadingFile(true);
-        const media = await uploadMedia(file);
-        setUploadingFile(false);
+        let media: MediaAsset | null;
+        if (file.size >= CHUNK_THRESHOLD) {
+            setUploadProgress({ loaded: 0, total: file.size });
+            media = await uploadMediaChunked(file, (loaded, total) => setUploadProgress({ loaded, total }));
+            setUploadProgress(null);
+        } else {
+            setUploadingFile(true);
+            media = await uploadMedia(file);
+            setUploadingFile(false);
+        }
+
         if (media) setPendingMedia(media);
         setSendAsGif(false);
     };
@@ -447,10 +457,22 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                     <p className={styles.blockedNote}>You can't send messages in this chat</p>
                 ) : (
                     <>
-                        {(pendingMedia || uploadingFile) && (
+                        {(pendingMedia || uploadingFile || uploadProgress) && (
                             <div className={styles.pendingAttachment}>
                                 {uploadingFile ? (
                                     <span className={styles.pendingUploading}>Uploading…</span>
+                                ) : uploadProgress ? (
+                                    <div className={styles.progressRow}>
+                                        <div className={styles.progressBarTrack}>
+                                            <div
+                                                className={styles.progressBarFill}
+                                                style={{ width: `${Math.round((uploadProgress.loaded / uploadProgress.total) * 100)}%` }}
+                                            />
+                                        </div>
+                                        <span className={styles.progressLabel}>
+                                            {Math.round((uploadProgress.loaded / uploadProgress.total) * 100)}%
+                                        </span>
+                                    </div>
                                 ) : pendingMedia && (
                                     <>
                                         {pendingMedia.hasThumbnail ? (
