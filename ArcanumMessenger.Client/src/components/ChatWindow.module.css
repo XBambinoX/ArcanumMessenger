@@ -206,6 +206,11 @@
     font-size: 12px;
     font-style: italic;
     color: rgba(148, 163, 184, 0.7);
+    cursor: pointer;
+}
+
+.forwardedLabel:hover {
+    text-decoration: underline;
 }
 
 .replyQuote {
@@ -216,6 +221,12 @@
     border-radius: 4px;
     background: rgba(124, 58, 237, 0.1);
     margin-bottom: 2px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.replyQuote:hover {
+    background: rgba(124, 58, 237, 0.18);
 }
 
 .replySender {
@@ -634,6 +645,19 @@
 
 .bubbleEnter {
     animation: bubbleIn 0.26s ease-out;
+}
+
+.bubbleHighlight .bubble {
+    animation: bubbleFlash 0.9s ease-out;
+}
+
+@keyframes bubbleFlash {
+    0% {
+        box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.6);
+    }
+    100% {
+        box-shadow: 0 0 0 3px rgba(167, 139, 250, 0);
+    }
 }
 
 .bubbleRow.own.bubbleEnter {

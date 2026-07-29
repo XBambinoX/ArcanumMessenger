@@ -27,6 +27,19 @@ function formatFileSize(bytes: number): string {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+// A reply/quote preview has no room for the full bubble, and a captionless
+// photo/video/gif has no text at all to show there otherwise.
+function replySnippet(message: ChatMessage): string {
+    if (message.content) return message.content;
+    switch (message.type) {
+        case "image": return "Photo";
+        case "video": return "Video";
+        case "gif": return "GIF";
+        case "file": return message.media?.fileName ?? "File";
+        default: return "";
+    }
+}
+
 interface ChatWindowProps {
     chat: ChatSummary;
     connection: HubConnection | null;
@@ -74,6 +87,7 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
     const gifPanelRef = useRef<HTMLDivElement | null>(null);
     const prependingRef = useRef(false);
     const [animatingIds, setAnimatingIds] = useState<Set<string>>(new Set());
+    const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());
 
 
     const [, forceTick] = useState(0);
@@ -87,6 +101,21 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                 return next;
             });
         }, ANIMATE_MS);
+    };
+
+    const handleJumpToMessage = (messageId: string) => {
+        const el = document.getElementById(`msg-${messageId}`);
+        if (!el) return;
+
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        setHighlightedIds((prev) => new Set(prev).add(messageId));
+        window.setTimeout(() => {
+            setHighlightedIds((prev) => {
+                const next = new Set(prev);
+                next.delete(messageId);
+                return next;
+            });
+        }, 900);
     };
 
     useEffect(() => {
@@ -390,6 +419,11 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
         if (user) setUserInfo({ userId, user });
     };
 
+    const handleForwardedSenderClick = async (userId: string) => {
+        const user = await getUser(userId);
+        if (user) setUserInfo({ userId, user });
+    };
+
     return (
         <div className={styles.root}>
             <header className={styles.header}>
@@ -464,9 +498,10 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                                 </div>
                             )}
                             <div
+                                id={`msg-${message.id}`}
                                 className={`${styles.bubbleRow} ${message.isOwn ? styles.own : ""} ${
                                     animatingIds.has(message.id) ? styles.bubbleEnter : ""
-                                }`}
+                                } ${highlightedIds.has(message.id) ? styles.bubbleHighlight : ""}`}
                             >
                                 {selectMode && (
                                     <span
@@ -485,7 +520,10 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                                         />
                                     )}
                                     {message.forwardedFromSenderName && (
-                                        <span className={styles.forwardedLabel}>
+                                        <span
+                                            className={styles.forwardedLabel}
+                                            onClick={() => handleForwardedSenderClick(message.forwardedFromSenderId!)}
+                                        >
                                             Forwarded from {message.forwardedFromSenderName}
                                         </span>
                                     )}
@@ -496,7 +534,10 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                                             </span>
                                         )}
                                     {replyTo && (
-                                        <div className={styles.replyQuote}>
+                                        <div
+                                            className={styles.replyQuote}
+                                            onClick={() => handleJumpToMessage(replyTo.id)}
+                                        >
                                             <span
                                                 className={styles.replySender}
                                             >
@@ -505,7 +546,7 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                                             <span
                                                 className={styles.replyText}
                                             >
-                                                {replyTo.content}
+                                                {replySnippet(replyTo)}
                                             </span>
                                         </div>
                                     )}
@@ -679,7 +720,7 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                                 <div className={styles.replyBarText}>
                                     <span className={styles.replyBarSender}>{replyTarget.senderName}</span>
                                     <span className={styles.replyBarSnippet}>
-                                        {replyTarget.content || "Media"}
+                                        {replySnippet(replyTarget)}
                                     </span>
                                 </div>
                                 <button
