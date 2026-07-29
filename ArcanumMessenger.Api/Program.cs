@@ -112,6 +112,7 @@ namespace ArcanumMessenger
             builder.Services.AddSingleton<TotpService>();
             builder.Services.AddSingleton<TotpSetupSessionService>();
             builder.Services.AddSingleton<RecoverySessionService>();
+            builder.Services.AddSingleton<MediaUploadSessionService>();
 
             var app = builder.Build();
 
