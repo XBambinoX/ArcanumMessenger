@@ -64,6 +64,8 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
     const [contextMenu, setContextMenu] = useState<{ message: ChatMessage; x: number; y: number } | null>(null);
     const [replyTarget, setReplyTarget] = useState<ChatMessage | null>(null);
     const [editTarget, setEditTarget] = useState<ChatMessage | null>(null);
+    const [selectMode, setSelectMode] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const scrollAnchor = useRef<HTMLDivElement | null>(null);
     const messagesRef = useRef<HTMLDivElement | null>(null);
@@ -274,7 +276,39 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
 
     const handleContextMenu = (e: React.MouseEvent, message: ChatMessage) => {
         e.preventDefault();
+        if (selectMode) return;
         setContextMenu({ message, x: e.clientX, y: e.clientY });
+    };
+
+    const toggleSelected = (messageId: string) => {
+        setSelectedIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(messageId)) next.delete(messageId);
+            else next.add(messageId);
+            return next;
+        });
+    };
+
+    const handleCancelSelect = () => {
+        setSelectMode(false);
+        setSelectedIds(new Set());
+    };
+
+    const handleBulkCopy = () => {
+        const text = messages
+            .filter((m) => selectedIds.has(m.id) && m.content)
+            .map((m) => m.content)
+            .join("\n\n");
+        if (text) navigator.clipboard.writeText(text);
+        handleCancelSelect();
+    };
+
+    const handleBulkDelete = async () => {
+        const ids = messages.filter((m) => selectedIds.has(m.id) && m.isOwn).map((m) => m.id);
+        const results = await Promise.all(ids.map((id) => deleteMessage(chat.id, id)));
+        const deletedIds = new Set(ids.filter((_, i) => results[i]));
+        setMessages((prev) => prev.filter((m) => !deletedIds.has(m.id)));
+        handleCancelSelect();
     };
 
     const buildMenuItems = (message: ChatMessage): MessageContextMenuItem[] => {
@@ -292,6 +326,14 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
         if (message.content) {
             items.push({ label: "Copy text", onClick: () => navigator.clipboard.writeText(message.content) });
         }
+
+        items.push({
+            label: "Select",
+            onClick: () => {
+                setSelectMode(true);
+                setSelectedIds(new Set([message.id]));
+            },
+        });
 
         if (message.type === "gif" && media) {
             const isSaved = savedGifIds.has(media.id);
@@ -412,10 +454,22 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                                     animatingIds.has(message.id) ? styles.bubbleEnter : ""
                                 }`}
                             >
+                                {selectMode && (
+                                    <span
+                                        className={`${styles.selectCheckbox} ${selectedIds.has(message.id) ? styles.selectCheckboxChecked : ""}`}
+                                        onClick={() => toggleSelected(message.id)}
+                                    />
+                                )}
                                 <div
                                     className={`${styles.bubble} ${bareMedia ? styles.bubbleBare : ""}`}
                                     onContextMenu={(e) => handleContextMenu(e, message)}
                                 >
+                                    {selectMode && (
+                                        <div
+                                            className={styles.selectOverlay}
+                                            onClick={() => toggleSelected(message.id)}
+                                        />
+                                    )}
                                     {chat.type === "group" &&
                                         !message.isOwn && (
                                             <span className={styles.sender}>
@@ -541,7 +595,36 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
             </div>
 
             <footer className={styles.inputBar}>
-                {chat.isBlocked ? (
+                {selectMode ? (
+                    <div className={styles.selectionBar}>
+                        <button
+                            className={styles.removeAttachmentBtn}
+                            onClick={handleCancelSelect}
+                            aria-label="Cancel selection"
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                                <path d="M18 6L6 18M6 6l12 12" />
+                            </svg>
+                        </button>
+                        <span className={styles.selectionCount}>{selectedIds.size} selected</span>
+                        <div className={styles.selectionActions}>
+                            <button
+                                className={styles.selectionActionBtn}
+                                onClick={handleBulkCopy}
+                                disabled={selectedIds.size === 0}
+                            >
+                                Copy
+                            </button>
+                            <button
+                                className={`${styles.selectionActionBtn} ${styles.selectionActionDanger}`}
+                                onClick={handleBulkDelete}
+                                disabled={selectedIds.size === 0}
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                ) : chat.isBlocked ? (
                     <p className={styles.blockedNote}>You can't send messages in this chat</p>
                 ) : (
                     <>

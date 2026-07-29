@@ -116,6 +116,8 @@
 
 .bubbleRow {
     display: flex;
+    align-items: center;
+    gap: 8px;
     justify-content: flex-start;
 }
 
@@ -124,6 +126,7 @@
 }
 
 .bubble {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 3px;
@@ -135,6 +138,33 @@
     border: 1px solid rgba(124, 58, 237, 0.14);
     font-size: 14px;
     line-height: 1.45;
+}
+
+.selectOverlay {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    cursor: pointer;
+    border-radius: inherit;
+}
+
+.selectCheckbox {
+    align-self: center;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid rgba(167, 139, 250, 0.5);
+    background: rgba(15, 12, 30, 0.4);
+    cursor: pointer;
+    transition:
+        background 0.15s,
+        border-color 0.15s;
+}
+
+.selectCheckboxChecked {
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    border-color: rgba(167, 139, 250, 0.9);
 }
 
 .own .bubble {
@@ -542,6 +572,54 @@
     text-align: center;
     font-size: 13.5px;
     color: rgba(148, 163, 184, 0.6);
+}
+
+.selectionBar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.selectionCount {
+    flex: 1;
+    font-size: 14px;
+    color: rgba(226, 232, 240, 0.9);
+}
+
+.selectionActions {
+    display: flex;
+    gap: 8px;
+}
+
+.selectionActionBtn {
+    padding: 9px 16px;
+    border-radius: 10px;
+    border: 1px solid rgba(124, 58, 237, 0.25);
+    background: rgba(124, 58, 237, 0.08);
+    color: rgba(226, 232, 240, 0.9);
+    font-size: 13.5px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.selectionActionBtn:hover:not(:disabled) {
+    background: rgba(124, 58, 237, 0.16);
+    border-color: rgba(167, 139, 250, 0.4);
+}
+
+.selectionActionBtn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.selectionActionDanger {
+    color: rgba(248, 113, 113, 0.9);
+    border-color: rgba(248, 113, 113, 0.25);
+}
+
+.selectionActionDanger:hover:not(:disabled) {
+    background: rgba(248, 113, 113, 0.12);
+    border-color: rgba(248, 113, 113, 0.4);
 }
 
 .subtitleOnline {
