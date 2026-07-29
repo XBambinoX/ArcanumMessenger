@@ -197,6 +197,17 @@ export default function AppPage() {
 
         const handleChatCreated = (chat: ChatSummary) => {
             setChats((prev) => [chat, ...prev]);
+
+            if (chat.type === "direct" && chat.otherUserId) {
+                const otherUserId = chat.otherUserId;
+                getUserPresence(otherUserId).then((data) => {
+                    if (!data) return;
+                    setPresence((prev) => ({
+                        ...prev,
+                        [otherUserId]: data,
+                    }));
+                });
+            }
         };
 
         const handleUserOnline = (userId: string) => {
@@ -288,6 +299,17 @@ export default function AppPage() {
         );
         setSelectedChatId(chat.id);
         setNewChatOpen(false);
+
+        if (chat.type === "direct" && chat.otherUserId) {
+            const otherUserId = chat.otherUserId;
+            getUserPresence(otherUserId).then((data) => {
+                if (!data) return;
+                setPresence((prev) => ({
+                    ...prev,
+                    [otherUserId]: data,
+                }));
+            });
+        }
     };
 
     const handleLogout = async () => {
