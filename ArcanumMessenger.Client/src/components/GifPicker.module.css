@@ -1,39 +1,31 @@
-.overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 10;
-    background: rgba(6, 4, 16, 0.55);
-    backdrop-filter: blur(2px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-}
-
 .panel {
     box-sizing: border-box;
-    width: 360px;
-    max-width: 100%;
-    max-height: 70vh;
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 0;
+    width: 380px;
+    max-width: min(380px, 80vw);
+    max-height: min(420px, 60vh);
     overflow-y: auto;
     display: flex;
     flex-direction: column;
     background: #12102a;
     border: 1px solid rgba(124, 58, 237, 0.2);
     border-radius: 16px;
-    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
-    padding: 18px;
-    animation: panelPop 0.16s ease-out;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+    padding: 16px;
+    z-index: 10;
+    animation: panelPop 0.14s ease-out;
 }
 
 @keyframes panelPop {
     from {
         opacity: 0;
-        transform: scale(0.96);
+        transform: translateY(6px);
     }
     to {
         opacity: 1;
-        transform: scale(1);
+        transform: translateY(0);
     }
 }
 
@@ -84,7 +76,7 @@
 
 .grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 8px;
 }
 

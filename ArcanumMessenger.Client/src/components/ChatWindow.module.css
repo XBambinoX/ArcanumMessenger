@@ -148,6 +148,24 @@
     border-color: rgba(167, 139, 250, 0.3);
 }
 
+/* A standalone photo/video/gif (no caption) drops the bubble chrome entirely -
+   the media is the whole message, so a purple frame around it just gets in
+   the way. The timestamp moves onto the media itself instead (.mediaTime). */
+.bubble.bubbleBare {
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 16px;
+    border-bottom-left-radius: 6px;
+}
+
+.own .bubble.bubbleBare {
+    background: transparent;
+    border: none;
+    border-radius: 16px;
+    border-bottom-right-radius: 6px;
+}
+
 .sender {
     font-size: 12.5px;
     font-weight: 600;
@@ -190,8 +208,8 @@
 
 .mediaImage {
     display: block;
-    max-width: 260px;
-    max-height: 260px;
+    max-width: 340px;
+    max-height: 340px;
     border-radius: 12px;
     cursor: pointer;
     object-fit: cover;
@@ -199,9 +217,35 @@
 
 .mediaVideo {
     display: block;
-    max-width: 280px;
-    max-height: 320px;
+    max-width: 380px;
+    max-height: 420px;
     border-radius: 12px;
+}
+
+.mediaWrap {
+    position: relative;
+    display: block;
+    line-height: 0;
+}
+
+/* Captioned media still sits inside a padded bubble (the caption needs the
+   normal chrome below it) - this pulls just the media out to the bubble's
+   top/side edges so it isn't boxed in by that padding either. */
+.mediaWrap.mediaBleedTop {
+    margin: -8px -12px 0;
+}
+
+.mediaTime {
+    position: absolute;
+    right: 8px;
+    bottom: 6px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 11px;
+    line-height: 1.4;
+    pointer-events: none;
 }
 
 .fileCard {
@@ -298,6 +342,11 @@
 .attachBtn:hover {
     background: rgba(124, 58, 237, 0.12);
     border-color: rgba(167, 139, 250, 0.4);
+}
+
+.gifButtonWrap {
+    position: relative;
+    flex-shrink: 0;
 }
 
 .pendingAttachment {

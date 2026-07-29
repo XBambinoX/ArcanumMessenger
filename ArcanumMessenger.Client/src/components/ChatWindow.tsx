@@ -65,6 +65,7 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const scrollAnchor = useRef<HTMLDivElement | null>(null);
     const messagesRef = useRef<HTMLDivElement | null>(null);
+    const gifPanelRef = useRef<HTMLDivElement | null>(null);
     const prependingRef = useRef(false);
     const [animatingIds, setAnimatingIds] = useState<Set<string>>(new Set());
 
@@ -93,6 +94,19 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
     useEffect(() => {
         getSavedGifs().then((gifs) => setSavedGifIds(new Set(gifs.map((g) => g.id))));
     }, []);
+
+    useEffect(() => {
+        if (!gifPickerOpen) return;
+
+        const handleClickOutside = (e: MouseEvent) => {
+            if (gifPanelRef.current && !gifPanelRef.current.contains(e.target as Node)) {
+                setGifPickerOpen(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [gifPickerOpen]);
 
     useEffect(() => {
         let cancelled = false;
@@ -200,7 +214,6 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
     };
 
     const handleSendGif = async (gif: MediaAsset) => {
-        setGifPickerOpen(false);
         const sent = await sendMessage(chat.id, "", gif.id);
         if (sent) {
             setMessages((prev) => [...prev, sent]);
@@ -334,6 +347,10 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                         new Date(prev.createdAt).toDateString() !==
                             new Date(message.createdAt).toDateString();
                     const replyTo = findMessage(message.replyToId);
+                    const isMediaKind = message.type === "image" || message.type === "gif" || message.type === "video";
+                    const hasCaption = isMediaKind && !!message.content;
+                    const bareMedia = isMediaKind && !hasCaption;
+                    const mediaWrapClass = `${styles.mediaWrap} ${hasCaption ? styles.mediaBleedTop : ""}`;
 
                     return (
                         <div key={message.id}>
@@ -347,7 +364,10 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                                     animatingIds.has(message.id) ? styles.bubbleEnter : ""
                                 }`}
                             >
-                                <div className={styles.bubble} onContextMenu={(e) => handleContextMenu(e, message)}>
+                                <div
+                                    className={`${styles.bubble} ${bareMedia ? styles.bubbleBare : ""}`}
+                                    onContextMenu={(e) => handleContextMenu(e, message)}
+                                >
                                     {chat.type === "group" &&
                                         !message.isOwn && (
                                             <span className={styles.sender}>
@@ -374,26 +394,7 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                                         </span>
                                     )}
                                     {message.type === "image" && message.media && (
-                                        <img
-                                            className={styles.mediaImage}
-                                            src={message.media.hasThumbnail
-                                                ? getMediaThumbnailUrl(message.media.id)
-                                                : getMediaUrl(message.media.id)}
-                                            alt={message.media.fileName}
-                                            onClick={() => window.open(getMediaUrl(message.media!.id), "_blank")}
-                                        />
-                                    )}
-                                    {message.type === "gif" && message.media && (
-                                        isVideoMime(message.media.mimeType) ? (
-                                            <video
-                                                className={styles.mediaImage}
-                                                src={getMediaUrl(message.media.id)}
-                                                autoPlay
-                                                loop
-                                                muted
-                                                playsInline
-                                            />
-                                        ) : (
+                                        <div className={mediaWrapClass}>
                                             <img
                                                 className={styles.mediaImage}
                                                 src={message.media.hasThumbnail
@@ -402,14 +403,51 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                                                 alt={message.media.fileName}
                                                 onClick={() => window.open(getMediaUrl(message.media!.id), "_blank")}
                                             />
-                                        )
+                                            {bareMedia && (
+                                                <span className={styles.mediaTime}>{formatMessageTime(message.createdAt)}</span>
+                                            )}
+                                        </div>
+                                    )}
+                                    {message.type === "gif" && message.media && (
+                                        <div className={mediaWrapClass}>
+                                            {isVideoMime(message.media.mimeType) ? (
+                                                <video
+                                                    className={styles.mediaImage}
+                                                    src={getMediaUrl(message.media.id)}
+                                                    autoPlay
+                                                    loop
+                                                    muted
+                                                    playsInline
+                                                    onClick={() => window.open(getMediaUrl(message.media!.id), "_blank")}
+                                                />
+                                            ) : (
+                                                // A real animated GIF file - the thumbnail is a single static
+                                                // frame, so it has to be skipped here or the gif would just sit
+                                                // there frozen. The full file is small enough to always load, and
+                                                // the browser loops it forever on its own, no attributes needed.
+                                                <img
+                                                    className={styles.mediaImage}
+                                                    src={getMediaUrl(message.media.id)}
+                                                    alt={message.media.fileName}
+                                                    onClick={() => window.open(getMediaUrl(message.media!.id), "_blank")}
+                                                />
+                                            )}
+                                            {bareMedia && (
+                                                <span className={styles.mediaTime}>{formatMessageTime(message.createdAt)}</span>
+                                            )}
+                                        </div>
                                     )}
                                     {message.type === "video" && message.media && (
-                                        <video
-                                            className={styles.mediaVideo}
-                                            src={getMediaUrl(message.media.id)}
-                                            controls
-                                        />
+                                        <div className={mediaWrapClass}>
+                                            <video
+                                                className={styles.mediaVideo}
+                                                src={getMediaUrl(message.media.id)}
+                                                controls
+                                            />
+                                            {bareMedia && (
+                                                <span className={styles.mediaTime}>{formatMessageTime(message.createdAt)}</span>
+                                            )}
+                                        </div>
                                     )}
                                     {message.type === "file" && message.media && (
                                         <a
@@ -436,14 +474,16 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                                             {message.content}
                                         </span>
                                     )}
-                                    <span className={styles.meta}>
-                                        {message.isEdited && (
-                                            <span className={styles.edited}>
-                                                edited
-                                            </span>
-                                        )}
-                                        {formatMessageTime(message.createdAt)}
-                                    </span>
+                                    {!bareMedia && (
+                                        <span className={styles.meta}>
+                                            {message.isEdited && (
+                                                <span className={styles.edited}>
+                                                    edited
+                                                </span>
+                                            )}
+                                            {formatMessageTime(message.createdAt)}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -533,17 +573,25 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                                     <path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.33 3.33 0 0 1 4.71 4.71l-9.2 9.19a1.67 1.67 0 0 1-2.36-2.36l8.49-8.48" />
                                 </svg>
                             </button>
-                            <button
-                                className={styles.attachBtn}
-                                onClick={() => setGifPickerOpen(true)}
-                                aria-label="Saved GIFs"
-                                title="Saved GIFs"
-                            >
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <rect x="3" y="5" width="18" height="14" rx="2" />
-                                    <path d="M7 9v6M11 9v6M11 12h2M16 9v6M16 9h3M16 12h2" />
-                                </svg>
-                            </button>
+                            <div className={styles.gifButtonWrap} ref={gifPanelRef}>
+                                <button
+                                    className={styles.attachBtn}
+                                    onClick={() => setGifPickerOpen((prev) => !prev)}
+                                    aria-label="Saved GIFs"
+                                    title="Saved GIFs"
+                                >
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <rect x="3" y="5" width="18" height="14" rx="2" />
+                                        <path d="M7 9v6M11 9v6M11 12h2M16 9v6M16 9h3M16 12h2" />
+                                    </svg>
+                                </button>
+                                {gifPickerOpen && (
+                                    <GifPicker
+                                        onClose={() => setGifPickerOpen(false)}
+                                        onSelect={handleSendGif}
+                                    />
+                                )}
+                            </div>
                             <input
                                 className={styles.input}
                                 type="text"
@@ -591,13 +639,6 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                 <ChatInfoPanel
                     chat={chat}
                     onClose={() => setChatInfoOpen(false)}
-                />
-            )}
-
-            {gifPickerOpen && (
-                <GifPicker
-                    onClose={() => setGifPickerOpen(false)}
-                    onSelect={handleSendGif}
                 />
             )}
 
