@@ -55,6 +55,15 @@ public class MediaController(AppDbContext db, MediaService media, MediaAccessSer
         {
             Response.StatusCode = StatusCodes.Status206PartialContent;
             Response.Headers.ContentRange = $"bytes {served.Start}-{served.End}/{result.TotalLength}";
+            Response.ContentLength = served.End!.Value - served.Start + 1;
+        }
+        else
+        {
+            // enableRangeProcessing is false below because the S3 response stream
+            // isn't seekable, so ASP.NET Core can't compute this on its own - without
+            // it, every response (200 or 206) goes out as unknown-length chunked
+            // transfer, which some browsers' video pipelines never leave "loading" for.
+            Response.ContentLength = result.TotalLength;
         }
 
         return File(result.Content, result.ContentType, enableRangeProcessing: false);
