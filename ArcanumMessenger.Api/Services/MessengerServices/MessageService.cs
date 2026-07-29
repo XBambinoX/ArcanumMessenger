@@ -16,6 +16,14 @@ public class MessageService(
     private const int MaxTake = 100;
     private const int MaxContentLength = 4000;
 
+    private static ChatMessageDto BuildDto(Message message, string senderName, MediaAsset? media, Guid callerId) =>
+        new(
+            message.Id, message.ChatId, message.SenderId, senderName,
+            message.ReplyToId, message.Content ?? "", message.Type,
+            media is not null ? MediaAssetDto.FromEntity(media) : null,
+            message.IsEdited, message.CreatedAt, message.SenderId == callerId
+        );
+
     public async Task<(List<ChatMessageDto> Messages, bool HasMore, string? Reason)> GetHistoryAsync(
         Guid chatId, Guid callerId, Guid? beforeMessageId, int take, CancellationToken ct)
     {
@@ -127,14 +135,7 @@ public class MessageService(
         await db.SaveChangesAsync(ct);
 
         var names = await displayNames.GetDisplayNamesAsync([membership.UserId], ct);
-
-        var dto = new ChatMessageDto(
-            message.Id, message.ChatId, message.SenderId,
-            names.GetValueOrDefault(membership.UserId, "Unknown user"),
-            message.ReplyToId, message.Content ?? "", message.Type,
-            media is not null ? MediaAssetDto.FromEntity(media) : null,
-            message.IsEdited, message.CreatedAt, true
-        );
+        var dto = BuildDto(message, names.GetValueOrDefault(membership.UserId, "Unknown user"), media, membership.UserId);
 
         var otherMemberIds = await db.ChatMembers.AsNoTracking()
             .Where(cm => cm.ChatId == membership.ChatId && cm.UserId != membership.UserId)
@@ -172,5 +173,47 @@ public class MessageService(
             await hub.Clients.User(id.ToString()).MessageDeleted(chatId, messageId);
 
         return (true, null);
+    }
+
+    public async Task<(ChatMessageDto? Message, string? Reason)> EditMessageAsync(
+        Guid chatId, Guid messageId, Guid callerId, string? content, CancellationToken ct)
+    {
+        var message = await db.Messages
+            .FirstOrDefaultAsync(m => m.Id == messageId && m.ChatId == chatId && !m.IsDeleted, ct);
+        if (message is null)
+            return (null, "not_found");
+        if (message.SenderId != callerId)
+            return (null, "forbidden");
+
+        var trimmed = content?.Trim() ?? "";
+        if (trimmed.Length > MaxContentLength)
+            return (null, "too_long");
+        // A media caption can be cleared out entirely, but a text message
+        // can't be edited down to nothing - that's what delete is for.
+        if (trimmed.Length == 0 && message.Type == "text")
+            return (null, "empty_content");
+
+        message.Content = trimmed.Length > 0 ? trimmed : null;
+        message.IsEdited = true;
+        message.EditedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+
+        var media = message.MediaId is { } mid
+            ? await db.MediaAssets.AsNoTracking().FirstOrDefaultAsync(m => m.Id == mid, ct)
+            : null;
+
+        var names = await displayNames.GetDisplayNamesAsync([callerId], ct);
+        var dto = BuildDto(message, names.GetValueOrDefault(callerId, "Unknown user"), media, callerId);
+
+        var otherMemberIds = await db.ChatMembers.AsNoTracking()
+            .Where(cm => cm.ChatId == chatId && cm.UserId != callerId)
+            .Select(cm => cm.UserId)
+            .ToListAsync(ct);
+
+        var dtoForOthers = dto with { IsOwn = false };
+        foreach (var id in otherMemberIds)
+            await hub.Clients.User(id.ToString()).MessageEdited(dtoForOthers);
+
+        return (dto, null);
     }
 }

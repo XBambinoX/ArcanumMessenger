@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { HubConnection } from "@microsoft/signalr";
 import type { ChatMessage, ChatSummary, MediaAsset, User } from "../types/messenger";
-import { getMessageHistory, sendMessage, deleteMessage } from "../api/messages";
+import { getMessageHistory, sendMessage, deleteMessage, editMessage } from "../api/messages";
 import { getUser } from "../api/users";
 import { uploadMedia, getMediaUrl, getMediaThumbnailUrl, getSavedGifs, saveGif, unsaveGif } from "../api/media";
 import { uploadMediaChunked, CHUNK_THRESHOLD } from "../api/chunkedUpload";
@@ -63,6 +63,7 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
     const [savedGifIds, setSavedGifIds] = useState<Set<string>>(new Set());
     const [contextMenu, setContextMenu] = useState<{ message: ChatMessage; x: number; y: number } | null>(null);
     const [replyTarget, setReplyTarget] = useState<ChatMessage | null>(null);
+    const [editTarget, setEditTarget] = useState<ChatMessage | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const scrollAnchor = useRef<HTMLDivElement | null>(null);
     const messagesRef = useRef<HTMLDivElement | null>(null);
@@ -137,11 +138,18 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
             setMessages((prev) => prev.filter((m) => m.id !== messageId));
         };
 
+        const handleMessageEdited = (message: ChatMessage) => {
+            if (message.chatId !== chat.id) return;
+            setMessages((prev) => prev.map((m) => (m.id === message.id ? message : m)));
+        };
+
         connection.on("ReceiveMessage", handleReceiveMessage);
         connection.on("MessageDeleted", handleMessageDeleted);
+        connection.on("MessageEdited", handleMessageEdited);
         return () => {
             connection.off("ReceiveMessage", handleReceiveMessage);
             connection.off("MessageDeleted", handleMessageDeleted);
+            connection.off("MessageEdited", handleMessageEdited);
         };
     }, [connection, chat.id]);
 
@@ -178,6 +186,17 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
 
     const handleSend = async () => {
         const content = draft.trim();
+
+        if (editTarget) {
+            if (!content) return;
+            setDraft("");
+            const target = editTarget;
+            setEditTarget(null);
+            const updated = await editMessage(chat.id, target.id, content);
+            if (updated) setMessages((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+            return;
+        }
+
         if (!content && !pendingMedia) return;
 
         setDraft("");
@@ -262,7 +281,13 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
         const items: MessageContextMenuItem[] = [];
         const media = message.media;
 
-        items.push({ label: "Reply", onClick: () => setReplyTarget(message) });
+        items.push({
+            label: "Reply",
+            onClick: () => {
+                setReplyTarget(message);
+                setEditTarget(null);
+            },
+        });
 
         if (message.content) {
             items.push({ label: "Copy text", onClick: () => navigator.clipboard.writeText(message.content) });
@@ -278,6 +303,18 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
 
         if (media) {
             items.push({ label: "Save as…", onClick: () => handleSaveAs(media) });
+        }
+
+        if (message.isOwn && message.type === "text") {
+            items.push({
+                label: "Edit",
+                onClick: () => {
+                    setEditTarget(message);
+                    setDraft(message.content);
+                    setReplyTarget(null);
+                    setPendingMedia(null);
+                },
+            });
         }
 
         if (message.isOwn) {
@@ -508,6 +545,26 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                     <p className={styles.blockedNote}>You can't send messages in this chat</p>
                 ) : (
                     <>
+                        {editTarget && (
+                            <div className={styles.replyBar}>
+                                <div className={styles.replyBarText}>
+                                    <span className={styles.replyBarSender}>Editing message</span>
+                                    <span className={styles.replyBarSnippet}>{editTarget.content}</span>
+                                </div>
+                                <button
+                                    className={styles.removeAttachmentBtn}
+                                    onClick={() => {
+                                        setEditTarget(null);
+                                        setDraft("");
+                                    }}
+                                    aria-label="Cancel edit"
+                                >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                                        <path d="M18 6L6 18M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        )}
                         {replyTarget && (
                             <div className={styles.replyBar}>
                                 <div className={styles.replyBarText}>
@@ -587,41 +644,45 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                             </div>
                         )}
                         <div className={styles.inputRow}>
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                className={styles.hiddenFileInput}
-                                onChange={handleFileSelected}
-                            />
-                            <button
-                                className={styles.attachBtn}
-                                onClick={handleAttachClick}
-                                aria-label="Attach file"
-                                title="Attach file"
-                            >
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.33 3.33 0 0 1 4.71 4.71l-9.2 9.19a1.67 1.67 0 0 1-2.36-2.36l8.49-8.48" />
-                                </svg>
-                            </button>
-                            <div className={styles.gifButtonWrap} ref={gifPanelRef}>
-                                <button
-                                    className={styles.attachBtn}
-                                    onClick={() => setGifPickerOpen((prev) => !prev)}
-                                    aria-label="Saved GIFs"
-                                    title="Saved GIFs"
-                                >
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <rect x="3" y="5" width="18" height="14" rx="2" />
-                                        <path d="M7 9v6M11 9v6M11 12h2M16 9v6M16 9h3M16 12h2" />
-                                    </svg>
-                                </button>
-                                {gifPickerOpen && (
-                                    <GifPicker
-                                        onClose={() => setGifPickerOpen(false)}
-                                        onSelect={handleSendGif}
+                            {!editTarget && (
+                                <>
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        className={styles.hiddenFileInput}
+                                        onChange={handleFileSelected}
                                     />
-                                )}
-                            </div>
+                                    <button
+                                        className={styles.attachBtn}
+                                        onClick={handleAttachClick}
+                                        aria-label="Attach file"
+                                        title="Attach file"
+                                    >
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.33 3.33 0 0 1 4.71 4.71l-9.2 9.19a1.67 1.67 0 0 1-2.36-2.36l8.49-8.48" />
+                                        </svg>
+                                    </button>
+                                    <div className={styles.gifButtonWrap} ref={gifPanelRef}>
+                                        <button
+                                            className={styles.attachBtn}
+                                            onClick={() => setGifPickerOpen((prev) => !prev)}
+                                            aria-label="Saved GIFs"
+                                            title="Saved GIFs"
+                                        >
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <rect x="3" y="5" width="18" height="14" rx="2" />
+                                                <path d="M7 9v6M11 9v6M11 12h2M16 9v6M16 9h3M16 12h2" />
+                                            </svg>
+                                        </button>
+                                        {gifPickerOpen && (
+                                            <GifPicker
+                                                onClose={() => setGifPickerOpen(false)}
+                                                onSelect={handleSendGif}
+                                            />
+                                        )}
+                                    </div>
+                                </>
+                            )}
                             <input
                                 className={styles.input}
                                 type="text"

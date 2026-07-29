@@ -42,3 +42,13 @@ export async function deleteMessage(chatId: string, messageId: string): Promise<
     const data = await res.json();
     return data.success === true;
 }
+
+export async function editMessage(chatId: string, messageId: string, content: string): Promise<ChatMessage | null> {
+    const res = await apiFetch(`/api/chats/${chatId}/messages/${messageId}`, {
+        method: "PUT",
+        credentials: "include",
+        body: JSON.stringify({ content }),
+    });
+    const data = await res.json();
+    return data.success ? data.message : null;
+}

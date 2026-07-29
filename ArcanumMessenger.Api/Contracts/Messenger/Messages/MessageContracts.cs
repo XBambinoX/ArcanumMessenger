@@ -22,3 +22,7 @@ public record SendMessageRequest(string? Content, Guid? ReplyToId, Guid? MediaId
 public record SendMessageResponse(bool Success, ChatMessageDto? Message, string? Reason = null);
 
 public record DeleteMessageResponse(bool Success, string? Reason = null);
+
+public record EditMessageRequest(string? Content);
+
+public record EditMessageResponse(bool Success, ChatMessageDto? Message, string? Reason = null);

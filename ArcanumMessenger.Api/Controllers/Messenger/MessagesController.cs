@@ -56,4 +56,21 @@ public class MessagesController(MessageService messageService, ChatAccessService
         var (success, reason) = await messageService.DeleteMessageAsync(chatId, messageId, userId, ct);
         return success ? Ok(new DeleteMessageResponse(true)) : BadRequest(new DeleteMessageResponse(false, reason));
     }
+
+    [HttpPut("{messageId:guid}")]
+    public async Task<ActionResult<EditMessageResponse>> Edit(
+        Guid chatId, Guid messageId, [FromBody] EditMessageRequest request, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var membership = await chatAccess.GetMembershipAsync(chatId, userId, ct);
+        if (membership is null)
+            return NotFound(new EditMessageResponse(false, null, "not_found"));
+
+        var (message, reason) = await messageService.EditMessageAsync(chatId, messageId, userId, request.Content, ct);
+        return message is null
+            ? BadRequest(new EditMessageResponse(false, null, reason))
+            : Ok(new EditMessageResponse(true, message));
+    }
 }

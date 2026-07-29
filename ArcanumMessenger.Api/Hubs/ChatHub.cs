@@ -15,6 +15,7 @@ public interface IChatClient
     Task ReceiveMessage(ChatMessageDto message);
     Task ChatCreated(ChatSummaryDto chat);
     Task MessageDeleted(Guid chatId, Guid messageId);
+    Task MessageEdited(ChatMessageDto message);
     Task UserOnline(Guid userId);
     Task UserOffline(Guid userId, DateTime? lastSeen);
 }
