@@ -21,7 +21,8 @@ public class MessageService(
             message.Id, message.ChatId, message.SenderId, senderName,
             message.ReplyToId, message.Content ?? "", message.Type,
             media is not null ? MediaAssetDto.FromEntity(media) : null,
-            message.IsEdited, message.CreatedAt, message.SenderId == callerId
+            message.IsEdited, message.CreatedAt, message.SenderId == callerId,
+            message.ForwardedFromSenderId, message.ForwardedFromSenderName
         );
 
     public async Task<(List<ChatMessageDto> Messages, bool HasMore, string? Reason)> GetHistoryAsync(
@@ -48,7 +49,10 @@ public class MessageService(
         var page = await query
             .OrderByDescending(m => m.CreatedAt).ThenByDescending(m => m.Id)
             .Take(take + 1)
-            .Select(m => new { m.Id, m.ChatId, m.SenderId, m.ReplyToId, m.Content, m.Type, m.MediaId, m.IsEdited, m.CreatedAt })
+            .Select(m => new {
+                m.Id, m.ChatId, m.SenderId, m.ReplyToId, m.Content, m.Type, m.MediaId, m.IsEdited, m.CreatedAt,
+                m.ForwardedFromSenderId, m.ForwardedFromSenderName,
+            })
             .ToListAsync(ct);
 
         var hasMore = page.Count > take;
@@ -65,7 +69,8 @@ public class MessageService(
             m.Id, m.ChatId, m.SenderId, names.GetValueOrDefault(m.SenderId, "Unknown user"),
             m.ReplyToId, m.Content ?? "", m.Type,
             m.MediaId is { } mid && mediaById.TryGetValue(mid, out var asset) ? MediaAssetDto.FromEntity(asset) : null,
-            m.IsEdited, m.CreatedAt, m.SenderId == callerId
+            m.IsEdited, m.CreatedAt, m.SenderId == callerId,
+            m.ForwardedFromSenderId, m.ForwardedFromSenderName
         )).ToList();
 
         return (messages, hasMore, null);
@@ -215,5 +220,90 @@ public class MessageService(
             await hub.Clients.User(id.ToString()).MessageEdited(dtoForOthers);
 
         return (dto, null);
+    }
+
+    public async Task<(List<ChatMessageDto>? Messages, string? Reason)> ForwardMessagesAsync(
+        ChatMember targetMembership, List<Guid> messageIds, CancellationToken ct)
+    {
+        if (messageIds.Count == 0)
+            return (null, "empty_selection");
+
+        if (targetMembership.Chat.Type == "direct")
+        {
+            var otherId = await db.ChatMembers.AsNoTracking()
+                .Where(cm => cm.ChatId == targetMembership.ChatId && cm.UserId != targetMembership.UserId)
+                .Select(cm => (Guid?)cm.UserId)
+                .FirstOrDefaultAsync(ct);
+            if (otherId is { } other && await blocks.IsBlockedEitherWayAsync(targetMembership.UserId, other, ct))
+                return (null, "blocked");
+        }
+
+        var sources = await db.Messages
+            .Where(m => messageIds.Contains(m.Id) && !m.IsDeleted)
+            .ToListAsync(ct);
+        if (sources.Count != messageIds.Count)
+            return (null, "invalid_messages");
+
+        // Forwarding only requires having been able to see the message in the
+        // first place - not sending it, not owning it, just membership in
+        // whatever chat it actually lives in.
+        var sourceChatIds = sources.Select(m => m.ChatId).Distinct().ToList();
+        var memberChatIds = await db.ChatMembers.AsNoTracking()
+            .Where(cm => cm.UserId == targetMembership.UserId && sourceChatIds.Contains(cm.ChatId))
+            .Select(cm => cm.ChatId)
+            .ToListAsync(ct);
+        if (sources.Any(m => !memberChatIds.Contains(m.ChatId)))
+            return (null, "forbidden");
+
+        var senderNames = await displayNames.GetDisplayNamesAsync(
+            sources.Select(m => m.SenderId).Append(targetMembership.UserId), ct);
+        var sourceById = sources.ToDictionary(m => m.Id);
+        var forwarderName = senderNames.GetValueOrDefault(targetMembership.UserId, "Unknown user");
+
+        // messageIds carries the order the caller selected them in (chronological,
+        // since that's the order they appear in the chat) - preserve it here too.
+        var newMessages = messageIds.Select(id =>
+        {
+            var src = sourceById[id];
+            return new Message
+            {
+                ChatId = targetMembership.ChatId,
+                SenderId = targetMembership.UserId,
+                Type = src.Type,
+                Content = src.Content,
+                MediaId = src.MediaId,
+                ForwardedFromSenderId = src.SenderId,
+                ForwardedFromSenderName = senderNames.GetValueOrDefault(src.SenderId, "Unknown user"),
+            };
+        }).ToList();
+
+        db.Messages.AddRange(newMessages);
+        targetMembership.LastReadAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+
+        var mediaIds = newMessages.Where(m => m.MediaId.HasValue).Select(m => m.MediaId!.Value).Distinct().ToList();
+        var mediaById = await db.MediaAssets.AsNoTracking()
+            .Where(m => mediaIds.Contains(m.Id))
+            .ToDictionaryAsync(m => m.Id, ct);
+
+        var dtos = newMessages.Select(m => BuildDto(
+            m, forwarderName,
+            m.MediaId is { } mid && mediaById.TryGetValue(mid, out var asset) ? asset : null,
+            targetMembership.UserId
+        )).ToList();
+
+        var otherMemberIds = await db.ChatMembers.AsNoTracking()
+            .Where(cm => cm.ChatId == targetMembership.ChatId && cm.UserId != targetMembership.UserId)
+            .Select(cm => cm.UserId)
+            .ToListAsync(ct);
+
+        foreach (var dto in dtos)
+        {
+            var dtoForOthers = dto with { IsOwn = false };
+            foreach (var id in otherMemberIds)
+                await hub.Clients.User(id.ToString()).ReceiveMessage(dtoForOthers);
+        }
+
+        return (dtos, null);
     }
 }

@@ -202,6 +202,12 @@
     color: rgba(34, 211, 238, 0.85);
 }
 
+.forwardedLabel {
+    font-size: 12px;
+    font-style: italic;
+    color: rgba(148, 163, 184, 0.7);
+}
+
 .replyQuote {
     display: flex;
     flex-direction: column;

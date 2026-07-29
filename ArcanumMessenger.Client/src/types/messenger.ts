@@ -48,6 +48,8 @@ export interface ChatMessage {
     isEdited: boolean;
     createdAt: string; // ISO timestamp
     isOwn: boolean;
+    forwardedFromSenderId: string | null;
+    forwardedFromSenderName: string | null;
 }
 
 export interface User {

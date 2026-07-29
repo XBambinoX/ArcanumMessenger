@@ -73,4 +73,21 @@ public class MessagesController(MessageService messageService, ChatAccessService
             ? BadRequest(new EditMessageResponse(false, null, reason))
             : Ok(new EditMessageResponse(true, message));
     }
+
+    [HttpPost("forward")]
+    public async Task<ActionResult<ForwardMessagesResponse>> Forward(
+        Guid chatId, [FromBody] ForwardMessagesRequest request, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var membership = await chatAccess.GetMembershipAsync(chatId, userId, ct);
+        if (membership is null)
+            return NotFound(new ForwardMessagesResponse(false, null, "not_found"));
+
+        var (messages, reason) = await messageService.ForwardMessagesAsync(membership, request.MessageIds, ct);
+        return messages is null
+            ? BadRequest(new ForwardMessagesResponse(false, null, reason))
+            : Ok(new ForwardMessagesResponse(true, messages));
+    }
 }

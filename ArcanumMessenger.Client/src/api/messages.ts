@@ -52,3 +52,16 @@ export async function editMessage(chatId: string, messageId: string, content: st
     const data = await res.json();
     return data.success ? data.message : null;
 }
+
+export async function forwardMessages(
+    targetChatId: string,
+    messageIds: string[],
+): Promise<ChatMessage[] | null> {
+    const res = await apiFetch(`/api/chats/${targetChatId}/messages/forward`, {
+        method: "POST",
+        credentials: "include",
+        body: JSON.stringify({ messageIds }),
+    });
+    const data = await res.json();
+    return data.success ? data.messages : null;
+}

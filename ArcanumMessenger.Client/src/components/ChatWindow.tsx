@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { HubConnection } from "@microsoft/signalr";
 import type { ChatMessage, ChatSummary, MediaAsset, User } from "../types/messenger";
-import { getMessageHistory, sendMessage, deleteMessage, editMessage } from "../api/messages";
+import { getMessageHistory, sendMessage, deleteMessage, editMessage, forwardMessages } from "../api/messages";
 import { getUser } from "../api/users";
 import { uploadMedia, getMediaUrl, getMediaThumbnailUrl, getSavedGifs, saveGif, unsaveGif } from "../api/media";
 import { uploadMediaChunked, CHUNK_THRESHOLD } from "../api/chunkedUpload";
@@ -9,6 +9,7 @@ import { formatMessageTime, formatChatTime } from "../lib/time";
 import UserInfoPanel from "./UserInfoPanel";
 import ChatInfoPanel from "./ChatInfoPanel";
 import GifPicker from "./GifPicker";
+import ForwardPanel from "./ForwardPanel";
 import MessageContextMenu, { type MessageContextMenuItem } from "./MessageContextMenu";
 import styles from "./ChatWindow.module.css";
 
@@ -66,6 +67,7 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
     const [editTarget, setEditTarget] = useState<ChatMessage | null>(null);
     const [selectMode, setSelectMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [forwardIds, setForwardIds] = useState<string[] | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const scrollAnchor = useRef<HTMLDivElement | null>(null);
     const messagesRef = useRef<HTMLDivElement | null>(null);
@@ -311,6 +313,16 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
         handleCancelSelect();
     };
 
+    const handleForwardPick = async (targetChatId: string) => {
+        const ids = forwardIds ?? [];
+        setForwardIds(null);
+        const forwarded = await forwardMessages(targetChatId, ids);
+        if (forwarded && targetChatId === chat.id) {
+            setMessages((prev) => [...prev, ...forwarded]);
+        }
+        if (selectMode) handleCancelSelect();
+    };
+
     const buildMenuItems = (message: ChatMessage): MessageContextMenuItem[] => {
         const items: MessageContextMenuItem[] = [];
         const media = message.media;
@@ -326,6 +338,8 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
         if (message.content) {
             items.push({ label: "Copy text", onClick: () => navigator.clipboard.writeText(message.content) });
         }
+
+        items.push({ label: "Forward", onClick: () => setForwardIds([message.id]) });
 
         items.push({
             label: "Select",
@@ -469,6 +483,11 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                                             className={styles.selectOverlay}
                                             onClick={() => toggleSelected(message.id)}
                                         />
+                                    )}
+                                    {message.forwardedFromSenderName && (
+                                        <span className={styles.forwardedLabel}>
+                                            Forwarded from {message.forwardedFromSenderName}
+                                        </span>
                                     )}
                                     {chat.type === "group" &&
                                         !message.isOwn && (
@@ -614,6 +633,13 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                                 disabled={selectedIds.size === 0}
                             >
                                 Copy
+                            </button>
+                            <button
+                                className={styles.selectionActionBtn}
+                                onClick={() => setForwardIds(Array.from(selectedIds))}
+                                disabled={selectedIds.size === 0}
+                            >
+                                Forward
                             </button>
                             <button
                                 className={`${styles.selectionActionBtn} ${styles.selectionActionDanger}`}
@@ -822,6 +848,13 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                     y={contextMenu.y}
                     items={buildMenuItems(contextMenu.message)}
                     onClose={() => setContextMenu(null)}
+                />
+            )}
+
+            {forwardIds && (
+                <ForwardPanel
+                    onClose={() => setForwardIds(null)}
+                    onPick={handleForwardPick}
                 />
             )}
         </div>
