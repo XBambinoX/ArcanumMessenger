@@ -77,9 +77,15 @@ export default function ChatInfoPanel({ chat, onClose }: ChatInfoPanelProps) {
                     <>
                         <div className={styles.chatHeader}>
                             <div
-                                className={`${styles.chatAvatar} ${chat.type === "group" ? styles.chatAvatarGroup : ""}`}
+                                className={`${styles.chatAvatar} ${chat.type === "group" ? styles.chatAvatarGroup : ""} ${chat.type === "saved" ? styles.chatAvatarSaved : ""}`}
                             >
-                                {chat.title.charAt(0).toUpperCase()}
+                                {chat.type === "saved" ? (
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z" />
+                                    </svg>
+                                ) : (
+                                    chat.title.charAt(0).toUpperCase()
+                                )}
                             </div>
                             <span className={styles.chatTitle}>
                                 {chat.title}
@@ -87,6 +93,8 @@ export default function ChatInfoPanel({ chat, onClose }: ChatInfoPanelProps) {
                             <span className={styles.chatSubtitle}>
                                 {chat.type === "group"
                                     ? "Group chat"
+                                    : chat.type === "saved"
+                                    ? "Saved Messages"
                                     : "Direct chat"}
                             </span>
                         </div>

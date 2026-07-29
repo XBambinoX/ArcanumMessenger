@@ -41,9 +41,15 @@ export default function ChatList({
                             onClick={() => onSelect(chat.id)}
                         >
                             <div
-                                className={`${styles.avatar} ${chat.type === "group" ? styles.avatarGroup : ""}`}
+                                className={`${styles.avatar} ${chat.type === "group" ? styles.avatarGroup : ""} ${chat.type === "saved" ? styles.avatarSaved : ""}`}
                             >
-                                {chat.title.charAt(0).toUpperCase()}
+                                {chat.type === "saved" ? (
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z" />
+                                    </svg>
+                                ) : (
+                                    chat.title.charAt(0).toUpperCase()
+                                )}
                                 {isOnline && <span className={styles.onlineDot} />}
                             </div>
 

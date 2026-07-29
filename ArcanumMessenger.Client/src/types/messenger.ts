@@ -3,7 +3,7 @@
 // future data shape - only the fields a chat list / chat window actually
 // renders, in camelCase like every other API response.
 
-export type ChatType = "direct" | "group";
+export type ChatType = "direct" | "group" | "saved";
 
 // Fixed categories, not user-defined folders. "unread" is computed from
 // unreadCount, "archive" maps to ChatMember.IsArchived on the server.

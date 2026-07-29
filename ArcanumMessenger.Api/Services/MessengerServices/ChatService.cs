@@ -48,9 +48,12 @@ public class ChatService(
                 Dto = new ChatSummaryDto(
                     r.ChatId,
                     r.Type,
-                    r.Type == "direct"
-                        ? (r.OtherMemberId is { } otherId ? names.GetValueOrDefault(otherId, "Unknown user") : "Unknown user")
-                        : r.Title ?? "Untitled group",
+                    r.Type switch
+                    {
+                        "direct" => r.OtherMemberId is { } otherId ? names.GetValueOrDefault(otherId, "Unknown user") : "Unknown user",
+                        "saved" => "Saved Messages",
+                        _ => r.Title ?? "Untitled group",
+                    },
                     r.LastMessageContent,
                     r.LastMessageAt,
                     r.UnreadCount,
@@ -58,15 +61,31 @@ public class ChatService(
                     r.IsArchived,
                     r.OtherMemberId,
                     r.IsBlocked),
-                SortKey = r.LastMessageAt ?? r.ChatCreatedAt,
+                SortKey = r.Type == "saved" ? DateTime.MaxValue : (r.LastMessageAt ?? r.ChatCreatedAt),
             })
             .OrderByDescending(x => x.SortKey)
             .Select(x => x.Dto)
             .ToList();
     }
 
+    private async Task EnsureSavedMessagesChatAsync(Guid userId, CancellationToken ct)
+    {
+        var exists = await db.ChatMembers.AsNoTracking()
+            .AnyAsync(cm => cm.UserId == userId && cm.Chat.Type == "saved", ct);
+        if (exists)
+            return;
+
+        var chat = new Chat { Type = "saved", CreatedBy = userId };
+        db.Chats.Add(chat);
+
+        var now = DateTime.UtcNow;
+        db.ChatMembers.Add(new ChatMember { Chat = chat, UserId = userId, Role = "member", JoinedAt = now, LastReadAt = now });
+        await db.SaveChangesAsync(ct);
+    }
+
     public async Task<List<ChatSummaryDto>> GetChatSummariesAsync(Guid userId, CancellationToken ct)
     {
+        await EnsureSavedMessagesChatAsync(userId, ct);
         var raw = await ProjectSummaries(db, db.ChatMembers.AsNoTracking().Where(cm => cm.UserId == userId), userId)
             .ToListAsync(ct);
         return await MaterializeAsync(raw, ct);

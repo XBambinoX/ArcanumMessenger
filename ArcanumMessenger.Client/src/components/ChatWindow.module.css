@@ -34,6 +34,10 @@
     background: linear-gradient(135deg, #0891b2, #4f46e5);
 }
 
+.avatarSaved {
+    background: linear-gradient(135deg, #38bdf8, #2563eb);
+}
+
 .avatarClickable {
     cursor: pointer;
     transition: filter 0.2s;
