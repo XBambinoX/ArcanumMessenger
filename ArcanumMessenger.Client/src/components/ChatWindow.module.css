@@ -249,6 +249,11 @@
     white-space: pre-wrap;
 }
 
+.emojiOnly {
+    font-size: 40px;
+    line-height: 1.25;
+}
+
 .mediaCaption {
     margin-top: 4px;
 }
@@ -424,6 +429,11 @@
 }
 
 .gifButtonWrap {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.emojiButtonWrap {
     position: relative;
     flex-shrink: 0;
 }

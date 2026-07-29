@@ -9,6 +9,7 @@ import { formatMessageTime, formatChatTime } from "../lib/time";
 import UserInfoPanel from "./UserInfoPanel";
 import ChatInfoPanel from "./ChatInfoPanel";
 import GifPicker from "./GifPicker";
+import EmojiPicker from "./EmojiPicker";
 import ForwardPanel from "./ForwardPanel";
 import MessageContextMenu, { type MessageContextMenuItem } from "./MessageContextMenu";
 import styles from "./ChatWindow.module.css";
@@ -50,6 +51,28 @@ function replySnippet(message: ChatMessage): string {
     }
 }
 
+// Telegram-style: a short message that is nothing but emoji renders bigger.
+// \p{Extended_Pictographic} covers the base pictographs; the explicit
+// U+1F1E6-1F1FF/U+1F3FB-1F3FF ranges cover flag regional indicators and
+// skin-tone modifiers, which are unambiguous. Plain ASCII digits/#/* are
+// NOT stripped on their own - \p{Emoji_Component} would match "123" too,
+// since digits double as keycap components - they only count as emoji when
+// they are actually part of a real keycap sequence (digit + optional
+// variation selector + the combining enclosing keycap U+20E3).
+function isEmojiOnlyMessage(text: string): boolean {
+    const trimmed = text.trim();
+    if (!trimmed) return false;
+
+    const stripped = trimmed.replace(
+        /[0-9#*]\ufe0f?\u20e3|[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u{1F3FB}-\u{1F3FF}\u200d\ufe0f\s]/gu,
+        "",
+    );
+    if (stripped.length > 0) return false;
+
+    const graphemeCount = [...new Intl.Segmenter().segment(trimmed)].length;
+    return graphemeCount > 0 && graphemeCount <= 6;
+}
+
 interface ChatWindowProps {
     chat: ChatSummary;
     connection: HubConnection | null;
@@ -84,6 +107,7 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
     const [uploadingFile, setUploadingFile] = useState(false);
     const [uploadProgress, setUploadProgress] = useState<{ loaded: number; total: number } | null>(null);
     const [gifPickerOpen, setGifPickerOpen] = useState(false);
+    const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
     const [savedGifIds, setSavedGifIds] = useState<Set<string>>(new Set());
     const [contextMenu, setContextMenu] = useState<{ message: ChatMessage; x: number; y: number } | null>(null);
     const [replyTarget, setReplyTarget] = useState<ChatMessage | null>(null);
@@ -95,6 +119,8 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
     const scrollAnchor = useRef<HTMLDivElement | null>(null);
     const messagesRef = useRef<HTMLDivElement | null>(null);
     const gifPanelRef = useRef<HTMLDivElement | null>(null);
+    const emojiPanelRef = useRef<HTMLDivElement | null>(null);
+    const draftInputRef = useRef<HTMLInputElement | null>(null);
     const prependingRef = useRef(false);
     const [animatingIds, setAnimatingIds] = useState<Set<string>>(new Set());
     const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());
@@ -152,6 +178,19 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [gifPickerOpen]);
+
+    useEffect(() => {
+        if (!emojiPickerOpen) return;
+
+        const handleClickOutside = (e: MouseEvent) => {
+            if (emojiPanelRef.current && !emojiPanelRef.current.contains(e.target as Node)) {
+                setEmojiPickerOpen(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [emojiPickerOpen]);
 
     useEffect(() => {
         let cancelled = false;
@@ -261,6 +300,20 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
     };
 
     const handleAttachClick = () => fileInputRef.current?.click();
+
+    const handleInsertEmoji = (emoji: string) => {
+        const input = draftInputRef.current;
+        const start = input?.selectionStart ?? draft.length;
+        const end = input?.selectionEnd ?? draft.length;
+        const next = draft.slice(0, start) + emoji + draft.slice(end);
+        setDraft(next);
+
+        requestAnimationFrame(() => {
+            const pos = start + emoji.length;
+            input?.focus();
+            input?.setSelectionRange(pos, pos);
+        });
+    };
 
     const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -565,7 +618,9 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                                         </div>
                                     )}
                                     {message.type === "text" && (
-                                        <span className={styles.content}>
+                                        <span
+                                            className={`${styles.content} ${isEmojiOnlyMessage(message.content) ? styles.emojiOnly : ""}`}
+                                        >
                                             {message.content}
                                         </span>
                                     )}
@@ -847,7 +902,28 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                                     </div>
                                 </>
                             )}
+                            <div className={styles.emojiButtonWrap} ref={emojiPanelRef}>
+                                <button
+                                    className={styles.attachBtn}
+                                    onClick={() => setEmojiPickerOpen((prev) => !prev)}
+                                    aria-label="Emoji"
+                                    title="Emoji"
+                                >
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                                        <path d="M9 9h.01M15 9h.01" />
+                                    </svg>
+                                </button>
+                                {emojiPickerOpen && (
+                                    <EmojiPicker
+                                        onClose={() => setEmojiPickerOpen(false)}
+                                        onSelect={handleInsertEmoji}
+                                    />
+                                )}
+                            </div>
                             <input
+                                ref={draftInputRef}
                                 className={styles.input}
                                 type="text"
                                 placeholder="Message"
