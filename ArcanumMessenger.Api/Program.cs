@@ -120,6 +120,18 @@ namespace ArcanumMessenger
             {
                 var media = startupScope.ServiceProvider.GetRequiredService<MediaService>();
                 await media.EnsureBucketExistsAsync(CancellationToken.None);
+
+                try
+                {
+                    await media.EnsureIncompleteUploadLifecycleRuleAsync(CancellationToken.None);
+                }
+                catch (Amazon.S3.AmazonS3Exception ex)
+                {
+                    // Housekeeping only (auto-abort stale chunked uploads) -
+                    // must never take the whole app down if MinIO rejects it.
+                    startupScope.ServiceProvider.GetRequiredService<ILogger<Program>>()
+                        .LogWarning(ex, "Could not configure the media bucket's lifecycle rule");
+                }
             }
 
             app.UseMiddleware<ExceptionHandlingMiddleware>();

@@ -182,6 +182,15 @@ public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config, 
     // otherwise leave its uploaded parts sitting in storage forever once the
     // Redis session itself expires - this is S3/MinIO's own cleanup for
     // exactly that, independent of anything this app tracks.
+    //
+    // As deployed, this MinIO version rejects the request outright ("XML you
+    // provided was not well-formed") for AbortIncompleteMultipartUpload
+    // specifically - confirmed it's not just this shape of request by trying
+    // several variations, and separately that `mc ilm rule add` has no flag
+    // for this action at all, so it looks like a real gap in this MinIO
+    // version's lifecycle support rather than a request-formatting mistake.
+    // The caller treats a failure here as non-fatal - it's cleanup, not core
+    // functionality - so this stays in place for whenever it does work.
     public async Task EnsureIncompleteUploadLifecycleRuleAsync(CancellationToken ct)
     {
         await s3.PutLifecycleConfigurationAsync(new PutLifecycleConfigurationRequest

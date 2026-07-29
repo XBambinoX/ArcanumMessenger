@@ -23,3 +23,12 @@ public record UploadMediaResponse(bool Success, MediaAssetDto? Media, string? Re
 public record SavedGifsResponse(bool Success, IReadOnlyList<MediaAssetDto>? Gifs, string? Reason = null);
 
 public record SaveGifResponse(bool Success, string? Reason = null);
+
+public record StartChunkedUploadRequest(string FileName, string MimeType, long TotalSize);
+
+public record StartChunkedUploadResponse(bool Success, string? SessionId, string? Reason = null);
+
+public record ChunkedUploadStatusResponse(
+    bool Success, IReadOnlyList<int>? UploadedPartNumbers, long? TotalSize, string? Reason = null);
+
+public record ChunkedUploadActionResponse(bool Success, string? Reason = null);

@@ -127,6 +127,81 @@ public class MediaController(AppDbContext db, MediaService media, MediaAccessSer
         return Ok(new SaveGifResponse(true));
     }
 
+    [HttpPost("chunked")]
+    public async Task<ActionResult<StartChunkedUploadResponse>> StartChunkedUpload(
+        [FromBody] StartChunkedUploadRequest request, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var (sessionId, reason) = await media.InitiateChunkedUploadAsync(
+            request.FileName, request.MimeType, request.TotalSize, userId, ct);
+
+        return sessionId is null
+            ? BadRequest(new StartChunkedUploadResponse(false, null, reason))
+            : Ok(new StartChunkedUploadResponse(true, sessionId));
+    }
+
+    [HttpPut("chunked/{sessionId}/parts/{partNumber:int}")]
+    [RequestSizeLimit(15_000_000)] // comfortably above the client's 10MB chunk size
+    public async Task<ActionResult<ChunkedUploadActionResponse>> UploadChunk(
+        string sessionId, int partNumber, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var partSize = Request.ContentLength ?? 0;
+        if (partSize <= 0)
+            return BadRequest(new ChunkedUploadActionResponse(false, "empty_chunk"));
+
+        // UploadPartAsync needs a seekable stream - buffering one chunk (a
+        // few MB at most) is cheap, unlike buffering the whole file.
+        using var buffer = new MemoryStream();
+        await Request.Body.CopyToAsync(buffer, ct);
+        buffer.Position = 0;
+
+        var (success, reason) = await media.UploadChunkAsync(sessionId, partNumber, buffer, partSize, userId, ct);
+        return success
+            ? Ok(new ChunkedUploadActionResponse(true))
+            : BadRequest(new ChunkedUploadActionResponse(false, reason));
+    }
+
+    [HttpGet("chunked/{sessionId}")]
+    public async Task<ActionResult<ChunkedUploadStatusResponse>> GetChunkedUploadStatus(string sessionId, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var (session, reason) = await media.GetChunkedUploadStatusAsync(sessionId, userId, ct);
+        return session is null
+            ? NotFound(new ChunkedUploadStatusResponse(false, null, null, reason))
+            : Ok(new ChunkedUploadStatusResponse(true, session.Parts.Select(p => p.PartNumber).ToList(), session.TotalSize));
+    }
+
+    [HttpPost("chunked/{sessionId}/complete")]
+    public async Task<ActionResult<UploadMediaResponse>> CompleteChunkedUpload(string sessionId, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var (asset, reason) = await media.CompleteChunkedUploadAsync(sessionId, userId, ct);
+        return asset is null
+            ? BadRequest(new UploadMediaResponse(false, null, reason))
+            : Ok(new UploadMediaResponse(true, MediaAssetDto.FromEntity(asset)));
+    }
+
+    [HttpDelete("chunked/{sessionId}")]
+    public async Task<ActionResult<ChunkedUploadActionResponse>> AbortChunkedUpload(string sessionId, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var (success, reason) = await media.AbortChunkedUploadAsync(sessionId, userId, ct);
+        return success
+            ? Ok(new ChunkedUploadActionResponse(true))
+            : BadRequest(new ChunkedUploadActionResponse(false, reason));
+    }
+
     private static MediaByteRange? ParseRange(string? rangeHeader)
     {
         if (string.IsNullOrEmpty(rangeHeader) || !rangeHeader.StartsWith("bytes=", StringComparison.OrdinalIgnoreCase))
