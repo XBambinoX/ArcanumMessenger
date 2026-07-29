@@ -1,6 +1,7 @@
 using System.Net;
 using Amazon.S3;
 using Amazon.S3.Model;
+using ArcanumMessenger.Contracts.Messenger.Media;
 using ArcanumMessenger.Data;
 using ArcanumMessenger.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -12,10 +13,11 @@ public record MediaByteRange(long Start, long? End);
 
 public record MediaStream(Stream Content, string ContentType, long TotalLength, MediaByteRange? ServedRange);
 
-public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config)
+public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config, MediaUploadSessionService uploadSessions)
 {
     private const long MaxImageOrGifBytes = 25L * 1024 * 1024;
     private const long MaxOtherBytes = 200L * 1024 * 1024;
+    private const long MaxChunkedTotalBytes = 5L * 1024 * 1024 * 1024; // 5 GB ceiling for the chunked path
     private const int ThumbnailMaxEdge = 320;
 
     private string Bucket => config["Media:Bucket"]!;
@@ -174,5 +176,166 @@ public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config)
     {
         if (!await Amazon.S3.Util.AmazonS3Util.DoesS3BucketExistV2Async(s3, Bucket))
             await s3.PutBucketAsync(Bucket, ct);
+    }
+
+    // A truly-abandoned chunked upload (browser closed, never resumed) would
+    // otherwise leave its uploaded parts sitting in storage forever once the
+    // Redis session itself expires - this is S3/MinIO's own cleanup for
+    // exactly that, independent of anything this app tracks.
+    public async Task EnsureIncompleteUploadLifecycleRuleAsync(CancellationToken ct)
+    {
+        await s3.PutLifecycleConfigurationAsync(new PutLifecycleConfigurationRequest
+        {
+            BucketName = Bucket,
+            Configuration = new LifecycleConfiguration
+            {
+                Rules =
+                [
+                    new LifecycleRule
+                    {
+                        Id = "abort-incomplete-chunked-uploads",
+                        Status = LifecycleRuleStatus.Enabled,
+                        Filter = new LifecycleFilter
+                        {
+                            LifecycleFilterPredicate = new LifecyclePrefixPredicate { Prefix = "" },
+                        },
+                        AbortIncompleteMultipartUpload = new LifecycleRuleAbortIncompleteMultipartUpload
+                        {
+                            DaysAfterInitiation = 3,
+                        },
+                    },
+                ],
+            },
+        }, ct);
+    }
+
+    // S3/MinIO's own multipart upload protocol - a different concept from
+    // HTTP multipart/form-data - lets a large object be uploaded as
+    // independently-retryable parts instead of one request for the whole
+    // file. These four methods mirror Initiate/UploadPart/Complete/Abort.
+
+    public async Task<(string? SessionId, string? Reason)> InitiateChunkedUploadAsync(
+        string fileName, string mimeType, long totalSize, Guid uploaderId, CancellationToken ct)
+    {
+        if (totalSize <= 0)
+            return (null, "empty_file");
+        if (totalSize > MaxChunkedTotalBytes)
+            return (null, "too_large");
+
+        var storageKey = $"{uploaderId}/{Guid.NewGuid()}";
+
+        var initiateResponse = await s3.InitiateMultipartUploadAsync(new InitiateMultipartUploadRequest
+        {
+            BucketName = Bucket,
+            Key = storageKey,
+            ContentType = mimeType,
+        }, ct);
+
+        var session = new MediaUploadSession
+        {
+            UploaderId = uploaderId,
+            FileName = fileName,
+            MimeType = mimeType,
+            TotalSize = totalSize,
+            StorageKey = storageKey,
+            S3UploadId = initiateResponse.UploadId,
+        };
+
+        var sessionId = await uploadSessions.CreateAsync(session, ct);
+        return (sessionId, null);
+    }
+
+    public async Task<(bool Success, string? Reason)> UploadChunkAsync(
+        string sessionId, int partNumber, Stream content, long partSize, Guid callerId, CancellationToken ct)
+    {
+        var session = await uploadSessions.GetAsync(sessionId, ct);
+        if (session is null)
+            return (false, "not_found");
+        if (session.UploaderId != callerId)
+            return (false, "forbidden");
+
+        var response = await s3.UploadPartAsync(new UploadPartRequest
+        {
+            BucketName = Bucket,
+            Key = session.StorageKey,
+            UploadId = session.S3UploadId,
+            PartNumber = partNumber,
+            InputStream = content,
+            PartSize = partSize,
+        }, ct);
+
+        // Re-uploading a part that was already confirmed (a retry) replaces
+        // it rather than duplicating it.
+        session.Parts.RemoveAll(p => p.PartNumber == partNumber);
+        session.Parts.Add(new UploadedPart { PartNumber = partNumber, ETag = response.ETag });
+        await uploadSessions.UpdateAsync(sessionId, session, ct);
+
+        return (true, null);
+    }
+
+    public async Task<(MediaUploadSession? Session, string? Reason)> GetChunkedUploadStatusAsync(
+        string sessionId, Guid callerId, CancellationToken ct)
+    {
+        var session = await uploadSessions.GetAsync(sessionId, ct);
+        if (session is null)
+            return (null, "not_found");
+        if (session.UploaderId != callerId)
+            return (null, "forbidden");
+
+        return (session, null);
+    }
+
+    public async Task<(MediaAsset? Asset, string? Reason)> CompleteChunkedUploadAsync(
+        string sessionId, Guid callerId, CancellationToken ct)
+    {
+        var session = await uploadSessions.GetAsync(sessionId, ct);
+        if (session is null)
+            return (null, "not_found");
+        if (session.UploaderId != callerId)
+            return (null, "forbidden");
+        if (session.Parts.Count == 0)
+            return (null, "no_parts_uploaded");
+
+        await s3.CompleteMultipartUploadAsync(new CompleteMultipartUploadRequest
+        {
+            BucketName = Bucket,
+            Key = session.StorageKey,
+            UploadId = session.S3UploadId,
+            PartETags = session.Parts
+                .OrderBy(p => p.PartNumber)
+                .Select(p => new PartETag(p.PartNumber, p.ETag))
+                .ToList(),
+        }, ct);
+
+        var asset = new MediaAsset
+        {
+            UploaderId = session.UploaderId,
+            Kind = DeriveKind(session.MimeType),
+            MimeType = session.MimeType,
+            FileName = session.FileName,
+            SizeBytes = session.TotalSize,
+            StorageKey = session.StorageKey,
+        };
+        db.MediaAssets.Add(asset);
+        await db.SaveChangesAsync(ct);
+
+        await uploadSessions.DeleteAsync(sessionId, ct);
+
+        return (asset, null);
+    }
+
+    public async Task<(bool Success, string? Reason)> AbortChunkedUploadAsync(
+        string sessionId, Guid callerId, CancellationToken ct)
+    {
+        var session = await uploadSessions.GetAsync(sessionId, ct);
+        if (session is null)
+            return (false, "not_found");
+        if (session.UploaderId != callerId)
+            return (false, "forbidden");
+
+        await s3.AbortMultipartUploadAsync(Bucket, session.StorageKey, session.S3UploadId, ct);
+        await uploadSessions.DeleteAsync(sessionId, ct);
+
+        return (true, null);
     }
 }
