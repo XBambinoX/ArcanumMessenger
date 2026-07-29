@@ -7,6 +7,7 @@ import { getMe, getUserPresence, getPresenceBulk } from "../api/users";
 import { createChatHubConnection } from "../lib/chatHub";
 import { type UserSettingsResponse, getUserSettings  } from "../api/userSettings";
 import { playNotificationSound } from "../lib/notificationSound";
+import { requestDesktopNotificationPermission, showDesktopNotification } from "../lib/desktopNotification";
 import { useAuth } from "../context/AuthContext";
 import ChatList from "../components/ChatList";
 import ChatWindow from "../components/ChatWindow";
@@ -61,6 +62,9 @@ export default function AppPage() {
     const [notificationSettings, setNotificationSettings] = useState<UserSettingsResponse | null>(null);
     const chatsRef = useRef<ChatSummary[]>([]);
     const notificationSettingsRef = useRef<UserSettingsResponse | null>(null);
+    const isIdleRef = useRef(false);
+    const baseTitleRef = useRef(document.title);
+    const selectedChatIdRef = useRef<string | null>(null);
 
     const handleNotificationSettingsChange = (
         sound: string,
@@ -74,9 +78,25 @@ export default function AppPage() {
         );
     };
 
+    // Only worth nagging the tab title while the user is away - if they're
+    // actively looking at the app, the in-app badges already say enough.
+    const applyTitleBadge = () => {
+        if (!isIdleRef.current) return;
+
+        const totalUnread = chatsRef.current.reduce(
+            (sum, c) => sum + (c.isArchived ? 0 : c.unreadCount), 0,
+        );
+        document.title = totalUnread > 0 ? `(${totalUnread}) ${baseTitleRef.current}` : baseTitleRef.current;
+    };
+
     useEffect(() => {
         chatsRef.current = chats;
+        applyTitleBadge();
     }, [chats]);
+
+    useEffect(() => {
+        selectedChatIdRef.current = selectedChatId;
+    }, [selectedChatId]);
 
     useEffect(() => {
         notificationSettingsRef.current = notificationSettings;
@@ -111,6 +131,8 @@ export default function AppPage() {
         getUserSettings().then((settings) => {
             if (settings) setNotificationSettings(settings);
         });
+
+        requestDesktopNotificationPermission();
     }, []);
 
     useEffect(() => {
@@ -134,17 +156,28 @@ export default function AppPage() {
         if (!connection) return;
 
         let idleTimer: number | null = null;
-        let isIdle = false;
 
         const goIdle = () => {
-            isIdle = true;
+            isIdleRef.current = true;
             connection.invoke("GoIdle").catch(() => {});
+            applyTitleBadge();
         };
 
         const resetIdleTimer = () => {
-            if (isIdle) {
-                isIdle = false;
+            if (isIdleRef.current) {
+                isIdleRef.current = false;
                 connection.invoke("GoActive").catch(() => {});
+                document.title = baseTitleRef.current;
+
+                // The chat that was open while idle stayed selected the whole
+                // time - coming back to it shouldn't leave a stale unread badge.
+                const openChatId = selectedChatIdRef.current;
+                if (openChatId) {
+                    setChats((prev) =>
+                        prev.map((c) => (c.id === openChatId ? { ...c, unreadCount: 0 } : c)),
+                    );
+                    markChatRead(openChatId);
+                }
             }
             if (idleTimer) window.clearTimeout(idleTimer);
             idleTimer = window.setTimeout(goIdle, IDLE_TIMEOUT_MS);
@@ -163,7 +196,10 @@ export default function AppPage() {
         if (!connection) return;
 
     const handleReceiveMessage = (message: ChatMessage) => {
-            const isOpen = message.chatId === selectedChatId;
+            // A chat can be "open" in the UI while the user is idle - they're
+            // not actually reading it, so it shouldn't auto-mark-read or skip
+            // the away notification just because it happens to be selected.
+            const isViewing = message.chatId === selectedChatId && !isIdleRef.current;
 
             setChats((prev) =>
                 prev.map((c) =>
@@ -172,13 +208,13 @@ export default function AppPage() {
                             ...c,
                             lastMessageText: message.content,
                             lastMessageAt: message.createdAt,
-                            unreadCount: isOpen ? c.unreadCount : c.unreadCount + 1,
+                            unreadCount: isViewing ? c.unreadCount : c.unreadCount + 1,
                         }
                         : c,
                 ),
             );
 
-            if (isOpen) {
+            if (isViewing) {
                 markChatRead(message.chatId);
             } else if (!message.isOwn) {
                 const chat = chatsRef.current.find((c) => c.id === message.chatId);
@@ -190,7 +226,15 @@ export default function AppPage() {
                             ? settings.groupNotifications
                             : settings.notificationsEnabled;
 
-                    if (enabled) playNotificationSound(settings.notificationSound);
+                    if (enabled) {
+                        playNotificationSound(settings.notificationSound);
+
+                        if (isIdleRef.current) {
+                            showDesktopNotification(chat.title, message.content, () => {
+                                setSelectedChatId(message.chatId);
+                            });
+                        }
+                    }
                 }
             }
         };
