@@ -5,6 +5,7 @@ export interface UserSettingsResponse {
     username: string;
     bio: string;
     phone: string;
+    email: string;
     notificationsEnabled: boolean;
     groupNotifications: boolean;
     notificationSound: string;
@@ -15,6 +16,7 @@ export interface UserSettingsResponse {
     showPhoneNumber: "everyone" | "contacts" | "nobody";
     showBio: "everyone" | "contacts" | "nobody";
     showAvatar: "everyone" | "contacts" | "nobody";
+    showEmail: "everyone" | "contacts" | "nobody";
     whoCanAddMe: "everyone" | "contacts";
     theme: "system" | "dark" | "light";
     wallpaper: string;
@@ -26,6 +28,7 @@ export interface UpdateAccountFieldsRequest {
     username?: string;
     bio?: string;
     phone?: string;
+    email?: string;
 }
 
 export async function getUserSettings(): Promise<UserSettingsResponse> {
@@ -91,6 +94,7 @@ export interface UpdatePrivacySettingsRequest {
     showPhoneNumber?: "everyone" | "contacts" | "nobody";
     showBio?: "everyone" | "contacts" | "nobody";
     showAvatar?: "everyone" | "contacts" | "nobody";
+    showEmail?: "everyone" | "contacts" | "nobody";
     whoCanAddMe?: "everyone" | "contacts";
     totpEnabled?: boolean;
 }

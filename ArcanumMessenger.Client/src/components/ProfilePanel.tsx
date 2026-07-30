@@ -26,7 +26,7 @@ interface ProfilePanelProps {
 
 type Section = "main" | "account" | "notifications" | "privacy" | "chats" | "blocked";
 type SaveStatus = "idle" | "saving" | "saved" | "error";
-type PrivacyField = "showLastSeen" | "showOnlineStatus" | "readReceipts" | "showPhoneNumber" | "showBio" | "showAvatar" | "whoCanAddMe" | "totpEnabled";
+type PrivacyField = "showLastSeen" | "showOnlineStatus" | "readReceipts" | "showPhoneNumber" | "showBio" | "showAvatar" | "showEmail" | "whoCanAddMe" | "totpEnabled";
 type ChatField = "theme" | "wallpaper" | "linkPreviews" | "autoDownloadMedia";
 
 // Mirrors Entities.UserSettings, plus a few visual-only extras below.
@@ -34,6 +34,7 @@ type ChatField = "theme" | "wallpaper" | "linkPreviews" | "autoDownloadMedia";
 interface SettingsState {
     bio: string;
     phone: string;
+    email: string;
     username: string;
     notificationsEnabled: boolean;
     messagePreview: boolean;
@@ -45,6 +46,7 @@ interface SettingsState {
     showPhoneNumber: "everyone" | "contacts" | "nobody";
     showBio: "everyone" | "contacts" | "nobody";
     showAvatar: "everyone" | "contacts" | "nobody";
+    showEmail: "everyone" | "contacts" | "nobody";
     whoCanAddMe: "everyone" | "contacts";
     readReceipts: boolean;
     theme: "system" | "dark" | "light";
@@ -56,6 +58,7 @@ interface SettingsState {
 const defaultSettings: SettingsState = {
     bio: "",
     phone: "",
+    email: "",
     username: "",
     notificationsEnabled: true,
     messagePreview: true,
@@ -67,6 +70,7 @@ const defaultSettings: SettingsState = {
     showPhoneNumber: "contacts",
     showBio: "everyone",
     showAvatar: "everyone",
+    showEmail: "everyone",
     whoCanAddMe: "everyone",
     readReceipts: true,
     theme: "system",
@@ -252,7 +256,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
     const [blockedUsers, setBlockedUsers] = useState<UserSearchResult[]>([]);
 
     const saveTimer = useRef<number | null>(null);
-    const pendingFields = useRef<Partial<{ username: string; bio: string; phone: string }>>({});
+    const pendingFields = useRef<Partial<{ username: string; bio: string; phone: string; email: string }>>({});
 
     const [notifSaveStatus, setNotifSaveStatus] = useState<SaveStatus>("idle");
     const [privacySaveStatus, setPrivacySaveStatus] = useState<SaveStatus>("idle");
@@ -267,6 +271,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
         showPhoneNumber: "showPhoneNumber",
         showBio: "showBio",
         showAvatar: "showAvatar",
+        showEmail: "showEmail",
         whoCanAddMe: "whoCanAddMe",
         totpEnabled: "totpEnabled",
     };
@@ -344,7 +349,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
         }
     };
 
-    const scheduleSave = (field: "username" | "bio" | "phone", value: string) => {
+    const scheduleSave = (field: "username" | "bio" | "phone" | "email", value: string) => {
         pendingFields.current = { ...pendingFields.current, [field]: value };
 
         if (saveTimer.current) window.clearTimeout(saveTimer.current);
@@ -371,6 +376,12 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
         const value = raw.replace(/^\s+/, "");
         patch({ username: value });
         scheduleSave("username", value);
+    };
+
+    const handleEmailChange = (raw: string) => {
+        const value = raw.replace(/^\s+/, "");
+        patch({ email: value });
+        scheduleSave("email", value);
     };
 
     const handleNotificationToggle = async (
@@ -499,6 +510,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                     ...prev,
                     bio: data.bio,
                     phone: data.phone,
+                    email: data.email,
                     username: data.username,
                     notificationsEnabled: data.notificationsEnabled,
                     groupNotifications: data.groupNotifications,
@@ -510,6 +522,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                     showPhoneNumber: data.showPhoneNumber,
                     showBio: data.showBio,
                     showAvatar: data.showAvatar,
+                    showEmail: data.showEmail,
                     whoCanAddMe: data.whoCanAddMe,
                     theme: data.theme,
                     wallpaper: data.wallpaper,
@@ -695,6 +708,17 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                             onChange={(e) => handlePhoneChange(e.target.value)}
                             disabled={!settingsLoaded}
                         />
+
+                        <label className={styles.fieldLabel}>Email</label>
+                        <input
+                            className={styles.textInput}
+                            type="email"
+                            placeholder={settingsLoaded ? "you@example.com" : "Loading..."}
+                            value={settings.email}
+                            onChange={(e) => handleEmailChange(e.target.value)}
+                            disabled={!settingsLoaded}
+                        />
+
                         <span className={styles.dangerTitle}>Danger Zone</span>
                         <button className={styles.dangerRow} onClick={handleOpenDeleteModal}>
                             <TrashIcon />
@@ -847,6 +871,23 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                                     className={`${styles.chipButton} ${settings.showAvatar === opt.id ? styles.chipButtonActive : ""}`}
                                     disabled={!settingsLoaded}
                                     onClick={() => handlePrivacyChange("showAvatar", opt.id)}
+                                >
+                                    <span className={styles.chipIcon}>
+                                        <opt.icon />
+                                    </span>
+                                    <span className={styles.chipLabel}>{opt.label}</span>
+                                </button>
+                            ))}
+                        </div>
+
+                        <span className={styles.subGroupTitle}>Who can see my email</span>
+                        <div className={styles.chipGroup}>
+                            {visibilityOptions.map((opt) => (
+                                <button
+                                    key={opt.id}
+                                    className={`${styles.chipButton} ${settings.showEmail === opt.id ? styles.chipButtonActive : ""}`}
+                                    disabled={!settingsLoaded}
+                                    onClick={() => handlePrivacyChange("showEmail", opt.id)}
                                 >
                                     <span className={styles.chipIcon}>
                                         <opt.icon />

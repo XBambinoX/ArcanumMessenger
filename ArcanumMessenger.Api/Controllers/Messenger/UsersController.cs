@@ -103,6 +103,7 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
                             u.UserSettings.PhoneEnc,
                             u.UserSettings.ShowPhoneNumber,
                             u.UserSettings.ShowBio,
+                            u.UserSettings.ShowEmail,
                         })
                         .FirstOrDefaultAsync(ct);
 
@@ -122,7 +123,6 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
         var dek = encryption.UnwrapDek(user.WrappedDek);
         var username = encryption.Decrypt(user.UsernameEnc, dek);
         var publicId = encryption.Decrypt(user.PublicIdEnc, dek);
-        var publicEmail = string.IsNullOrEmpty(user.EmailEnc) ? null : encryption.Decrypt(user.EmailEnc, dek);
         var isBlocked = id != callerId && await db.Contacts.AnyAsync(c => c.UserId == callerId && c.ContactId == id && c.IsBlocked, ct);
         var isBlockedByOther = id != callerId && await db.Contacts.AnyAsync(c => c.UserId == id && c.ContactId == callerId && c.IsBlocked, ct);
         // isContact ("have I added them") drives the Add/Remove-contact button
@@ -147,12 +147,22 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
             PhoneVisibility.Nobody => id == callerId,
             _ => false
         };
+        var showEmailToThisViewer = user.ShowEmail switch
+        {
+            PhoneVisibility.Everyone => true,
+            PhoneVisibility.Contacts => isCallerInOwnersContacts || id == callerId,
+            PhoneVisibility.Nobody => id == callerId,
+            _ => false
+        };
 
         var phone = (!string.IsNullOrEmpty(user.PhoneEnc) && showPhoneToThisViewer)
             ? encryption.Decrypt(user.PhoneEnc, dek)
             : null;
         var bio = (!string.IsNullOrEmpty(user.BioEnc) && showBioToThisViewer)
             ? encryption.Decrypt(user.BioEnc, dek)
+            : null;
+        var publicEmail = (!string.IsNullOrEmpty(user.EmailEnc) && showEmailToThisViewer)
+            ? encryption.Decrypt(user.EmailEnc, dek)
             : null;
     
         return new GetUserResponce(Name:username,

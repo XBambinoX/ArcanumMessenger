@@ -908,16 +908,18 @@ export default function RegisterPage() {
                         <h3 className={styles.modalTitle}>About your email</h3>
                         <p className={styles.modalText}>
                             Your email is private and not even developers can
-                            read or recover it. If you'd like to show your email
-                            on your public profile later, we need your
-                            permission to know it in plain form.
+                            read or recover it. Checking this box lets Arcanum
+                            keep this email in encrypted form, so it's already
+                            there if you choose to show it on your profile
+                            later.
                         </p>
                         <p className={styles.modalText}>
                             <br />
                             <span className={styles.modalWarning}>
-                                Without this, your email stays hashed forever –
-                                and you won't be able to add it to your profile,
-                                even afterward.
+                                Without this, your email stays hashed forever
+                                and this copy is never kept. You can still add
+                                an email to your profile later - you'll just
+                                need to type it in again at that point.
                             </span>
                         </p>
                         <button

@@ -4,6 +4,7 @@ public record UserSettingsResponse(
     string Username,
     string Bio,
     string Phone,
+    string Email,
     bool NotificationsEnabled,
     bool GroupNotifications,
     string NotificationSound,
@@ -14,6 +15,7 @@ public record UserSettingsResponse(
     string ShowPhoneNumber,   // "everyone" | "contacts" | "nobody"
     string ShowBio,           // "everyone" | "contacts" | "nobody"
     string ShowAvatar,        // "everyone" | "contacts" | "nobody"
+    string ShowEmail,         // "everyone" | "contacts" | "nobody"
     string WhoCanAddMe,       // "everyone" | "contacts"
     string Theme,
     string Wallpaper,
@@ -22,9 +24,10 @@ public record UserSettingsResponse(
 );
 
 public record UpdateAccountFieldsRequest(
-    string? Username, 
-    string? Bio, 
-    string? Phone);
+    string? Username,
+    string? Bio,
+    string? Phone,
+    string? Email);
 
 public record DeleteAccountRequest(string AuthKey);
 
@@ -43,6 +46,7 @@ public record UpdatePrivacySettingsRequest(
     string? ShowPhoneNumber,
     string? ShowBio,
     string? ShowAvatar,
+    string? ShowEmail,
     string? WhoCanAddMe,
     bool? TotpEnabled
 );

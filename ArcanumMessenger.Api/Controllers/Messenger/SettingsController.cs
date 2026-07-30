@@ -35,6 +35,7 @@ public class SettingsController(AppDbContext db, EncryptionService encryption, T
             Username: encryption.Decrypt(settings.UsernameEnc, dek),
             Bio: settings.BioEnc is not null ? encryption.Decrypt(settings.BioEnc, dek) : "",
             Phone: settings.PhoneEnc is not null ? encryption.Decrypt(settings.PhoneEnc, dek) : "",
+            Email: settings.EmailEnc is not null ? encryption.Decrypt(settings.EmailEnc, dek) : "",
             NotificationsEnabled: settings.NotificationsEnabled,
             GroupNotifications: settings.GroupNotificationsEnabled,
             NotificationSound: settings.NotificationSound,
@@ -45,6 +46,7 @@ public class SettingsController(AppDbContext db, EncryptionService encryption, T
             ShowPhoneNumber: settings.ShowPhoneNumber.ToApiString(),
             ShowBio: settings.ShowBio.ToApiString(),
             ShowAvatar: settings.ShowAvatar.ToApiString(),
+            ShowEmail: settings.ShowEmail.ToApiString(),
             WhoCanAddMe: settings.WhoCanAddMe.ToApiString(),
             Theme: settings.Theme,
             Wallpaper: settings.Wallpaper,
@@ -83,6 +85,13 @@ public class SettingsController(AppDbContext db, EncryptionService encryption, T
 
         if (request.Phone is not null)
             user.UserSettings.PhoneEnc = request.Phone.Length > 0 ? encryption.Encrypt(request.Phone, dek) : null;
+
+        // Same free-text, unverified field as phone/bio - registering without
+        // the email-visibility consent just means this starts empty instead
+        // of being pre-filled with the registration email; nothing stops it
+        // being set here afterward.
+        if (request.Email is not null)
+            user.UserSettings.EmailEnc = request.Email.Length > 0 ? encryption.Encrypt(request.Email, dek) : null;
 
         user.UserSettings.UpdatedAt = DateTime.UtcNow;
 
@@ -226,6 +235,14 @@ public class SettingsController(AppDbContext db, EncryptionService encryption, T
                 return BadRequest(new { reason = "invalid_show_avatar" });
 
             settings.ShowAvatar = avatarVisibility;
+        }
+
+        if (request.ShowEmail is not null)
+        {
+            if (!PrivacyEnumConverters.TryParsePhoneVisibility(request.ShowEmail, out var emailVisibility))
+                return BadRequest(new { reason = "invalid_show_email" });
+
+            settings.ShowEmail = emailVisibility;
         }
 
         if (request.WhoCanAddMe is not null)
