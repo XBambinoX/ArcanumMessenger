@@ -11,6 +11,8 @@ import { getUserSettings,
     type UpdatePrivacySettingsRequest,
     type UpdateChatSettingsRequest } from "../api/userSettings";
 import { getBlockedUsers, unblockUser } from "../api/contacts";
+import { getMyAvatarUrl, getUserAvatarUrl, uploadMyAvatar, deleteMyAvatar } from "../api/users";
+import AvatarImage from "./AvatarImage";
 import DeleteAccountModal from "./DeleteAccountModal";
 
 interface ProfilePanelProps {
@@ -19,11 +21,12 @@ interface ProfilePanelProps {
     onLogout: () => void;
     onUsernameChange?: (username: string) => void;
     onNotificationSettingsChange?: (sound: string, notificationsEnabled: boolean, groupNotifications: boolean) => void;
+    onAvatarChange?: () => void;
 }
 
 type Section = "main" | "account" | "notifications" | "privacy" | "chats" | "blocked";
 type SaveStatus = "idle" | "saving" | "saved" | "error";
-type PrivacyField = "showLastSeen" | "showOnlineStatus" | "readReceipts" | "showPhoneNumber" | "whoCanAddMe" | "totpEnabled";
+type PrivacyField = "showLastSeen" | "showOnlineStatus" | "readReceipts" | "showPhoneNumber" | "showBio" | "showAvatar" | "showEmail" | "whoCanAddMe" | "totpEnabled";
 type ChatField = "theme" | "wallpaper" | "linkPreviews" | "autoDownloadMedia";
 
 // Mirrors Entities.UserSettings, plus a few visual-only extras below.
@@ -31,6 +34,7 @@ type ChatField = "theme" | "wallpaper" | "linkPreviews" | "autoDownloadMedia";
 interface SettingsState {
     bio: string;
     phone: string;
+    email: string;
     username: string;
     notificationsEnabled: boolean;
     messagePreview: boolean;
@@ -40,6 +44,9 @@ interface SettingsState {
     showLastSeen: boolean;
     showOnlineStatus: boolean;
     showPhoneNumber: "everyone" | "contacts" | "nobody";
+    showBio: "everyone" | "contacts" | "nobody";
+    showAvatar: "everyone" | "contacts" | "nobody";
+    showEmail: "everyone" | "contacts" | "nobody";
     whoCanAddMe: "everyone" | "contacts";
     readReceipts: boolean;
     theme: "system" | "dark" | "light";
@@ -51,6 +58,7 @@ interface SettingsState {
 const defaultSettings: SettingsState = {
     bio: "",
     phone: "",
+    email: "",
     username: "",
     notificationsEnabled: true,
     messagePreview: true,
@@ -60,6 +68,9 @@ const defaultSettings: SettingsState = {
     showLastSeen: true,
     showOnlineStatus: true,
     showPhoneNumber: "contacts",
+    showBio: "everyone",
+    showAvatar: "everyone",
+    showEmail: "everyone",
     whoCanAddMe: "everyone",
     readReceipts: true,
     theme: "system",
@@ -189,7 +200,8 @@ const themeOptions: { id: SettingsState["theme"]; label: string; icon: () => Rea
     { id: "light", label: "Light", icon: ThemeLightIcon },
 ];
 
-const phoneVisibilityOptions: { id: SettingsState["showPhoneNumber"]; label: string; icon: () => ReactElement }[] = [
+// Shared by phone/bio/avatar visibility - all three are the same three-way choice.
+const visibilityOptions: { id: SettingsState["showPhoneNumber"]; label: string; icon: () => ReactElement }[] = [
     { id: "everyone", label: "Everyone", icon: EveryoneIcon },
     { id: "contacts", label: "My Contacts", icon: ContactsIcon },
     { id: "nobody", label: "Nobody", icon: NobodyIcon },
@@ -218,12 +230,15 @@ const sectionTitles: Record<Section, string> = {
 const MAX_PHONE_DIGITS = 15;
 const ANIMATION_MS = 250;
 
-export default function ProfilePanel({ profile, onClose, onLogout, onUsernameChange, onNotificationSettingsChange }: ProfilePanelProps) {
+export default function ProfilePanel({ profile, onClose, onLogout, onUsernameChange, onNotificationSettingsChange, onAvatarChange }: ProfilePanelProps) {
     const navigate = useNavigate();
     const [copied, setCopied] = useState(false);
     const [settings, setSettings] = useState<SettingsState>(defaultSettings);
     const [settingsLoaded, setSettingsLoaded] = useState(false);
     const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+    const [avatarNonce, setAvatarNonce] = useState(0);
+    const avatarInputRef = useRef<HTMLInputElement | null>(null);
+    const myAvatarSrc = getMyAvatarUrl() + (avatarNonce ? `?t=${avatarNonce}` : "");
 
     const [section, setSection] = useState<Section>("main");
     const [prevSection, setPrevSection] = useState<Section | null>(null);
@@ -241,7 +256,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
     const [blockedUsers, setBlockedUsers] = useState<UserSearchResult[]>([]);
 
     const saveTimer = useRef<number | null>(null);
-    const pendingFields = useRef<Partial<{ username: string; bio: string; phone: string }>>({});
+    const pendingFields = useRef<Partial<{ username: string; bio: string; phone: string; email: string }>>({});
 
     const [notifSaveStatus, setNotifSaveStatus] = useState<SaveStatus>("idle");
     const [privacySaveStatus, setPrivacySaveStatus] = useState<SaveStatus>("idle");
@@ -254,6 +269,9 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
         showOnlineStatus: "showOnlineStatus",
         readReceipts: "readReceiptsEnabled",
         showPhoneNumber: "showPhoneNumber",
+        showBio: "showBio",
+        showAvatar: "showAvatar",
+        showEmail: "showEmail",
         whoCanAddMe: "whoCanAddMe",
         totpEnabled: "totpEnabled",
     };
@@ -275,6 +293,38 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
         setTimeout(() => setCopied(false), 1500);
     };
 
+    const handleAvatarClick = () => avatarInputRef.current?.click();
+
+    const handleAvatarFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        e.target.value = "";
+        if (!file) return;
+
+        setSaveStatus("saving");
+        const ok = await uploadMyAvatar(file);
+        if (ok) {
+            setSaveStatus("saved");
+            window.setTimeout(() => setSaveStatus((s) => (s === "saved" ? "idle" : s)), 1500);
+            setAvatarNonce(Date.now());
+            onAvatarChange?.();
+        } else {
+            setSaveStatus("error");
+        }
+    };
+
+    const handleRemoveAvatar = async () => {
+        setSaveStatus("saving");
+        const ok = await deleteMyAvatar();
+        if (ok) {
+            setSaveStatus("saved");
+            window.setTimeout(() => setSaveStatus((s) => (s === "saved" ? "idle" : s)), 1500);
+            setAvatarNonce(Date.now());
+            onAvatarChange?.();
+        } else {
+            setSaveStatus("error");
+        }
+    };
+
     const handleOpenDeleteModal = async () => {
         try {
             const salt = await getKdfSalt();
@@ -291,15 +341,19 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
         setSaveStatus("saving");
 
         try {
-            await updateAccountFields(fields);
-            setSaveStatus("saved");
-            window.setTimeout(() => setSaveStatus((s) => (s === "saved" ? "idle" : s)), 1500);
+            const result = await updateAccountFields(fields);
+            if (result.ok) {
+                setSaveStatus("saved");
+                window.setTimeout(() => setSaveStatus((s) => (s === "saved" ? "idle" : s)), 1500);
+            } else {
+                setSaveStatus("error");
+            }
         } catch {
             setSaveStatus("error");
         }
     };
 
-    const scheduleSave = (field: "username" | "bio" | "phone", value: string) => {
+    const scheduleSave = (field: "username" | "bio" | "phone" | "email", value: string) => {
         pendingFields.current = { ...pendingFields.current, [field]: value };
 
         if (saveTimer.current) window.clearTimeout(saveTimer.current);
@@ -326,6 +380,12 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
         const value = raw.replace(/^\s+/, "");
         patch({ username: value });
         scheduleSave("username", value);
+    };
+
+    const handleEmailChange = (raw: string) => {
+        const value = raw.replace(/^\s+/, "");
+        patch({ email: value });
+        scheduleSave("email", value);
     };
 
     const handleNotificationToggle = async (
@@ -454,6 +514,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                     ...prev,
                     bio: data.bio,
                     phone: data.phone,
+                    email: data.email,
                     username: data.username,
                     notificationsEnabled: data.notificationsEnabled,
                     groupNotifications: data.groupNotifications,
@@ -463,6 +524,9 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                     showOnlineStatus: data.showOnlineStatus,
                     readReceipts: data.readReceiptsEnabled,
                     showPhoneNumber: data.showPhoneNumber,
+                    showBio: data.showBio,
+                    showAvatar: data.showAvatar,
+                    showEmail: data.showEmail,
                     whoCanAddMe: data.whoCanAddMe,
                     theme: data.theme,
                     wallpaper: data.wallpaper,
@@ -526,7 +590,10 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                     <>
                         <div className={styles.profileHeader}>
                             <div className={styles.profileAvatar}>
-                                {(settingsLoaded ? (settings.username || profile.name) : profile.name).charAt(0).toUpperCase()}
+                                <AvatarImage
+                                    src={myAvatarSrc}
+                                    fallback={(settingsLoaded ? (settings.username || profile.name) : profile.name).charAt(0).toUpperCase()}
+                                />
                             </div>
 
                            <span className={styles.profileName}>
@@ -585,17 +652,24 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                 return (
                     <div className={styles.subPage}>
                         <div className={styles.avatarEditRow}>
-                            <div className={styles.avatarEditPic}>
-                                {profile.name.charAt(0).toUpperCase()}
+                            <input
+                                type="file"
+                                accept="image/*"
+                                ref={avatarInputRef}
+                                className={styles.hiddenFileInput}
+                                onChange={handleAvatarFileSelected}
+                            />
+                            <div className={styles.avatarEditPic} onClick={handleAvatarClick}>
+                                <AvatarImage src={myAvatarSrc} fallback={profile.name.charAt(0).toUpperCase()} />
                                 <span className={styles.avatarEditOverlay}>
                                     <CameraIcon />
                                 </span>
                             </div>
                             <div className={styles.avatarEditHint}>
                                 <span className={styles.avatarEditTitle}>Set New Photo</span>
-                                <span className={styles.avatarEditSub}>
-                                    Upload isn't wired up yet
-                                </span>
+                                <button className={styles.avatarEditSub} onClick={handleRemoveAvatar}>
+                                    Remove photo
+                                </button>
                             </div>
 
                             <div className={styles.saveStatus}>
@@ -638,6 +712,17 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                             onChange={(e) => handlePhoneChange(e.target.value)}
                             disabled={!settingsLoaded}
                         />
+
+                        <label className={styles.fieldLabel}>Email</label>
+                        <input
+                            className={styles.textInput}
+                            type="email"
+                            placeholder={settingsLoaded ? "you@example.com" : "Loading..."}
+                            value={settings.email}
+                            onChange={(e) => handleEmailChange(e.target.value)}
+                            disabled={!settingsLoaded}
+                        />
+
                         <span className={styles.dangerTitle}>Danger Zone</span>
                         <button className={styles.dangerRow} onClick={handleOpenDeleteModal}>
                             <TrashIcon />
@@ -750,12 +835,63 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
 
                         <span className={styles.subGroupTitle}>Who can see my phone number</span>
                         <div className={styles.chipGroup}>
-                            {phoneVisibilityOptions.map((opt) => (
+                            {visibilityOptions.map((opt) => (
                                 <button
                                     key={opt.id}
                                     className={`${styles.chipButton} ${settings.showPhoneNumber === opt.id ? styles.chipButtonActive : ""}`}
                                     disabled={!settingsLoaded}
                                     onClick={() => handlePrivacyChange("showPhoneNumber", opt.id)}
+                                >
+                                    <span className={styles.chipIcon}>
+                                        <opt.icon />
+                                    </span>
+                                    <span className={styles.chipLabel}>{opt.label}</span>
+                                </button>
+                            ))}
+                        </div>
+
+                        <span className={styles.subGroupTitle}>Who can see my bio</span>
+                        <div className={styles.chipGroup}>
+                            {visibilityOptions.map((opt) => (
+                                <button
+                                    key={opt.id}
+                                    className={`${styles.chipButton} ${settings.showBio === opt.id ? styles.chipButtonActive : ""}`}
+                                    disabled={!settingsLoaded}
+                                    onClick={() => handlePrivacyChange("showBio", opt.id)}
+                                >
+                                    <span className={styles.chipIcon}>
+                                        <opt.icon />
+                                    </span>
+                                    <span className={styles.chipLabel}>{opt.label}</span>
+                                </button>
+                            ))}
+                        </div>
+
+                        <span className={styles.subGroupTitle}>Who can see my profile photo</span>
+                        <div className={styles.chipGroup}>
+                            {visibilityOptions.map((opt) => (
+                                <button
+                                    key={opt.id}
+                                    className={`${styles.chipButton} ${settings.showAvatar === opt.id ? styles.chipButtonActive : ""}`}
+                                    disabled={!settingsLoaded}
+                                    onClick={() => handlePrivacyChange("showAvatar", opt.id)}
+                                >
+                                    <span className={styles.chipIcon}>
+                                        <opt.icon />
+                                    </span>
+                                    <span className={styles.chipLabel}>{opt.label}</span>
+                                </button>
+                            ))}
+                        </div>
+
+                        <span className={styles.subGroupTitle}>Who can see my email</span>
+                        <div className={styles.chipGroup}>
+                            {visibilityOptions.map((opt) => (
+                                <button
+                                    key={opt.id}
+                                    className={`${styles.chipButton} ${settings.showEmail === opt.id ? styles.chipButtonActive : ""}`}
+                                    disabled={!settingsLoaded}
+                                    onClick={() => handlePrivacyChange("showEmail", opt.id)}
                                 >
                                     <span className={styles.chipIcon}>
                                         <opt.icon />
@@ -800,7 +936,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                                 {blockedUsers.map((u) => (
                                     <li key={u.id} className={styles.blockedRow}>
                                         <div className={styles.blockedAvatar}>
-                                            {u.name.charAt(0).toUpperCase()}
+                                            <AvatarImage src={getUserAvatarUrl(u.id)} fallback={u.name.charAt(0).toUpperCase()} />
                                         </div>
                                         <span className={styles.blockedName}>{u.name}</span>
                                         <button

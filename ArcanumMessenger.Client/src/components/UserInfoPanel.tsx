@@ -2,7 +2,9 @@ import { useState } from "react";
 import type { ChatSummary, User } from "../types/messenger";
 import { createDirectChat } from "../api/chats";
 import { addContact, removeContact, blockUser, unblockUser } from "../api/contacts";
+import { getUserAvatarUrl } from "../api/users";
 import { formatChatTime } from "../lib/time";
+import AvatarImage from "./AvatarImage";
 import styles from "./UserInfoPanel.module.css";
 
 interface UserInfoPanelProps {
@@ -74,7 +76,7 @@ export default function UserInfoPanel({
 
                 <div className={styles.profileHeader}>
                     <div className={styles.profileAvatar}>
-                        {user.name.charAt(0).toUpperCase()}
+                        <AvatarImage src={getUserAvatarUrl(userId)} fallback={user.name.charAt(0).toUpperCase()} />
                     </div>
                     <span className={styles.profileName}>{user.name}</span>
                     <span

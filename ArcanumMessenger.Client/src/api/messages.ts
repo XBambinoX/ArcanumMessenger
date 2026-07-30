@@ -21,12 +21,47 @@ export async function getMessageHistory(
 export async function sendMessage(
     chatId: string,
     content: string,
+    mediaId?: string,
+    asGif?: boolean,
+    replyToId?: string | null,
 ): Promise<ChatMessage | null> {
     const res = await apiFetch(`/api/chats/${chatId}/messages`, {
         method: "POST",
         credentials: "include",
-        body: JSON.stringify({ content, replyToId: null }),
+        body: JSON.stringify({ content, replyToId: replyToId ?? null, mediaId: mediaId ?? null, asGif: asGif ?? false }),
     });
     const data = await res.json();
     return data.success ? data.message : null;
+}
+
+export async function deleteMessage(chatId: string, messageId: string): Promise<boolean> {
+    const res = await apiFetch(`/api/chats/${chatId}/messages/${messageId}`, {
+        method: "DELETE",
+        credentials: "include",
+    });
+    const data = await res.json();
+    return data.success === true;
+}
+
+export async function editMessage(chatId: string, messageId: string, content: string): Promise<ChatMessage | null> {
+    const res = await apiFetch(`/api/chats/${chatId}/messages/${messageId}`, {
+        method: "PUT",
+        credentials: "include",
+        body: JSON.stringify({ content }),
+    });
+    const data = await res.json();
+    return data.success ? data.message : null;
+}
+
+export async function forwardMessages(
+    targetChatId: string,
+    messageIds: string[],
+): Promise<ChatMessage[] | null> {
+    const res = await apiFetch(`/api/chats/${targetChatId}/messages/forward`, {
+        method: "POST",
+        credentials: "include",
+        body: JSON.stringify({ messageIds }),
+    });
+    const data = await res.json();
+    return data.success ? data.messages : null;
 }

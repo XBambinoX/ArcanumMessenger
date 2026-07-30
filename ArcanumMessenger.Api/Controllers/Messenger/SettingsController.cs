@@ -10,7 +10,7 @@ using ArcanumMessenger.Services.AuthServices.LoginServices;
 namespace ArcanumMessenger.Controllers.Messenger;
 
 [Route("api/settings")]
-public class SettingsController(AppDbContext db, EncryptionService encryption, TokenIssuanceService tokenIssuance, ILogger<SettingsController> logger) : MessengerControllerBase
+public class SettingsController(AppDbContext db, EncryptionService encryption, TokenIssuanceService tokenIssuance, EmailHasher emailHasher, ILogger<SettingsController> logger) : MessengerControllerBase
 {
     [HttpGet("get")]
     [Authorize]
@@ -35,6 +35,7 @@ public class SettingsController(AppDbContext db, EncryptionService encryption, T
             Username: encryption.Decrypt(settings.UsernameEnc, dek),
             Bio: settings.BioEnc is not null ? encryption.Decrypt(settings.BioEnc, dek) : "",
             Phone: settings.PhoneEnc is not null ? encryption.Decrypt(settings.PhoneEnc, dek) : "",
+            Email: settings.EmailEnc is not null ? encryption.Decrypt(settings.EmailEnc, dek) : "",
             NotificationsEnabled: settings.NotificationsEnabled,
             GroupNotifications: settings.GroupNotificationsEnabled,
             NotificationSound: settings.NotificationSound,
@@ -43,6 +44,9 @@ public class SettingsController(AppDbContext db, EncryptionService encryption, T
             ShowOnlineStatus: settings.ShowOnlineStatus,
             ReadReceiptsEnabled: settings.ReadReceiptsEnabled,
             ShowPhoneNumber: settings.ShowPhoneNumber.ToApiString(),
+            ShowBio: settings.ShowBio.ToApiString(),
+            ShowAvatar: settings.ShowAvatar.ToApiString(),
+            ShowEmail: settings.ShowEmail.ToApiString(),
             WhoCanAddMe: settings.WhoCanAddMe.ToApiString(),
             Theme: settings.Theme,
             Wallpaper: settings.Wallpaper,
@@ -81,6 +85,27 @@ public class SettingsController(AppDbContext db, EncryptionService encryption, T
 
         if (request.Phone is not null)
             user.UserSettings.PhoneEnc = request.Phone.Length > 0 ? encryption.Encrypt(request.Phone, dek) : null;
+
+        // Unlike phone/bio, email isn't a free-text "contact info" field -
+        // it has to be the same address this account was actually
+        // registered with, checked the same way login checks it (a hash,
+        // since the real address is never stored in plain form). Skipping
+        // the registration consent just means this starts empty instead of
+        // being pre-filled, not that any email can be typed in here.
+        if (request.Email is not null)
+        {
+            if (request.Email.Length > 0)
+            {
+                if (emailHasher.Hash(request.Email) != user.EmailHash)
+                    return BadRequest(new { success = false, reason = "email_mismatch" });
+
+                user.UserSettings.EmailEnc = encryption.Encrypt(request.Email, dek);
+            }
+            else
+            {
+                user.UserSettings.EmailEnc = null;
+            }
+        }
 
         user.UserSettings.UpdatedAt = DateTime.UtcNow;
 
@@ -208,6 +233,30 @@ public class SettingsController(AppDbContext db, EncryptionService encryption, T
                 return BadRequest(new { reason = "invalid_show_phone_number" });
 
             settings.ShowPhoneNumber = phoneVisibility;
+        }
+
+        if (request.ShowBio is not null)
+        {
+            if (!PrivacyEnumConverters.TryParsePhoneVisibility(request.ShowBio, out var bioVisibility))
+                return BadRequest(new { reason = "invalid_show_bio" });
+
+            settings.ShowBio = bioVisibility;
+        }
+
+        if (request.ShowAvatar is not null)
+        {
+            if (!PrivacyEnumConverters.TryParsePhoneVisibility(request.ShowAvatar, out var avatarVisibility))
+                return BadRequest(new { reason = "invalid_show_avatar" });
+
+            settings.ShowAvatar = avatarVisibility;
+        }
+
+        if (request.ShowEmail is not null)
+        {
+            if (!PrivacyEnumConverters.TryParsePhoneVisibility(request.ShowEmail, out var emailVisibility))
+                return BadRequest(new { reason = "invalid_show_email" });
+
+            settings.ShowEmail = emailVisibility;
         }
 
         if (request.WhoCanAddMe is not null)

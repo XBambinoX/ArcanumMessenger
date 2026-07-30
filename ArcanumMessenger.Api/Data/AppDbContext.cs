@@ -12,6 +12,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Contact> Contacts => Set<Contact>();
     public DbSet<Message> Messages => Set<Message>();
     public DbSet<UserSettings> UserSettings => Set<UserSettings>();
+    public DbSet<MediaAsset> MediaAssets => Set<MediaAsset>();
+    public DbSet<SavedGif> SavedGifs => Set<SavedGif>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -85,6 +87,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(m => m.ReplyToId)
                 .OnDelete(DeleteBehavior.SetNull);
             e.HasIndex(m => new { m.ChatId, m.CreatedAt });
+            e.HasOne(m => m.Media)
+                .WithMany()
+                .HasForeignKey(m => m.MediaId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Contact>(e =>
@@ -108,6 +114,31 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(s => s.User)
                 .WithOne(u => u.UserSettings)
                 .HasForeignKey<UserSettings>(s => s.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<MediaAsset>(e =>
+        {
+            e.HasKey(m => m.Id);
+            e.Property(m => m.Id).HasDefaultValueSql("gen_random_uuid()");
+            e.Property(m => m.CreatedAt).HasDefaultValueSql("NOW()");
+            e.HasOne(m => m.Uploader)
+                .WithMany()
+                .HasForeignKey(m => m.UploaderId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SavedGif>(e =>
+        {
+            e.HasKey(s => new { s.UserId, s.MediaId });
+            e.Property(s => s.SavedAt).HasDefaultValueSql("NOW()");
+            e.HasOne(s => s.User)
+                .WithMany()
+                .HasForeignKey(s => s.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(s => s.Media)
+                .WithMany()
+                .HasForeignKey(s => s.MediaId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

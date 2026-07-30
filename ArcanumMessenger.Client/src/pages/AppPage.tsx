@@ -3,7 +3,7 @@ import type { HubConnection } from "@microsoft/signalr";
 import { useNavigate } from "react-router";
 import { logout } from "../api/session";
 import { getChats, markChatRead, setChatArchived } from "../api/chats";
-import { getMe, getUserPresence, getPresenceBulk } from "../api/users";
+import { getMe, getUserPresence, getPresenceBulk, getMyAvatarUrl } from "../api/users";
 import { createChatHubConnection } from "../lib/chatHub";
 import { type UserSettingsResponse, getUserSettings  } from "../api/userSettings";
 import { playNotificationSound } from "../lib/notificationSound";
@@ -13,6 +13,7 @@ import ChatList from "../components/ChatList";
 import ChatWindow from "../components/ChatWindow";
 import ProfilePanel from "../components/ProfilePanel";
 import NewChatPanel from "../components/NewChatPanel";
+import AvatarImage from "../components/AvatarImage";
 import type { ChatFolder, ChatMessage, ChatSummary, User } from "../types/messenger";
 import styles from "./AppPage.module.css";
 
@@ -48,6 +49,7 @@ export default function AppPage() {
     const [chats, setChats] = useState<ChatSummary[]>([]);
     const [profile, setProfile] = useState<User | null>(null);
     const [displayName, setDisplayName] = useState<string | null>(null);
+    const [avatarNonce, setAvatarNonce] = useState(0);
     const [folder, setFolder] = useState<ChatFolder>("all");
     const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
     const [search, setSearch] = useState("");
@@ -208,7 +210,7 @@ export default function AppPage() {
                             ...c,
                             lastMessageText: message.content,
                             lastMessageAt: message.createdAt,
-                            unreadCount: isViewing ? c.unreadCount : c.unreadCount + 1,
+                            unreadCount: isViewing || message.isOwn ? c.unreadCount : c.unreadCount + 1,
                         }
                         : c,
                 ),
@@ -237,6 +239,36 @@ export default function AppPage() {
                     }
                 }
             }
+        };
+
+        // Your own sends/forwards now arrive here too (see MessageService),
+        // which is what makes the case above need the isOwn check - without
+        // it, forwarding into a chat you're not currently looking at would
+        // mark your own outgoing message as unread.
+
+        const handleMessageDeleted = (
+            chatId: string,
+            _messageId: string,
+            lastMessageText: string | null,
+            lastMessageAt: string | null,
+        ) => {
+            setChats((prev) =>
+                prev.map((c) => (c.id === chatId ? { ...c, lastMessageText, lastMessageAt } : c)),
+            );
+        };
+
+        // An edit only needs to touch the sidebar preview if it changed the
+        // message that's currently shown as the chat's last one - comparing
+        // timestamps (edits don't change createdAt) says exactly that without
+        // the chat list needing to track message ids at all.
+        const handleMessageEdited = (message: ChatMessage) => {
+            setChats((prev) =>
+                prev.map((c) =>
+                    c.id === message.chatId && c.lastMessageAt === message.createdAt
+                        ? { ...c, lastMessageText: message.content }
+                        : c,
+                ),
+            );
         };
 
         const handleChatCreated = (chat: ChatSummary) => {
@@ -269,12 +301,16 @@ export default function AppPage() {
         };
 
         connection.on("ReceiveMessage", handleReceiveMessage);
+        connection.on("MessageDeleted", handleMessageDeleted);
+        connection.on("MessageEdited", handleMessageEdited);
         connection.on("ChatCreated", handleChatCreated);
         connection.on("UserOnline", handleUserOnline);
         connection.on("UserOffline", handleUserOffline);
 
         return () => {
             connection.off("ReceiveMessage", handleReceiveMessage);
+            connection.off("MessageDeleted", handleMessageDeleted);
+            connection.off("MessageEdited", handleMessageEdited);
             connection.off("ChatCreated", handleChatCreated);
             connection.off("UserOnline", handleUserOnline);
             connection.off("UserOffline", handleUserOffline);
@@ -401,7 +437,10 @@ export default function AppPage() {
                             title="Profile"
                         >
                             <span className={styles.avatarBtn}>
-                                {(displayName ?? profile?.name ?? "?").charAt(0).toUpperCase()}
+                                <AvatarImage
+                                    src={getMyAvatarUrl() + (avatarNonce ? `?t=${avatarNonce}` : "")}
+                                    fallback={(displayName ?? profile?.name ?? "?").charAt(0).toUpperCase()}
+                                />
                             </span>
 
                             <span className={styles.profileName}>
@@ -523,6 +562,7 @@ export default function AppPage() {
                     onLogout={handleLogout}
                     onUsernameChange={(username) => setDisplayName(username || profile.name)}
                     onNotificationSettingsChange={handleNotificationSettingsChange}
+                    onAvatarChange={() => setAvatarNonce(Date.now())}
                 />
             )}
 

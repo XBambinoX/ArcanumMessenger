@@ -10,8 +10,9 @@ using ArcanumMessenger.Entities;
 namespace ArcanumMessenger.Controllers.Messenger;
 
 [Route("api/users")]
-public class UsersController(AppDbContext db, EncryptionService encryption, PublicIdHasher publicIdHasher, PresenceService presence) : MessengerControllerBase
+public class UsersController(AppDbContext db, EncryptionService encryption, PublicIdHasher publicIdHasher, PresenceService presence, AvatarService avatars) : MessengerControllerBase
 {
+    private const long MaxAvatarUploadBytes = 10_000_000;
     [HttpGet("me")]
     public async Task<ActionResult<GetUserResponce>> GetMe(CancellationToken ct)
     {
@@ -101,6 +102,8 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
                             u.UserSettings.BioEnc,
                             u.UserSettings.PhoneEnc,
                             u.UserSettings.ShowPhoneNumber,
+                            u.UserSettings.ShowBio,
+                            u.UserSettings.ShowEmail,
                         })
                         .FirstOrDefaultAsync(ct);
 
@@ -120,21 +123,46 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
         var dek = encryption.UnwrapDek(user.WrappedDek);
         var username = encryption.Decrypt(user.UsernameEnc, dek);
         var publicId = encryption.Decrypt(user.PublicIdEnc, dek);
-        var publicEmail = string.IsNullOrEmpty(user.EmailEnc) ? null : encryption.Decrypt(user.EmailEnc, dek);
         var isBlocked = id != callerId && await db.Contacts.AnyAsync(c => c.UserId == callerId && c.ContactId == id && c.IsBlocked, ct);
         var isBlockedByOther = id != callerId && await db.Contacts.AnyAsync(c => c.UserId == id && c.ContactId == callerId && c.IsBlocked, ct);
+        // isContact ("have I added them") drives the Add/Remove-contact button
+        // and is a caller-centric fact about the caller's own contact list.
+        // Contacts-tier privacy is a different question - "does the PROFILE
+        // OWNER'S contact list include the caller" - answered by a separate,
+        // oppositely-directed check, the same way isBlockedByOther already
+        // mirrors isBlocked in the other direction.
         var isContact = id != callerId && await db.Contacts.AnyAsync(c => c.UserId == callerId && c.ContactId == id && !c.IsBlocked, ct);
-        var bio = string.IsNullOrEmpty(user.BioEnc) ? null : encryption.Decrypt(user.BioEnc, dek);
+        var isCallerInOwnersContacts = id != callerId && await db.Contacts.AnyAsync(c => c.UserId == id && c.ContactId == callerId && !c.IsBlocked, ct);
         var showPhoneToThisViewer = user.ShowPhoneNumber switch
         {
             PhoneVisibility.Everyone => true,
-            PhoneVisibility.Contacts => isContact || id == callerId,
+            PhoneVisibility.Contacts => isCallerInOwnersContacts || id == callerId,
+            PhoneVisibility.Nobody => id == callerId,
+            _ => false
+        };
+        var showBioToThisViewer = user.ShowBio switch
+        {
+            PhoneVisibility.Everyone => true,
+            PhoneVisibility.Contacts => isCallerInOwnersContacts || id == callerId,
+            PhoneVisibility.Nobody => id == callerId,
+            _ => false
+        };
+        var showEmailToThisViewer = user.ShowEmail switch
+        {
+            PhoneVisibility.Everyone => true,
+            PhoneVisibility.Contacts => isCallerInOwnersContacts || id == callerId,
             PhoneVisibility.Nobody => id == callerId,
             _ => false
         };
 
         var phone = (!string.IsNullOrEmpty(user.PhoneEnc) && showPhoneToThisViewer)
             ? encryption.Decrypt(user.PhoneEnc, dek)
+            : null;
+        var bio = (!string.IsNullOrEmpty(user.BioEnc) && showBioToThisViewer)
+            ? encryption.Decrypt(user.BioEnc, dek)
+            : null;
+        var publicEmail = (!string.IsNullOrEmpty(user.EmailEnc) && showEmailToThisViewer)
+            ? encryption.Decrypt(user.EmailEnc, dek)
             : null;
     
         return new GetUserResponce(Name:username,
@@ -246,5 +274,89 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
         }
 
         return Ok(new BulkPresenceResponse(items));
+    }
+
+    // RequestFormLimits isn't needed here the way MediaController's upload
+    // needed it - 10MB is comfortably under the 128MB multipart-form default,
+    // so the two limits never disagree at this size.
+    [HttpPost("me/avatar")]
+    [RequestSizeLimit(MaxAvatarUploadBytes)]
+    public async Task<ActionResult<UploadAvatarResponse>> UploadAvatar(IFormFile? file, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        if (file is null || file.Length == 0)
+            return BadRequest(new UploadAvatarResponse(false, "empty_file"));
+
+        await using var stream = file.OpenReadStream();
+        var (success, reason) = await avatars.UploadAvatarAsync(
+            userId, stream, file.Length, file.ContentType ?? "application/octet-stream", ct);
+
+        return success ? Ok(new UploadAvatarResponse(true)) : BadRequest(new UploadAvatarResponse(false, reason));
+    }
+
+    [HttpDelete("me/avatar")]
+    public async Task<ActionResult<UploadAvatarResponse>> DeleteAvatar(CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        await avatars.DeleteAvatarAsync(userId, ct);
+        return Ok(new UploadAvatarResponse(true));
+    }
+
+    [HttpGet("me/avatar")]
+    public Task<IActionResult> GetMyAvatar(CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Task.FromResult<IActionResult>(Unauthorized());
+
+        return GetAvatarById(userId, ct);
+    }
+
+    // Same open-by-default model GetUser already has (no chat-membership
+    // check) - but now subject to the owner's own ShowAvatar preference,
+    // same as phone/bio.
+    [HttpGet("{id:guid}/avatar")]
+    public async Task<IActionResult> GetAvatarById(Guid id, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var callerId))
+            return Unauthorized();
+
+        var showAvatar = await db.Users.AsNoTracking()
+            .Where(u => u.Id == id && !u.IsDeleted)
+            .Select(u => (PhoneVisibility?)u.UserSettings.ShowAvatar)
+            .FirstOrDefaultAsync(ct);
+
+        if (showAvatar is null || !await IsVisibleToAsync(showAvatar.Value, id, callerId, ct))
+            return NotFound();
+
+        var result = await avatars.OpenAvatarStreamAsync(id, ct);
+        if (result is null)
+            return NotFound();
+
+        Response.ContentLength = result.Length;
+        Response.Headers.CacheControl = "private, max-age=300";
+        return File(result.Content, result.ContentType);
+    }
+
+    // A standalone helper (rather than reusing BuildProfileAsync's inline
+    // logic) since this method needs the check without already computing
+    // anything else about the caller/target pair along the way. Same
+    // direction as BuildProfileAsync's Contacts-tier checks: visible when
+    // the PROFILE OWNER (targetId) has the caller in their own contact list,
+    // not the other way around.
+    private async Task<bool> IsVisibleToAsync(PhoneVisibility visibility, Guid targetId, Guid callerId, CancellationToken ct)
+    {
+        if (targetId == callerId) return true;
+        return visibility switch
+        {
+            PhoneVisibility.Everyone => true,
+            PhoneVisibility.Contacts => await db.Contacts.AnyAsync(
+                c => c.UserId == targetId && c.ContactId == callerId && !c.IsBlocked, ct),
+            PhoneVisibility.Nobody => false,
+            _ => false,
+        };
     }
 }

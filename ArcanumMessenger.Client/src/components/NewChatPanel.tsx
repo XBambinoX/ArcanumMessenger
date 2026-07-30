@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { getContacts } from "../api/contacts";
-import { searchUsers, getUser } from "../api/users";
+import { searchUsers, getUser, getUserAvatarUrl } from "../api/users";
 import type { ChatSummary, User, UserSearchResult } from "../types/messenger";
 import UserInfoPanel from "./UserInfoPanel";
+import AvatarImage from "./AvatarImage";
 import styles from "./NewChatPanel.module.css";
 
 const MIN_SEARCH_LENGTH = 4;
@@ -125,9 +126,10 @@ export default function NewChatPanel({ onClose, onStartChat }: NewChatPanelProps
                                                     styles.contactAvatar
                                                 }
                                             >
-                                                {result.name
-                                                    .charAt(0)
-                                                    .toUpperCase()}
+                                                <AvatarImage
+                                                    src={getUserAvatarUrl(result.id)}
+                                                    fallback={result.name.charAt(0).toUpperCase()}
+                                                />
                                             </div>
                                             <span>{result.name}</span>
                                         </button>
@@ -158,9 +160,10 @@ export default function NewChatPanel({ onClose, onStartChat }: NewChatPanelProps
                                                     styles.contactAvatar
                                                 }
                                             >
-                                                {contact.name
-                                                    .charAt(0)
-                                                    .toUpperCase()}
+                                                <AvatarImage
+                                                    src={getUserAvatarUrl(contact.id)}
+                                                    fallback={contact.name.charAt(0).toUpperCase()}
+                                                />
                                             </div>
                                             <span>{contact.name}</span>
                                         </button>

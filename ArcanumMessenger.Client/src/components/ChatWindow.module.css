@@ -120,6 +120,8 @@
 
 .bubbleRow {
     display: flex;
+    align-items: center;
+    gap: 8px;
     justify-content: flex-start;
 }
 
@@ -128,6 +130,7 @@
 }
 
 .bubble {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 3px;
@@ -141,6 +144,33 @@
     line-height: 1.45;
 }
 
+.selectOverlay {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    cursor: pointer;
+    border-radius: inherit;
+}
+
+.selectCheckbox {
+    align-self: center;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid rgba(167, 139, 250, 0.5);
+    background: rgba(15, 12, 30, 0.4);
+    cursor: pointer;
+    transition:
+        background 0.15s,
+        border-color 0.15s;
+}
+
+.selectCheckboxChecked {
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    border-color: rgba(167, 139, 250, 0.9);
+}
+
 .own .bubble {
     border-radius: 16px;
     border-bottom-right-radius: 6px;
@@ -152,10 +182,39 @@
     border-color: rgba(167, 139, 250, 0.3);
 }
 
+/* A standalone photo/video/gif (no caption) drops the bubble chrome entirely -
+   the media is the whole message, so a purple frame around it just gets in
+   the way. The timestamp moves onto the media itself instead (.mediaTime). */
+.bubble.bubbleBare {
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 16px;
+    border-bottom-left-radius: 6px;
+}
+
+.own .bubble.bubbleBare {
+    background: transparent;
+    border: none;
+    border-radius: 16px;
+    border-bottom-right-radius: 6px;
+}
+
 .sender {
     font-size: 12.5px;
     font-weight: 600;
     color: rgba(34, 211, 238, 0.85);
+}
+
+.forwardedLabel {
+    font-size: 12px;
+    font-style: italic;
+    color: rgba(148, 163, 184, 0.7);
+    cursor: pointer;
+}
+
+.forwardedLabel:hover {
+    text-decoration: underline;
 }
 
 .replyQuote {
@@ -166,6 +225,12 @@
     border-radius: 4px;
     background: rgba(124, 58, 237, 0.1);
     margin-bottom: 2px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.replyQuote:hover {
+    background: rgba(124, 58, 237, 0.18);
 }
 
 .replySender {
@@ -188,6 +253,100 @@
     white-space: pre-wrap;
 }
 
+.emojiOnly {
+    font-size: 40px;
+    line-height: 1.25;
+}
+
+.mediaCaption {
+    margin-top: 4px;
+}
+
+.mediaImage {
+    display: block;
+    max-width: 340px;
+    max-height: 340px;
+    border-radius: 12px;
+    cursor: pointer;
+    object-fit: cover;
+}
+
+.mediaVideo {
+    display: block;
+    max-width: 380px;
+    max-height: 420px;
+    border-radius: 12px;
+}
+
+.mediaWrap {
+    position: relative;
+    display: block;
+    line-height: 0;
+}
+
+/* Captioned media still sits inside a padded bubble (the caption needs the
+   normal chrome below it) - this pulls just the media out to the bubble's
+   top/side edges so it isn't boxed in by that padding either. */
+.mediaWrap.mediaBleedTop {
+    margin: -8px -12px 0;
+}
+
+.mediaTime {
+    position: absolute;
+    right: 8px;
+    bottom: 6px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 11px;
+    line-height: 1.4;
+    pointer-events: none;
+}
+
+.fileCard {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(124, 58, 237, 0.08);
+    border: 1px solid rgba(124, 58, 237, 0.15);
+    color: rgba(226, 232, 240, 0.95);
+    text-decoration: none;
+    min-width: 180px;
+}
+
+.fileIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: rgba(124, 58, 237, 0.15);
+    color: rgba(167, 139, 250, 0.9);
+    flex-shrink: 0;
+}
+
+.fileInfo {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.fileName {
+    font-size: 13.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fileSize {
+    font-size: 11.5px;
+    color: rgba(148, 163, 184, 0.6);
+}
+
 .meta {
     align-self: flex-end;
     display: flex;
@@ -204,11 +363,187 @@
 /* ── INPUT BAR ── */
 .inputBar {
     display: flex;
-    align-items: center;
-    gap: 10px;
+    flex-direction: column;
+    gap: 8px;
     padding: 12px 18px;
     border-top: 1px solid rgba(124, 58, 237, 0.12);
     background: rgba(15, 12, 30, 0.6);
+}
+
+.inputRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.replyBar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    border-left: 2px solid rgba(167, 139, 250, 0.6);
+    background: rgba(124, 58, 237, 0.08);
+}
+
+.replyBarText {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.replyBarSender {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(167, 139, 250, 0.9);
+}
+
+.replyBarSnippet {
+    font-size: 12.5px;
+    color: rgba(148, 163, 184, 0.8);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.hiddenFileInput {
+    display: none;
+}
+
+.attachBtn {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    border: 1px solid rgba(124, 58, 237, 0.2);
+    background: rgba(124, 58, 237, 0.05);
+    color: rgba(167, 139, 250, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.2s;
+}
+
+.attachBtn:hover {
+    background: rgba(124, 58, 237, 0.12);
+    border-color: rgba(167, 139, 250, 0.4);
+}
+
+.gifButtonWrap {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.emojiButtonWrap {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.pendingAttachment {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: rgba(124, 58, 237, 0.08);
+    border: 1px solid rgba(124, 58, 237, 0.15);
+}
+
+.pendingThumb {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.pendingIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    background: rgba(124, 58, 237, 0.15);
+    color: rgba(167, 139, 250, 0.9);
+    flex-shrink: 0;
+}
+
+.pendingName {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sendAsGifLabel {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+    font-size: 12px;
+    color: rgba(226, 232, 240, 0.85);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.pendingUploading {
+    font-size: 13px;
+    color: rgba(148, 163, 184, 0.7);
+}
+
+.progressRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+}
+
+.progressBarTrack {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(148, 163, 184, 0.2);
+    overflow: hidden;
+}
+
+.progressBarFill {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    transition: width 0.15s ease-out;
+}
+
+.progressLabel {
+    flex-shrink: 0;
+    font-size: 12.5px;
+    color: rgba(148, 163, 184, 0.8);
+    min-width: 34px;
+    text-align: right;
+}
+
+.removeAttachmentBtn {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: rgba(248, 113, 113, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.removeAttachmentBtn:hover {
+    background: rgba(248, 113, 113, 0.12);
 }
 
 .input {
@@ -270,12 +605,73 @@
     color: rgba(148, 163, 184, 0.6);
 }
 
+.selectionBar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.selectionCount {
+    flex: 1;
+    font-size: 14px;
+    color: rgba(226, 232, 240, 0.9);
+}
+
+.selectionActions {
+    display: flex;
+    gap: 8px;
+}
+
+.selectionActionBtn {
+    padding: 9px 16px;
+    border-radius: 10px;
+    border: 1px solid rgba(124, 58, 237, 0.25);
+    background: rgba(124, 58, 237, 0.08);
+    color: rgba(226, 232, 240, 0.9);
+    font-size: 13.5px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.selectionActionBtn:hover:not(:disabled) {
+    background: rgba(124, 58, 237, 0.16);
+    border-color: rgba(167, 139, 250, 0.4);
+}
+
+.selectionActionBtn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.selectionActionDanger {
+    color: rgba(248, 113, 113, 0.9);
+    border-color: rgba(248, 113, 113, 0.25);
+}
+
+.selectionActionDanger:hover:not(:disabled) {
+    background: rgba(248, 113, 113, 0.12);
+    border-color: rgba(248, 113, 113, 0.4);
+}
+
 .subtitleOnline {
     color: #4fb85c;
 }
 
 .bubbleEnter {
     animation: bubbleIn 0.26s ease-out;
+}
+
+.bubbleHighlight .bubble {
+    animation: bubbleFlash 0.9s ease-out;
+}
+
+@keyframes bubbleFlash {
+    0% {
+        box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.6);
+    }
+    100% {
+        box-shadow: 0 0 0 3px rgba(167, 139, 250, 0);
+    }
 }
 
 .bubbleRow.own.bubbleEnter {
