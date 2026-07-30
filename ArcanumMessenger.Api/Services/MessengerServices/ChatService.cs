@@ -186,6 +186,20 @@ public class ChatService(
     {
         membership.LastReadAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
+
+        var settings = await db.UserSettings.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.UserId == membership.UserId, ct);
+        if (settings is null || settings.ReadReceiptsEnabled)
+        {
+            var otherMemberIds = await db.ChatMembers.AsNoTracking()
+                .Where(cm => cm.ChatId == membership.ChatId && cm.UserId != membership.UserId)
+                .Select(cm => cm.UserId)
+                .ToListAsync(ct);
+
+            foreach (var id in otherMemberIds)
+                await hub.Clients.User(id.ToString()).ChatRead(membership.ChatId, membership.UserId, membership.LastReadAt);
+        }
+
         return membership.LastReadAt;
     }
 

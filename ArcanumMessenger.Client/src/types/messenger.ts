@@ -36,6 +36,11 @@ export interface MediaAsset {
     hasThumbnail: boolean;
 }
 
+export interface ChatReadState {
+    userId: string;
+    lastReadAt: string; // ISO timestamp
+}
+
 export interface ChatMessage {
     id: string;
     chatId: string;

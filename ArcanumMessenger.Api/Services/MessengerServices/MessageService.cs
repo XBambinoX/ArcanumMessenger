@@ -25,7 +25,7 @@ public class MessageService(
             message.ForwardedFromSenderId, message.ForwardedFromSenderName
         );
 
-    public async Task<(List<ChatMessageDto> Messages, bool HasMore, string? Reason)> GetHistoryAsync(
+    public async Task<(List<ChatMessageDto> Messages, bool HasMore, List<ChatReadStateDto> ReadStates, string? Reason)> GetHistoryAsync(
         Guid chatId, Guid callerId, Guid? beforeMessageId, int take, CancellationToken ct)
     {
         take = Math.Clamp(take <= 0 ? DefaultTake : take, 1, MaxTake);
@@ -38,7 +38,7 @@ public class MessageService(
                 .Select(m => (DateTime?)m.CreatedAt)
                 .FirstOrDefaultAsync(ct);
             if (beforeCreatedAt is null)
-                return ([], false, "invalid_cursor");
+                return ([], false, [], "invalid_cursor");
         }
 
         var query = db.Messages.AsNoTracking().Where(m => m.ChatId == chatId && !m.IsDeleted);
@@ -73,7 +73,13 @@ public class MessageService(
             m.ForwardedFromSenderId, m.ForwardedFromSenderName
         )).ToList();
 
-        return (messages, hasMore, null);
+        //Read states
+        var readStates = await db.ChatMembers.AsNoTracking()
+            .Where(cm => cm.ChatId == chatId && cm.UserId != callerId)
+            .Select(cm => new ChatReadStateDto(cm.UserId, cm.LastReadAt))
+            .ToListAsync(ct);
+
+        return (messages, hasMore, readStates, null);
     }
 
     public async Task<(ChatMessageDto? Message, string? Reason)> SendMessageAsync(

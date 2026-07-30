@@ -18,11 +18,11 @@ public class MessagesController(MessageService messageService, ChatAccessService
         if (membership is null)
             return NotFound(new MessageHistoryResponse(false, null, false, "not_found"));
 
-        var (messages, hasMore, reason) = await messageService.GetHistoryAsync(chatId, userId, before, take, ct);
+        var (messages, hasMore, readStates, reason) = await messageService.GetHistoryAsync(chatId, userId, before, take, ct);
         if (reason is not null)
             return BadRequest(new MessageHistoryResponse(false, null, false, reason));
 
-        return Ok(new MessageHistoryResponse(true, messages, hasMore));
+        return Ok(new MessageHistoryResponse(true, messages, hasMore, ReadStates: readStates));
     }
 
     [HttpPost]

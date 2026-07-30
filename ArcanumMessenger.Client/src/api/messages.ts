@@ -1,9 +1,10 @@
 import { apiFetch } from "../lib/apiFetch";
-import type { ChatMessage } from "../types/messenger";
+import type { ChatMessage, ChatReadState } from "../types/messenger";
 
 export interface MessageHistoryResult {
     messages: ChatMessage[];
     hasMore: boolean;
+    readStates: ChatReadState[];
 }
 
 export async function getMessageHistory(
@@ -15,7 +16,7 @@ export async function getMessageHistory(
         credentials: "include",
     });
     const data = await res.json();
-    return { messages: data.messages ?? [], hasMore: data.hasMore ?? false };
+    return { messages: data.messages ?? [], hasMore: data.hasMore ?? false, readStates: data.readStates ?? [] };
 }
 
 export async function sendMessage(

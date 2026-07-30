@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { HubConnection } from "@microsoft/signalr";
-import type { ChatMessage, ChatSummary, MediaAsset, User } from "../types/messenger";
+import type { ChatMessage, ChatReadState, ChatSummary, MediaAsset, User } from "../types/messenger";
 import { getMessageHistory, sendMessage, deleteMessage, editMessage, forwardMessages } from "../api/messages";
 import { getUser, getUserAvatarUrl } from "../api/users";
 import { uploadMedia, getMediaUrl, getMediaThumbnailUrl, getSavedGifs, saveGif, unsaveGif } from "../api/media";
@@ -74,6 +74,32 @@ function isEmojiOnlyMessage(text: string): boolean {
     return graphemeCount > 0 && graphemeCount <= 6;
 }
 
+function isMessageRead(message: ChatMessage, readStates: ChatReadState[]): boolean {
+    if (readStates.length === 0) return false;
+    const createdAt = new Date(message.createdAt).getTime();
+    return readStates.every((rs) => new Date(rs.lastReadAt).getTime() >= createdAt);
+}
+
+function MessageStatusIcon({ read }: { read: boolean }) {
+    return read ? (
+        <svg
+            className={styles.statusIconRead}
+            width="16" height="10" viewBox="0 0 16 10" fill="none"
+            stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
+        >
+            <path d="M1 5L4.5 8.5L9.5 2" />
+            <path d="M6 5L9.5 8.5L14.5 2" />
+        </svg>
+    ) : (
+        <svg
+            width="12" height="10" viewBox="0 0 12 10" fill="none"
+            stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
+        >
+            <path d="M1 5L4.5 8.5L11 1" />
+        </svg>
+    );
+}
+
 interface ChatWindowProps {
     chat: ChatSummary;
     connection: HubConnection | null;
@@ -98,6 +124,7 @@ function dayLabel(iso: string): string {
 
 export default function ChatWindow({ chat, connection, onStartChat, presence }: ChatWindowProps) {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [readStates, setReadStates] = useState<ChatReadState[]>([]);
     const [hasMore, setHasMore] = useState(false);
     const [loadingMore, setLoadingMore] = useState(false);
     const [draft, setDraft] = useState("");
@@ -200,6 +227,7 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
             if (cancelled) return;
             setMessages(history.messages);
             setHasMore(history.hasMore);
+            setReadStates(history.readStates);
         });
 
         return () => {
@@ -230,13 +258,26 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
             setMessages((prev) => prev.map((m) => (m.id === message.id ? message : m)));
         };
 
+        const handleChatRead = (readChatId: string, userId: string, readAt: string) => {
+            if (readChatId !== chat.id) return;
+            setReadStates((prev) => {
+                const idx = prev.findIndex((rs) => rs.userId === userId);
+                if (idx === -1) return [...prev, { userId, lastReadAt: readAt }];
+                const next = [...prev];
+                next[idx] = { userId, lastReadAt: readAt };
+                return next;
+            });
+        };
+
         connection.on("ReceiveMessage", handleReceiveMessage);
         connection.on("MessageDeleted", handleMessageDeleted);
         connection.on("MessageEdited", handleMessageEdited);
+        connection.on("ChatRead", handleChatRead);
         return () => {
             connection.off("ReceiveMessage", handleReceiveMessage);
             connection.off("MessageDeleted", handleMessageDeleted);
             connection.off("MessageEdited", handleMessageEdited);
+            connection.off("ChatRead", handleChatRead);
         };
     }, [connection, chat.id]);
 
@@ -647,7 +688,12 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                                                 onClick={() => window.open(getMediaUrl(message.media!.id), "_blank")}
                                             />
                                             {bareMedia && (
-                                                <span className={styles.mediaTime}>{formatMessageTime(message.createdAt)}</span>
+                                                <span className={styles.mediaTime}>
+                                                    {formatMessageTime(message.createdAt)}
+                                                    {message.isOwn && chat.type !== "saved" && (
+                                                        <MessageStatusIcon read={isMessageRead(message, readStates)} />
+                                                    )}
+                                                </span>
                                             )}
                                         </div>
                                     )}
@@ -676,7 +722,12 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                                                 />
                                             )}
                                             {bareMedia && (
-                                                <span className={styles.mediaTime}>{formatMessageTime(message.createdAt)}</span>
+                                                <span className={styles.mediaTime}>
+                                                    {formatMessageTime(message.createdAt)}
+                                                    {message.isOwn && chat.type !== "saved" && (
+                                                        <MessageStatusIcon read={isMessageRead(message, readStates)} />
+                                                    )}
+                                                </span>
                                             )}
                                         </div>
                                     )}
@@ -688,7 +739,12 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                                                 controls
                                             />
                                             {bareMedia && (
-                                                <span className={styles.mediaTime}>{formatMessageTime(message.createdAt)}</span>
+                                                <span className={styles.mediaTime}>
+                                                    {formatMessageTime(message.createdAt)}
+                                                    {message.isOwn && chat.type !== "saved" && (
+                                                        <MessageStatusIcon read={isMessageRead(message, readStates)} />
+                                                    )}
+                                                </span>
                                             )}
                                         </div>
                                     )}
@@ -725,6 +781,9 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                                                 </span>
                                             )}
                                             {formatMessageTime(message.createdAt)}
+                                            {message.isOwn && chat.type !== "saved" && (
+                                                <MessageStatusIcon read={isMessageRead(message, readStates)} />
+                                            )}
                                         </span>
                                     )}
                                 </div>

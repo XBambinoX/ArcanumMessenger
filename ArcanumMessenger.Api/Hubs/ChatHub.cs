@@ -18,6 +18,7 @@ public interface IChatClient
     Task MessageEdited(ChatMessageDto message);
     Task UserOnline(Guid userId);
     Task UserOffline(Guid userId, DateTime? lastSeen);
+    Task ChatRead(Guid chatId, Guid userId, DateTime readAt);
 }
 
 [Authorize]

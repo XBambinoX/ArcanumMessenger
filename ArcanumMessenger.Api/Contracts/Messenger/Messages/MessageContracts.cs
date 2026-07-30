@@ -17,7 +17,14 @@ public record ChatMessageDto(
     Guid? ForwardedFromSenderId = null,
     string? ForwardedFromSenderName = null);
 
-public record MessageHistoryResponse(bool Success, IReadOnlyList<ChatMessageDto>? Messages, bool HasMore = false, string? Reason = null);
+public record ChatReadStateDto(Guid UserId, DateTime LastReadAt);
+
+public record MessageHistoryResponse(
+    bool Success,
+    IReadOnlyList<ChatMessageDto>? Messages,
+    bool HasMore = false,
+    string? Reason = null,
+    IReadOnlyList<ChatReadStateDto>? ReadStates = null);
 
 public record SendMessageRequest(string? Content, Guid? ReplyToId, Guid? MediaId, bool AsGif = false);
 

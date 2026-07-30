@@ -295,6 +295,9 @@
     position: absolute;
     right: 8px;
     bottom: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     padding: 2px 8px;
     border-radius: 10px;
     background: rgba(0, 0, 0, 0.5);
@@ -302,6 +305,10 @@
     font-size: 11px;
     line-height: 1.4;
     pointer-events: none;
+}
+
+.statusIconRead {
+    color: rgba(167, 139, 250, 0.95);
 }
 
 .fileCard {
