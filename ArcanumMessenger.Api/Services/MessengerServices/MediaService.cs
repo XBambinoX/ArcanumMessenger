@@ -125,6 +125,29 @@ public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config, 
         return (asset, null);
     }
 
+    public async Task<(bool Success, string? Reason)> DeleteUnusedAsync(Guid mediaId, Guid callerId, CancellationToken ct)
+    {
+        var asset = await db.MediaAssets.FirstOrDefaultAsync(m => m.Id == mediaId, ct);
+        if (asset is null)
+            return (false, "not_found");
+        if (asset.UploaderId != callerId)
+            return (false, "forbidden");
+
+        var inUse = await db.Messages.AnyAsync(m => m.MediaId == mediaId, ct) ||
+            await db.SavedGifs.AnyAsync(s => s.MediaId == mediaId, ct);
+        if (inUse)
+            return (false, "in_use");
+
+        await s3.DeleteObjectAsync(Bucket, asset.StorageKey, ct);
+        if (asset.ThumbnailStorageKey is { } thumbnailKey)
+            await s3.DeleteObjectAsync(Bucket, thumbnailKey, ct);
+
+        db.MediaAssets.Remove(asset);
+        await db.SaveChangesAsync(ct);
+
+        return (true, null);
+    }
+
     // The DB row can outlive the actual object in storage (e.g. it was
     // removed directly in the bucket) - that's a missing file, not a server
     // error, so it should surface as a clean 404 rather than a crash.

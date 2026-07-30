@@ -500,6 +500,7 @@
 }
 
 .pendingUploading {
+    flex: 1;
     font-size: 13px;
     color: rgba(148, 163, 184, 0.7);
 }

@@ -13,7 +13,7 @@ function fingerprintKey(file: File): string {
     return `chunked-upload:${file.name}|${file.size}|${file.lastModified}`;
 }
 
-async function startSession(file: File): Promise<string | null> {
+async function startSession(file: File, signal?: AbortSignal): Promise<string | null> {
     const res = await apiFetch("/api/media/chunked", {
         method: "POST",
         credentials: "include",
@@ -22,56 +22,80 @@ async function startSession(file: File): Promise<string | null> {
             mimeType: file.type || "application/octet-stream",
             totalSize: file.size,
         }),
+        signal,
     });
     const data = await res.json();
     return data.success ? data.sessionId : null;
 }
 
-async function getUploadedParts(sessionId: string): Promise<Set<number> | null> {
-    const res = await apiFetch(`/api/media/chunked/${sessionId}`, { credentials: "include" });
+async function getUploadedParts(sessionId: string, signal?: AbortSignal): Promise<Set<number> | null> {
+    const res = await apiFetch(`/api/media/chunked/${sessionId}`, { credentials: "include", signal });
     if (!res.ok) return null;
     const data = await res.json();
     return data.success ? new Set<number>(data.uploadedPartNumbers ?? []) : null;
 }
 
-async function uploadPartOnce(sessionId: string, partNumber: number, chunk: Blob): Promise<boolean> {
+async function uploadPartOnce(sessionId: string, partNumber: number, chunk: Blob, signal?: AbortSignal): Promise<boolean> {
     const res = await apiFetch(`/api/media/chunked/${sessionId}/parts/${partNumber}`, {
         method: "PUT",
         credentials: "include",
         headers: { "Content-Type": "application/octet-stream" },
         body: chunk,
+        signal,
     });
     const data = await res.json();
     return data.success === true;
 }
 
-async function uploadPartWithRetry(sessionId: string, partNumber: number, chunk: Blob): Promise<boolean> {
+async function uploadPartWithRetry(sessionId: string, partNumber: number, chunk: Blob, signal?: AbortSignal): Promise<boolean> {
     for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
-        if (await uploadPartOnce(sessionId, partNumber, chunk)) return true;
+        if (await uploadPartOnce(sessionId, partNumber, chunk, signal)) return true;
         if (attempt < RETRY_ATTEMPTS) await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
     }
     return false;
 }
 
-async function completeSession(sessionId: string): Promise<MediaAsset | null> {
+async function completeSession(sessionId: string, signal?: AbortSignal): Promise<MediaAsset | null> {
     const res = await apiFetch(`/api/media/chunked/${sessionId}/complete`, {
         method: "POST",
         credentials: "include",
+        signal,
     });
     const data = await res.json();
     return data.success ? data.media : null;
 }
 
+export function clearChunkedUploadResumeState(file: File): void {
+    localStorage.removeItem(fingerprintKey(file));
+}
+
+// Best-effort cleanup for a session the user cancelled mid-upload - drops
+// the server-side multipart upload and whatever parts already landed.
+export async function abortChunkedUpload(sessionId: string): Promise<boolean> {
+    try {
+        const res = await apiFetch(`/api/media/chunked/${sessionId}`, {
+            method: "DELETE",
+            credentials: "include",
+        });
+        const data = await res.json();
+        return data.success === true;
+    } catch {
+        return false;
+    }
+}
+
 export async function uploadMediaChunked(
     file: File,
     onProgress: (loadedBytes: number, totalBytes: number) => void,
+    signal?: AbortSignal,
+    onSessionStart?: (sessionId: string) => void,
 ): Promise<MediaAsset | null> {
     const key = fingerprintKey(file);
     let sessionId = localStorage.getItem(key);
     let uploadedParts = new Set<number>();
 
     if (sessionId) {
-        const parts = await getUploadedParts(sessionId);
+        const parts = await getUploadedParts(sessionId, signal);
         if (parts) {
             uploadedParts = parts;
         } else {
@@ -83,10 +107,12 @@ export async function uploadMediaChunked(
     }
 
     if (!sessionId) {
-        sessionId = await startSession(file);
+        sessionId = await startSession(file, signal);
         if (!sessionId) return null;
         localStorage.setItem(key, sessionId);
     }
+
+    onSessionStart?.(sessionId);
 
     const totalParts = Math.ceil(file.size / CHUNK_SIZE);
     let loaded = uploadedParts.size * CHUNK_SIZE;
@@ -98,14 +124,14 @@ export async function uploadMediaChunked(
         const start = (partNumber - 1) * CHUNK_SIZE;
         const chunk = file.slice(start, Math.min(start + CHUNK_SIZE, file.size));
 
-        const ok = await uploadPartWithRetry(sessionId, partNumber, chunk);
+        const ok = await uploadPartWithRetry(sessionId, partNumber, chunk, signal);
         if (!ok) return null; // localStorage entry stays - retrying the same file resumes, not restarts
 
         loaded += chunk.size;
         onProgress(Math.min(loaded, file.size), file.size);
     }
 
-    const media = await completeSession(sessionId);
+    const media = await completeSession(sessionId, signal);
     if (media) localStorage.removeItem(key);
     return media;
 }

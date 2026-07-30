@@ -69,6 +69,18 @@ public class MediaController(AppDbContext db, MediaService media, MediaAccessSer
         return File(result.Content, result.ContentType, enableRangeProcessing: false);
     }
 
+    [HttpDelete("{id:guid}")]
+    public async Task<ActionResult<ChunkedUploadActionResponse>> Delete(Guid id, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var (success, reason) = await media.DeleteUnusedAsync(id, userId, ct);
+        return success
+            ? Ok(new ChunkedUploadActionResponse(true))
+            : BadRequest(new ChunkedUploadActionResponse(false, reason));
+    }
+
     [HttpGet("{id:guid}/thumbnail")]
     public async Task<IActionResult> GetThumbnail(Guid id, CancellationToken ct)
     {

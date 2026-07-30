@@ -62,6 +62,10 @@ export async function apiFetch(
             ...init,
         });
     } catch (networkErr) {
+        if (networkErr instanceof DOMException && networkErr.name === "AbortError") {
+            throw networkErr;
+        }
+
         reportServerError({
             status: 0,
             path,

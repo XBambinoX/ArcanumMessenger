@@ -3,8 +3,8 @@ import type { HubConnection } from "@microsoft/signalr";
 import type { ChatMessage, ChatReadState, ChatSummary, MediaAsset, User } from "../types/messenger";
 import { getMessageHistory, sendMessage, deleteMessage, editMessage, forwardMessages } from "../api/messages";
 import { getUser, getUserAvatarUrl } from "../api/users";
-import { uploadMedia, getMediaUrl, getMediaThumbnailUrl, getSavedGifs, saveGif, unsaveGif } from "../api/media";
-import { uploadMediaChunked, CHUNK_THRESHOLD } from "../api/chunkedUpload";
+import { uploadMedia, deleteMedia, getMediaUrl, getMediaThumbnailUrl, getSavedGifs, saveGif, unsaveGif } from "../api/media";
+import { uploadMediaChunked, abortChunkedUpload, clearChunkedUploadResumeState, CHUNK_THRESHOLD } from "../api/chunkedUpload";
 import { formatMessageTime, formatChatTime } from "../lib/time";
 import UserInfoPanel from "./UserInfoPanel";
 import ChatInfoPanel from "./ChatInfoPanel";
@@ -150,6 +150,9 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
     const emojiPanelRef = useRef<HTMLDivElement | null>(null);
     const draftInputRef = useRef<HTMLInputElement | null>(null);
     const prependingRef = useRef(false);
+    const uploadAbortRef = useRef<AbortController | null>(null);
+    const uploadFileRef = useRef<File | null>(null);
+    const uploadSessionIdRef = useRef<string | null>(null);
     const [animatingIds, setAnimatingIds] = useState<Set<string>>(new Set());
     const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());
 
@@ -192,6 +195,22 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
 
     useEffect(() => {
         getSavedGifs().then((gifs) => setSavedGifIds(new Set(gifs.map((g) => g.id))));
+    }, []);
+
+    const pendingMediaRef = useRef<MediaAsset | null>(null);
+    useEffect(() => {
+        pendingMediaRef.current = pendingMedia;
+    }, [pendingMedia]);
+
+    useEffect(() => {
+        return () => {
+            uploadAbortRef.current?.abort();
+            if (uploadSessionIdRef.current) {
+                abortChunkedUpload(uploadSessionIdRef.current);
+                if (uploadFileRef.current) clearChunkedUploadResumeState(uploadFileRef.current);
+            }
+            if (pendingMediaRef.current) deleteMedia(pendingMediaRef.current.id);
+        };
     }, []);
 
     useEffect(() => {
@@ -362,19 +381,53 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
         e.target.value = "";
         if (!file) return;
 
-        let media: MediaAsset | null;
-        if (file.size >= CHUNK_THRESHOLD) {
-            setUploadProgress({ loaded: 0, total: file.size });
-            media = await uploadMediaChunked(file, (loaded, total) => setUploadProgress({ loaded, total }));
-            setUploadProgress(null);
-        } else {
-            setUploadingFile(true);
-            media = await uploadMedia(file);
-            setUploadingFile(false);
-        }
+        const controller = new AbortController();
+        uploadAbortRef.current = controller;
+        uploadFileRef.current = file;
+        uploadSessionIdRef.current = null;
 
-        if (media) setPendingMedia(media);
+        try {
+            let media: MediaAsset | null;
+            if (file.size >= CHUNK_THRESHOLD) {
+                setUploadProgress({ loaded: 0, total: file.size });
+                media = await uploadMediaChunked(
+                    file,
+                    (loaded, total) => setUploadProgress({ loaded, total }),
+                    controller.signal,
+                    (sessionId) => { uploadSessionIdRef.current = sessionId; },
+                );
+            } else {
+                setUploadingFile(true);
+                media = await uploadMedia(file, controller.signal);
+            }
+
+            if (media) setPendingMedia(media);
+            setSendAsGif(false);
+        } catch (err) {
+            // A deliberate cancel (handleCancelUpload) - already cleaned up there.
+            if (!(err instanceof DOMException && err.name === "AbortError")) throw err;
+        } finally {
+            setUploadingFile(false);
+            setUploadProgress(null);
+            uploadAbortRef.current = null;
+            uploadFileRef.current = null;
+            uploadSessionIdRef.current = null;
+        }
+    };
+
+    const handleCancelUpload = () => {
+        uploadAbortRef.current?.abort();
+        if (uploadSessionIdRef.current) {
+            abortChunkedUpload(uploadSessionIdRef.current);
+            if (uploadFileRef.current) clearChunkedUploadResumeState(uploadFileRef.current);
+        }
+    };
+
+    const handleRemovePendingMedia = () => {
+        const media = pendingMedia;
+        setPendingMedia(null);
         setSendAsGif(false);
+        if (media) deleteMedia(media.id);
     };
 
     const handleSendGif = async (gif: MediaAsset) => {
@@ -506,7 +559,7 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                     setEditTarget(message);
                     setDraft(message.content);
                     setReplyTarget(null);
-                    setPendingMedia(null);
+                    handleRemovePendingMedia();
                 },
             });
         }
@@ -877,7 +930,18 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                         {(pendingMedia || uploadingFile || uploadProgress) && (
                             <div className={styles.pendingAttachment}>
                                 {uploadingFile ? (
-                                    <span className={styles.pendingUploading}>Uploading…</span>
+                                    <>
+                                        <span className={styles.pendingUploading}>Uploading…</span>
+                                        <button
+                                            className={styles.removeAttachmentBtn}
+                                            onClick={handleCancelUpload}
+                                            aria-label="Cancel upload"
+                                        >
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                                                <path d="M18 6L6 18M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </>
                                 ) : uploadProgress ? (
                                     <div className={styles.progressRow}>
                                         <div className={styles.progressBarTrack}>
@@ -889,6 +953,15 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                                         <span className={styles.progressLabel}>
                                             {Math.round((uploadProgress.loaded / uploadProgress.total) * 100)}%
                                         </span>
+                                        <button
+                                            className={styles.removeAttachmentBtn}
+                                            onClick={handleCancelUpload}
+                                            aria-label="Cancel upload"
+                                        >
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                                                <path d="M18 6L6 18M6 6l12 12" />
+                                            </svg>
+                                        </button>
                                     </div>
                                 ) : pendingMedia && (
                                     <>
@@ -919,10 +992,7 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                                         )}
                                         <button
                                             className={styles.removeAttachmentBtn}
-                                            onClick={() => {
-                                                setPendingMedia(null);
-                                                setSendAsGif(false);
-                                            }}
+                                            onClick={handleRemovePendingMedia}
                                             aria-label="Remove attachment"
                                         >
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
