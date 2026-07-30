@@ -125,18 +125,25 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
         var publicEmail = string.IsNullOrEmpty(user.EmailEnc) ? null : encryption.Decrypt(user.EmailEnc, dek);
         var isBlocked = id != callerId && await db.Contacts.AnyAsync(c => c.UserId == callerId && c.ContactId == id && c.IsBlocked, ct);
         var isBlockedByOther = id != callerId && await db.Contacts.AnyAsync(c => c.UserId == id && c.ContactId == callerId && c.IsBlocked, ct);
+        // isContact ("have I added them") drives the Add/Remove-contact button
+        // and is a caller-centric fact about the caller's own contact list.
+        // Contacts-tier privacy is a different question - "does the PROFILE
+        // OWNER'S contact list include the caller" - answered by a separate,
+        // oppositely-directed check, the same way isBlockedByOther already
+        // mirrors isBlocked in the other direction.
         var isContact = id != callerId && await db.Contacts.AnyAsync(c => c.UserId == callerId && c.ContactId == id && !c.IsBlocked, ct);
+        var isCallerInOwnersContacts = id != callerId && await db.Contacts.AnyAsync(c => c.UserId == id && c.ContactId == callerId && !c.IsBlocked, ct);
         var showPhoneToThisViewer = user.ShowPhoneNumber switch
         {
             PhoneVisibility.Everyone => true,
-            PhoneVisibility.Contacts => isContact || id == callerId,
+            PhoneVisibility.Contacts => isCallerInOwnersContacts || id == callerId,
             PhoneVisibility.Nobody => id == callerId,
             _ => false
         };
         var showBioToThisViewer = user.ShowBio switch
         {
             PhoneVisibility.Everyone => true,
-            PhoneVisibility.Contacts => isContact || id == callerId,
+            PhoneVisibility.Contacts => isCallerInOwnersContacts || id == callerId,
             PhoneVisibility.Nobody => id == callerId,
             _ => false
         };
@@ -325,9 +332,11 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
     }
 
     // A standalone helper (rather than reusing BuildProfileAsync's inline
-    // isContact) because this is the only place in the controller that needs
-    // a visibility check without already computing isContact for other
-    // reasons along the way.
+    // logic) since this method needs the check without already computing
+    // anything else about the caller/target pair along the way. Same
+    // direction as BuildProfileAsync's Contacts-tier checks: visible when
+    // the PROFILE OWNER (targetId) has the caller in their own contact list,
+    // not the other way around.
     private async Task<bool> IsVisibleToAsync(PhoneVisibility visibility, Guid targetId, Guid callerId, CancellationToken ct)
     {
         if (targetId == callerId) return true;
@@ -335,7 +344,7 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
         {
             PhoneVisibility.Everyone => true,
             PhoneVisibility.Contacts => await db.Contacts.AnyAsync(
-                c => c.UserId == callerId && c.ContactId == targetId && !c.IsBlocked, ct),
+                c => c.UserId == targetId && c.ContactId == callerId && !c.IsBlocked, ct),
             PhoneVisibility.Nobody => false,
             _ => false,
         };
