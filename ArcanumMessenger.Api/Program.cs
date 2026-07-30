@@ -105,6 +105,7 @@ namespace ArcanumMessenger
             builder.Services.AddScoped<BlockService>();
             builder.Services.AddScoped<MediaService>();
             builder.Services.AddScoped<MediaAccessService>();
+            builder.Services.AddScoped<AvatarService>();
             builder.Services.AddSingleton<EncryptionService>();
             builder.Services.AddSingleton<EmailHasher>();
             builder.Services.AddSingleton<PublicIdHasher>();

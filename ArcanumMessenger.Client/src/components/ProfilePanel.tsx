@@ -11,6 +11,8 @@ import { getUserSettings,
     type UpdatePrivacySettingsRequest,
     type UpdateChatSettingsRequest } from "../api/userSettings";
 import { getBlockedUsers, unblockUser } from "../api/contacts";
+import { getMyAvatarUrl, getUserAvatarUrl, uploadMyAvatar, deleteMyAvatar } from "../api/users";
+import AvatarImage from "./AvatarImage";
 import DeleteAccountModal from "./DeleteAccountModal";
 
 interface ProfilePanelProps {
@@ -19,6 +21,7 @@ interface ProfilePanelProps {
     onLogout: () => void;
     onUsernameChange?: (username: string) => void;
     onNotificationSettingsChange?: (sound: string, notificationsEnabled: boolean, groupNotifications: boolean) => void;
+    onAvatarChange?: () => void;
 }
 
 type Section = "main" | "account" | "notifications" | "privacy" | "chats" | "blocked";
@@ -218,12 +221,15 @@ const sectionTitles: Record<Section, string> = {
 const MAX_PHONE_DIGITS = 15;
 const ANIMATION_MS = 250;
 
-export default function ProfilePanel({ profile, onClose, onLogout, onUsernameChange, onNotificationSettingsChange }: ProfilePanelProps) {
+export default function ProfilePanel({ profile, onClose, onLogout, onUsernameChange, onNotificationSettingsChange, onAvatarChange }: ProfilePanelProps) {
     const navigate = useNavigate();
     const [copied, setCopied] = useState(false);
     const [settings, setSettings] = useState<SettingsState>(defaultSettings);
     const [settingsLoaded, setSettingsLoaded] = useState(false);
     const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+    const [avatarNonce, setAvatarNonce] = useState(0);
+    const avatarInputRef = useRef<HTMLInputElement | null>(null);
+    const myAvatarSrc = getMyAvatarUrl() + (avatarNonce ? `?t=${avatarNonce}` : "");
 
     const [section, setSection] = useState<Section>("main");
     const [prevSection, setPrevSection] = useState<Section | null>(null);
@@ -273,6 +279,38 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
         navigator.clipboard.writeText(profile.publicId);
         setCopied(true);
         setTimeout(() => setCopied(false), 1500);
+    };
+
+    const handleAvatarClick = () => avatarInputRef.current?.click();
+
+    const handleAvatarFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        e.target.value = "";
+        if (!file) return;
+
+        setSaveStatus("saving");
+        const ok = await uploadMyAvatar(file);
+        if (ok) {
+            setSaveStatus("saved");
+            window.setTimeout(() => setSaveStatus((s) => (s === "saved" ? "idle" : s)), 1500);
+            setAvatarNonce(Date.now());
+            onAvatarChange?.();
+        } else {
+            setSaveStatus("error");
+        }
+    };
+
+    const handleRemoveAvatar = async () => {
+        setSaveStatus("saving");
+        const ok = await deleteMyAvatar();
+        if (ok) {
+            setSaveStatus("saved");
+            window.setTimeout(() => setSaveStatus((s) => (s === "saved" ? "idle" : s)), 1500);
+            setAvatarNonce(Date.now());
+            onAvatarChange?.();
+        } else {
+            setSaveStatus("error");
+        }
     };
 
     const handleOpenDeleteModal = async () => {
@@ -526,7 +564,10 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                     <>
                         <div className={styles.profileHeader}>
                             <div className={styles.profileAvatar}>
-                                {(settingsLoaded ? (settings.username || profile.name) : profile.name).charAt(0).toUpperCase()}
+                                <AvatarImage
+                                    src={myAvatarSrc}
+                                    fallback={(settingsLoaded ? (settings.username || profile.name) : profile.name).charAt(0).toUpperCase()}
+                                />
                             </div>
 
                            <span className={styles.profileName}>
@@ -585,17 +626,24 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                 return (
                     <div className={styles.subPage}>
                         <div className={styles.avatarEditRow}>
-                            <div className={styles.avatarEditPic}>
-                                {profile.name.charAt(0).toUpperCase()}
+                            <input
+                                type="file"
+                                accept="image/*"
+                                ref={avatarInputRef}
+                                className={styles.hiddenFileInput}
+                                onChange={handleAvatarFileSelected}
+                            />
+                            <div className={styles.avatarEditPic} onClick={handleAvatarClick}>
+                                <AvatarImage src={myAvatarSrc} fallback={profile.name.charAt(0).toUpperCase()} />
                                 <span className={styles.avatarEditOverlay}>
                                     <CameraIcon />
                                 </span>
                             </div>
                             <div className={styles.avatarEditHint}>
                                 <span className={styles.avatarEditTitle}>Set New Photo</span>
-                                <span className={styles.avatarEditSub}>
-                                    Upload isn't wired up yet
-                                </span>
+                                <button className={styles.avatarEditSub} onClick={handleRemoveAvatar}>
+                                    Remove photo
+                                </button>
                             </div>
 
                             <div className={styles.saveStatus}>
@@ -800,7 +848,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                                 {blockedUsers.map((u) => (
                                     <li key={u.id} className={styles.blockedRow}>
                                         <div className={styles.blockedAvatar}>
-                                            {u.name.charAt(0).toUpperCase()}
+                                            <AvatarImage src={getUserAvatarUrl(u.id)} fallback={u.name.charAt(0).toUpperCase()} />
                                         </div>
                                         <span className={styles.blockedName}>{u.name}</span>
                                         <button

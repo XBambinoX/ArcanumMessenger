@@ -1,5 +1,7 @@
 import { useState } from "react";
 import type { ChatSummary } from "../types/messenger";
+import { getUserAvatarUrl } from "../api/users";
+import AvatarImage from "./AvatarImage";
 import styles from "./ChatInfoPanel.module.css";
 
 interface ChatInfoPanelProps {
@@ -79,7 +81,10 @@ export default function ChatInfoPanel({ chat, onClose }: ChatInfoPanelProps) {
                             <div
                                 className={`${styles.chatAvatar} ${chat.type === "group" ? styles.chatAvatarGroup : ""}`}
                             >
-                                {chat.title.charAt(0).toUpperCase()}
+                                <AvatarImage
+                                    src={chat.type === "direct" && chat.otherUserId ? getUserAvatarUrl(chat.otherUserId) : null}
+                                    fallback={chat.title.charAt(0).toUpperCase()}
+                                />
                             </div>
                             <span className={styles.chatTitle}>
                                 {chat.title}

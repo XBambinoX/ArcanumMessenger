@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import type { ChatSummary } from "../types/messenger";
 import { getChats } from "../api/chats";
+import { getUserAvatarUrl } from "../api/users";
+import AvatarImage from "./AvatarImage";
 import styles from "./ForwardPanel.module.css";
 
 interface ForwardPanelProps {
@@ -42,7 +44,10 @@ export default function ForwardPanel({ onClose, onPick }: ForwardPanelProps) {
                     {chats.map((chat) => (
                         <button key={chat.id} className={styles.chatRow} onClick={() => onPick(chat.id)}>
                             <div className={`${styles.avatar} ${chat.type === "group" ? styles.avatarGroup : ""}`}>
-                                {chat.title.charAt(0).toUpperCase()}
+                                <AvatarImage
+                                    src={chat.type === "direct" && chat.otherUserId ? getUserAvatarUrl(chat.otherUserId) : null}
+                                    fallback={chat.title.charAt(0).toUpperCase()}
+                                />
                             </div>
                             <span className={styles.chatTitle}>{chat.title}</span>
                         </button>

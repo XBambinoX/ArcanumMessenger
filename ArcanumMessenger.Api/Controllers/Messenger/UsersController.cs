@@ -10,8 +10,9 @@ using ArcanumMessenger.Entities;
 namespace ArcanumMessenger.Controllers.Messenger;
 
 [Route("api/users")]
-public class UsersController(AppDbContext db, EncryptionService encryption, PublicIdHasher publicIdHasher, PresenceService presence) : MessengerControllerBase
+public class UsersController(AppDbContext db, EncryptionService encryption, PublicIdHasher publicIdHasher, PresenceService presence, AvatarService avatars) : MessengerControllerBase
 {
+    private const long MaxAvatarUploadBytes = 10_000_000;
     [HttpGet("me")]
     public async Task<ActionResult<GetUserResponce>> GetMe(CancellationToken ct)
     {
@@ -246,5 +247,61 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
         }
 
         return Ok(new BulkPresenceResponse(items));
+    }
+
+    // RequestFormLimits isn't needed here the way MediaController's upload
+    // needed it - 10MB is comfortably under the 128MB multipart-form default,
+    // so the two limits never disagree at this size.
+    [HttpPost("me/avatar")]
+    [RequestSizeLimit(MaxAvatarUploadBytes)]
+    public async Task<ActionResult<UploadAvatarResponse>> UploadAvatar(IFormFile? file, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        if (file is null || file.Length == 0)
+            return BadRequest(new UploadAvatarResponse(false, "empty_file"));
+
+        await using var stream = file.OpenReadStream();
+        var (success, reason) = await avatars.UploadAvatarAsync(
+            userId, stream, file.Length, file.ContentType ?? "application/octet-stream", ct);
+
+        return success ? Ok(new UploadAvatarResponse(true)) : BadRequest(new UploadAvatarResponse(false, reason));
+    }
+
+    [HttpDelete("me/avatar")]
+    public async Task<ActionResult<UploadAvatarResponse>> DeleteAvatar(CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        await avatars.DeleteAvatarAsync(userId, ct);
+        return Ok(new UploadAvatarResponse(true));
+    }
+
+    [HttpGet("me/avatar")]
+    public Task<IActionResult> GetMyAvatar(CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Task.FromResult<IActionResult>(Unauthorized());
+
+        return GetAvatarById(userId, ct);
+    }
+
+    // Any authenticated user can view anyone's avatar - same open model
+    // GetUser already has, no chat-membership check makes sense here.
+    [HttpGet("{id:guid}/avatar")]
+    public async Task<IActionResult> GetAvatarById(Guid id, CancellationToken ct)
+    {
+        if (!TryGetUserId(out _))
+            return Unauthorized();
+
+        var result = await avatars.OpenAvatarStreamAsync(id, ct);
+        if (result is null)
+            return NotFound();
+
+        Response.ContentLength = result.Length;
+        Response.Headers.CacheControl = "private, max-age=300";
+        return File(result.Content, result.ContentType);
     }
 }

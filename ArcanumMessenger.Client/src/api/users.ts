@@ -46,6 +46,36 @@ export async function searchUsers(query: string): Promise<UserSearchResult[]> {
     return data.success ? (data.results ?? []) : [];
 }
 
+export function getMyAvatarUrl(): string {
+    return "/api/users/me/avatar";
+}
+
+export function getUserAvatarUrl(userId: string): string {
+    return `/api/users/${userId}/avatar`;
+}
+
+export async function uploadMyAvatar(file: File): Promise<boolean> {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await apiFetch("/api/users/me/avatar", {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+    });
+    const data = await res.json();
+    return data.success === true;
+}
+
+export async function deleteMyAvatar(): Promise<boolean> {
+    const res = await apiFetch("/api/users/me/avatar", {
+        method: "DELETE",
+        credentials: "include",
+    });
+    const data = await res.json();
+    return data.success === true;
+}
+
 export interface UserPresence {
     isOnline: boolean;
     lastSeen: string | null;

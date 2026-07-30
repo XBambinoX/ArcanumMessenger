@@ -1,5 +1,7 @@
 import type { ChatSummary } from "../types/messenger";
 import { formatChatTime } from "../lib/time";
+import { getUserAvatarUrl } from "../api/users";
+import AvatarImage from "./AvatarImage";
 import styles from "./ChatList.module.css";
 
 interface PresenceInfo {
@@ -43,7 +45,10 @@ export default function ChatList({
                             <div
                                 className={`${styles.avatar} ${chat.type === "group" ? styles.avatarGroup : ""}`}
                             >
-                                {chat.title.charAt(0).toUpperCase()}
+                                <AvatarImage
+                                    src={chat.type === "direct" && chat.otherUserId ? getUserAvatarUrl(chat.otherUserId) : null}
+                                    fallback={chat.title.charAt(0).toUpperCase()}
+                                />
                                 {isOnline && <span className={styles.onlineDot} />}
                             </div>
 

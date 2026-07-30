@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { HubConnection } from "@microsoft/signalr";
 import type { ChatMessage, ChatSummary, MediaAsset, User } from "../types/messenger";
 import { getMessageHistory, sendMessage, deleteMessage, editMessage, forwardMessages } from "../api/messages";
-import { getUser } from "../api/users";
+import { getUser, getUserAvatarUrl } from "../api/users";
 import { uploadMedia, getMediaUrl, getMediaThumbnailUrl, getSavedGifs, saveGif, unsaveGif } from "../api/media";
 import { uploadMediaChunked, CHUNK_THRESHOLD } from "../api/chunkedUpload";
 import { formatMessageTime, formatChatTime } from "../lib/time";
@@ -11,6 +11,7 @@ import ChatInfoPanel from "./ChatInfoPanel";
 import GifPicker from "./GifPicker";
 import EmojiPicker from "./EmojiPicker";
 import ForwardPanel from "./ForwardPanel";
+import AvatarImage from "./AvatarImage";
 import MessageContextMenu, { type MessageContextMenuItem } from "./MessageContextMenu";
 import styles from "./ChatWindow.module.css";
 
@@ -498,7 +499,10 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                     className={`${styles.avatar} ${chat.type === "group" ? styles.avatarGroup : ""} ${chat.type === "direct" ? styles.avatarClickable : ""}`}
                     onClick={handleAvatarClick}
                 >
-                    {chat.title.charAt(0).toUpperCase()}
+                    <AvatarImage
+                        src={chat.type === "direct" && chat.otherUserId ? getUserAvatarUrl(chat.otherUserId) : null}
+                        fallback={chat.title.charAt(0).toUpperCase()}
+                    />
                 </div>
                 <div className={styles.headerText}>
                     <span className={styles.title}>{chat.title}</span>

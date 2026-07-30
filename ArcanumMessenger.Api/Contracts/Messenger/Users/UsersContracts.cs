@@ -6,3 +6,5 @@ public record GetUserResponce(string? Name, string? Id, DateTime? LastSeen, stri
 public record UserSearchResultDto(Guid Id, string Name, string PublicId);
 
 public record SearchUsersResponse(bool Success, IReadOnlyList<UserSearchResultDto>? Results, string? Reason = null);
+
+public record UploadAvatarResponse(bool Success, string? Reason = null);
