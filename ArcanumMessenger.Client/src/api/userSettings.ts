@@ -38,13 +38,18 @@ export async function getUserSettings(): Promise<UserSettingsResponse> {
     return res.json();
 }
 
-export async function updateAccountFields(payload: UpdateAccountFieldsRequest): Promise<void> {
-    await apiFetch("api/settings/update-account", {
+export async function updateAccountFields(
+    payload: UpdateAccountFieldsRequest,
+): Promise<{ ok: boolean; reason?: string }> {
+    const res = await apiFetch("api/settings/update-account", {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
     });
+    if (res.ok) return { ok: true };
+    const body = await res.json().catch(() => null);
+    return { ok: false, reason: body?.reason };
 }
 
 export async function deleteAccount(password: string, kdfSalt: string): Promise<{ ok: boolean; reason?: string }> {

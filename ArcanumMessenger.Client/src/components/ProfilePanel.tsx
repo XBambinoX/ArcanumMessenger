@@ -341,9 +341,13 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
         setSaveStatus("saving");
 
         try {
-            await updateAccountFields(fields);
-            setSaveStatus("saved");
-            window.setTimeout(() => setSaveStatus((s) => (s === "saved" ? "idle" : s)), 1500);
+            const result = await updateAccountFields(fields);
+            if (result.ok) {
+                setSaveStatus("saved");
+                window.setTimeout(() => setSaveStatus((s) => (s === "saved" ? "idle" : s)), 1500);
+            } else {
+                setSaveStatus("error");
+            }
         } catch {
             setSaveStatus("error");
         }
