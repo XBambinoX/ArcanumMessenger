@@ -133,6 +133,7 @@ public class SettingsController(AppDbContext db, EncryptionService encryption, T
             return StatusCode(StatusCodes.Status422UnprocessableEntity, new { reason = "invalid_password" });
 
         user.IsDeleted = true;
+        user.DeletedAt = DateTime.UtcNow;
 
         var sessions = await db.Sessions
             .Where(s => s.UserId == userId && s.RevokedAt == null)

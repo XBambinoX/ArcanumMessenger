@@ -21,6 +21,9 @@ public class User
     public string WrappedDek { get; set; } = null!;
     public DateTime? LastSeen { get; set; }
     public bool IsDeleted { get; set; }
+    // When IsDeleted was set - drives AccountCleanupService's grace period
+    // before this account actually gets anonymized.
+    public DateTime? DeletedAt { get; set; }
     public DateTime CreatedAt { get; set; }
     public UserSettings UserSettings { get; set; } = null!;
 }

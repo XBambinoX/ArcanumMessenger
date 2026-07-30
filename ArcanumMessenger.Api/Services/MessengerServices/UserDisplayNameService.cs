@@ -8,7 +8,11 @@ public class UserDisplayNameService(AppDbContext db, EncryptionService encryptio
 {
     // No !IsDeleted filter here on purpose - a direct chat's other member or an
     // old message's sender may since have been soft-deleted, but their name
-    // should still resolve for historical display instead of showing blank.
+    // should still resolve for historical display instead of showing blank -
+    // it just resolves to "Deleted User" rather than their real name. Once
+    // AccountCleanupService actually anonymizes the row (past the grace
+    // period), WrappedDek is destroyed and decrypting it would throw anyway -
+    // this same IsDeleted check is what keeps that from ever being attempted.
     public async Task<Dictionary<Guid, string>> GetDisplayNamesAsync(IEnumerable<Guid> userIds, CancellationToken ct)
     {
         var ids = userIds.Distinct().ToList();
@@ -17,11 +21,11 @@ public class UserDisplayNameService(AppDbContext db, EncryptionService encryptio
 
         var rows = await db.Users.AsNoTracking()
             .Where(u => ids.Contains(u.Id))
-            .Select(u => new { u.Id, u.UserSettings.UsernameEnc, u.WrappedDek })
+            .Select(u => new { u.Id, u.IsDeleted, u.UserSettings.UsernameEnc, u.WrappedDek })
             .ToListAsync(ct);
 
         return rows.ToDictionary(
             r => r.Id,
-            r => encryption.Decrypt(r.UsernameEnc, encryption.UnwrapDek(r.WrappedDek)));
+            r => r.IsDeleted ? "Deleted User" : encryption.Decrypt(r.UsernameEnc, encryption.UnwrapDek(r.WrappedDek)));
     }
 }

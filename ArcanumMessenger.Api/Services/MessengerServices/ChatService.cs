@@ -39,6 +39,8 @@ public class ChatService(
 
     private async Task<List<ChatSummaryDto>> MaterializeAsync(List<RawChatSummary> raw, CancellationToken ct)
     {
+        // Resolves to "Deleted User" for a since-deleted other member -
+        // see UserDisplayNameService's own comment.
         var otherMemberIds = raw.Where(r => r.OtherMemberId.HasValue).Select(r => r.OtherMemberId!.Value);
         var names = await displayNames.GetDisplayNamesAsync(otherMemberIds, ct);
 
