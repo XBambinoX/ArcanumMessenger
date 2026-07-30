@@ -26,7 +26,7 @@ interface ProfilePanelProps {
 
 type Section = "main" | "account" | "notifications" | "privacy" | "chats" | "blocked";
 type SaveStatus = "idle" | "saving" | "saved" | "error";
-type PrivacyField = "showLastSeen" | "showOnlineStatus" | "readReceipts" | "showPhoneNumber" | "whoCanAddMe" | "totpEnabled";
+type PrivacyField = "showLastSeen" | "showOnlineStatus" | "readReceipts" | "showPhoneNumber" | "showBio" | "showAvatar" | "whoCanAddMe" | "totpEnabled";
 type ChatField = "theme" | "wallpaper" | "linkPreviews" | "autoDownloadMedia";
 
 // Mirrors Entities.UserSettings, plus a few visual-only extras below.
@@ -43,6 +43,8 @@ interface SettingsState {
     showLastSeen: boolean;
     showOnlineStatus: boolean;
     showPhoneNumber: "everyone" | "contacts" | "nobody";
+    showBio: "everyone" | "contacts" | "nobody";
+    showAvatar: "everyone" | "contacts" | "nobody";
     whoCanAddMe: "everyone" | "contacts";
     readReceipts: boolean;
     theme: "system" | "dark" | "light";
@@ -63,6 +65,8 @@ const defaultSettings: SettingsState = {
     showLastSeen: true,
     showOnlineStatus: true,
     showPhoneNumber: "contacts",
+    showBio: "everyone",
+    showAvatar: "everyone",
     whoCanAddMe: "everyone",
     readReceipts: true,
     theme: "system",
@@ -192,7 +196,8 @@ const themeOptions: { id: SettingsState["theme"]; label: string; icon: () => Rea
     { id: "light", label: "Light", icon: ThemeLightIcon },
 ];
 
-const phoneVisibilityOptions: { id: SettingsState["showPhoneNumber"]; label: string; icon: () => ReactElement }[] = [
+// Shared by phone/bio/avatar visibility - all three are the same three-way choice.
+const visibilityOptions: { id: SettingsState["showPhoneNumber"]; label: string; icon: () => ReactElement }[] = [
     { id: "everyone", label: "Everyone", icon: EveryoneIcon },
     { id: "contacts", label: "My Contacts", icon: ContactsIcon },
     { id: "nobody", label: "Nobody", icon: NobodyIcon },
@@ -260,6 +265,8 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
         showOnlineStatus: "showOnlineStatus",
         readReceipts: "readReceiptsEnabled",
         showPhoneNumber: "showPhoneNumber",
+        showBio: "showBio",
+        showAvatar: "showAvatar",
         whoCanAddMe: "whoCanAddMe",
         totpEnabled: "totpEnabled",
     };
@@ -501,6 +508,8 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                     showOnlineStatus: data.showOnlineStatus,
                     readReceipts: data.readReceiptsEnabled,
                     showPhoneNumber: data.showPhoneNumber,
+                    showBio: data.showBio,
+                    showAvatar: data.showAvatar,
                     whoCanAddMe: data.whoCanAddMe,
                     theme: data.theme,
                     wallpaper: data.wallpaper,
@@ -798,12 +807,46 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
 
                         <span className={styles.subGroupTitle}>Who can see my phone number</span>
                         <div className={styles.chipGroup}>
-                            {phoneVisibilityOptions.map((opt) => (
+                            {visibilityOptions.map((opt) => (
                                 <button
                                     key={opt.id}
                                     className={`${styles.chipButton} ${settings.showPhoneNumber === opt.id ? styles.chipButtonActive : ""}`}
                                     disabled={!settingsLoaded}
                                     onClick={() => handlePrivacyChange("showPhoneNumber", opt.id)}
+                                >
+                                    <span className={styles.chipIcon}>
+                                        <opt.icon />
+                                    </span>
+                                    <span className={styles.chipLabel}>{opt.label}</span>
+                                </button>
+                            ))}
+                        </div>
+
+                        <span className={styles.subGroupTitle}>Who can see my bio</span>
+                        <div className={styles.chipGroup}>
+                            {visibilityOptions.map((opt) => (
+                                <button
+                                    key={opt.id}
+                                    className={`${styles.chipButton} ${settings.showBio === opt.id ? styles.chipButtonActive : ""}`}
+                                    disabled={!settingsLoaded}
+                                    onClick={() => handlePrivacyChange("showBio", opt.id)}
+                                >
+                                    <span className={styles.chipIcon}>
+                                        <opt.icon />
+                                    </span>
+                                    <span className={styles.chipLabel}>{opt.label}</span>
+                                </button>
+                            ))}
+                        </div>
+
+                        <span className={styles.subGroupTitle}>Who can see my profile photo</span>
+                        <div className={styles.chipGroup}>
+                            {visibilityOptions.map((opt) => (
+                                <button
+                                    key={opt.id}
+                                    className={`${styles.chipButton} ${settings.showAvatar === opt.id ? styles.chipButtonActive : ""}`}
+                                    disabled={!settingsLoaded}
+                                    onClick={() => handlePrivacyChange("showAvatar", opt.id)}
                                 >
                                     <span className={styles.chipIcon}>
                                         <opt.icon />

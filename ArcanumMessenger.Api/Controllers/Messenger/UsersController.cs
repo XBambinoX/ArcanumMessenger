@@ -102,6 +102,7 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
                             u.UserSettings.BioEnc,
                             u.UserSettings.PhoneEnc,
                             u.UserSettings.ShowPhoneNumber,
+                            u.UserSettings.ShowBio,
                         })
                         .FirstOrDefaultAsync(ct);
 
@@ -125,8 +126,14 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
         var isBlocked = id != callerId && await db.Contacts.AnyAsync(c => c.UserId == callerId && c.ContactId == id && c.IsBlocked, ct);
         var isBlockedByOther = id != callerId && await db.Contacts.AnyAsync(c => c.UserId == id && c.ContactId == callerId && c.IsBlocked, ct);
         var isContact = id != callerId && await db.Contacts.AnyAsync(c => c.UserId == callerId && c.ContactId == id && !c.IsBlocked, ct);
-        var bio = string.IsNullOrEmpty(user.BioEnc) ? null : encryption.Decrypt(user.BioEnc, dek);
         var showPhoneToThisViewer = user.ShowPhoneNumber switch
+        {
+            PhoneVisibility.Everyone => true,
+            PhoneVisibility.Contacts => isContact || id == callerId,
+            PhoneVisibility.Nobody => id == callerId,
+            _ => false
+        };
+        var showBioToThisViewer = user.ShowBio switch
         {
             PhoneVisibility.Everyone => true,
             PhoneVisibility.Contacts => isContact || id == callerId,
@@ -136,6 +143,9 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
 
         var phone = (!string.IsNullOrEmpty(user.PhoneEnc) && showPhoneToThisViewer)
             ? encryption.Decrypt(user.PhoneEnc, dek)
+            : null;
+        var bio = (!string.IsNullOrEmpty(user.BioEnc) && showBioToThisViewer)
+            ? encryption.Decrypt(user.BioEnc, dek)
             : null;
     
         return new GetUserResponce(Name:username,
@@ -288,13 +298,22 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
         return GetAvatarById(userId, ct);
     }
 
-    // Any authenticated user can view anyone's avatar - same open model
-    // GetUser already has, no chat-membership check makes sense here.
+    // Same open-by-default model GetUser already has (no chat-membership
+    // check) - but now subject to the owner's own ShowAvatar preference,
+    // same as phone/bio.
     [HttpGet("{id:guid}/avatar")]
     public async Task<IActionResult> GetAvatarById(Guid id, CancellationToken ct)
     {
-        if (!TryGetUserId(out _))
+        if (!TryGetUserId(out var callerId))
             return Unauthorized();
+
+        var showAvatar = await db.Users.AsNoTracking()
+            .Where(u => u.Id == id && !u.IsDeleted)
+            .Select(u => (PhoneVisibility?)u.UserSettings.ShowAvatar)
+            .FirstOrDefaultAsync(ct);
+
+        if (showAvatar is null || !await IsVisibleToAsync(showAvatar.Value, id, callerId, ct))
+            return NotFound();
 
         var result = await avatars.OpenAvatarStreamAsync(id, ct);
         if (result is null)
@@ -303,5 +322,22 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
         Response.ContentLength = result.Length;
         Response.Headers.CacheControl = "private, max-age=300";
         return File(result.Content, result.ContentType);
+    }
+
+    // A standalone helper (rather than reusing BuildProfileAsync's inline
+    // isContact) because this is the only place in the controller that needs
+    // a visibility check without already computing isContact for other
+    // reasons along the way.
+    private async Task<bool> IsVisibleToAsync(PhoneVisibility visibility, Guid targetId, Guid callerId, CancellationToken ct)
+    {
+        if (targetId == callerId) return true;
+        return visibility switch
+        {
+            PhoneVisibility.Everyone => true,
+            PhoneVisibility.Contacts => await db.Contacts.AnyAsync(
+                c => c.UserId == callerId && c.ContactId == targetId && !c.IsBlocked, ct),
+            PhoneVisibility.Nobody => false,
+            _ => false,
+        };
     }
 }

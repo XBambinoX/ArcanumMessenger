@@ -13,6 +13,8 @@ export interface UserSettingsResponse {
     showOnlineStatus: boolean;
     readReceiptsEnabled: boolean;
     showPhoneNumber: "everyone" | "contacts" | "nobody";
+    showBio: "everyone" | "contacts" | "nobody";
+    showAvatar: "everyone" | "contacts" | "nobody";
     whoCanAddMe: "everyone" | "contacts";
     theme: "system" | "dark" | "light";
     wallpaper: string;
@@ -87,6 +89,8 @@ export interface UpdatePrivacySettingsRequest {
     showOnlineStatus?: boolean;
     readReceiptsEnabled?: boolean;
     showPhoneNumber?: "everyone" | "contacts" | "nobody";
+    showBio?: "everyone" | "contacts" | "nobody";
+    showAvatar?: "everyone" | "contacts" | "nobody";
     whoCanAddMe?: "everyone" | "contacts";
     totpEnabled?: boolean;
 }

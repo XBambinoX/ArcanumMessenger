@@ -43,6 +43,8 @@ public class SettingsController(AppDbContext db, EncryptionService encryption, T
             ShowOnlineStatus: settings.ShowOnlineStatus,
             ReadReceiptsEnabled: settings.ReadReceiptsEnabled,
             ShowPhoneNumber: settings.ShowPhoneNumber.ToApiString(),
+            ShowBio: settings.ShowBio.ToApiString(),
+            ShowAvatar: settings.ShowAvatar.ToApiString(),
             WhoCanAddMe: settings.WhoCanAddMe.ToApiString(),
             Theme: settings.Theme,
             Wallpaper: settings.Wallpaper,
@@ -208,6 +210,22 @@ public class SettingsController(AppDbContext db, EncryptionService encryption, T
                 return BadRequest(new { reason = "invalid_show_phone_number" });
 
             settings.ShowPhoneNumber = phoneVisibility;
+        }
+
+        if (request.ShowBio is not null)
+        {
+            if (!PrivacyEnumConverters.TryParsePhoneVisibility(request.ShowBio, out var bioVisibility))
+                return BadRequest(new { reason = "invalid_show_bio" });
+
+            settings.ShowBio = bioVisibility;
+        }
+
+        if (request.ShowAvatar is not null)
+        {
+            if (!PrivacyEnumConverters.TryParsePhoneVisibility(request.ShowAvatar, out var avatarVisibility))
+                return BadRequest(new { reason = "invalid_show_avatar" });
+
+            settings.ShowAvatar = avatarVisibility;
         }
 
         if (request.WhoCanAddMe is not null)

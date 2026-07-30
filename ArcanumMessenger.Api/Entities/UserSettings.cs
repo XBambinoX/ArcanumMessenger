@@ -21,6 +21,11 @@ public class UserSettings
     public bool ShowOnlineStatus { get; set; } = true;
     public bool ReadReceiptsEnabled { get; set; } = true;
     public PhoneVisibility ShowPhoneNumber { get; set; } = PhoneVisibility.Contacts;
+    // Bio and avatar are already public-facing by default today (always
+    // shown/served to anyone signed in) - Everyone here preserves that for
+    // every existing row, same as phone's own default preserves its own.
+    public PhoneVisibility ShowBio { get; set; } = PhoneVisibility.Everyone;
+    public PhoneVisibility ShowAvatar { get; set; } = PhoneVisibility.Everyone;
     public AddPermission WhoCanAddMe { get; set; } = AddPermission.Everyone;
     public bool TwoFactorEnabled { get; set; } = false;
     // Base32 TOTP secret, encrypted with this user's DEK (same pattern as

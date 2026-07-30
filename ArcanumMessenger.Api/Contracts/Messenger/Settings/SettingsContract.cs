@@ -12,6 +12,8 @@ public record UserSettingsResponse(
     bool ShowOnlineStatus,
     bool ReadReceiptsEnabled,
     string ShowPhoneNumber,   // "everyone" | "contacts" | "nobody"
+    string ShowBio,           // "everyone" | "contacts" | "nobody"
+    string ShowAvatar,        // "everyone" | "contacts" | "nobody"
     string WhoCanAddMe,       // "everyone" | "contacts"
     string Theme,
     string Wallpaper,
@@ -39,6 +41,8 @@ public record UpdatePrivacySettingsRequest(
     bool? ShowOnlineStatus,
     bool? ReadReceiptsEnabled,
     string? ShowPhoneNumber,
+    string? ShowBio,
+    string? ShowAvatar,
     string? WhoCanAddMe,
     bool? TotpEnabled
 );
