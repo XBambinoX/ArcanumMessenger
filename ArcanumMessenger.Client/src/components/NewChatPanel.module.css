@@ -45,6 +45,13 @@
     flex-shrink: 0;
 }
 
+.headerLeft {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
 .title {
     margin: 0;
     font-size: 18px;
@@ -53,6 +60,26 @@
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+}
+
+.backBtn {
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    border-radius: 9px;
+    border: 1px solid rgba(124, 58, 237, 0.25);
+    background: rgba(124, 58, 237, 0.05);
+    color: rgba(167, 139, 250, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.backBtn:hover {
+    background: rgba(124, 58, 237, 0.12);
+    border-color: rgba(167, 139, 250, 0.4);
 }
 
 .closeBtn {
@@ -188,6 +215,119 @@
     margin: 18px 0 0;
     font-size: 12.5px;
     color: rgba(148, 163, 184, 0.6);
+}
+
+.memberCheckbox {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid rgba(167, 139, 250, 0.5);
+    background: rgba(15, 12, 30, 0.4);
+    transition:
+        background 0.15s,
+        border-color 0.15s;
+}
+
+.memberCheckboxChecked {
+    border-color: #7c3aed;
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+}
+
+.selectedChips {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0 0 14px;
+    padding: 0;
+}
+
+.chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 6px 5px 10px;
+    border-radius: 100px;
+    background: rgba(124, 58, 237, 0.14);
+    border: 1px solid rgba(124, 58, 237, 0.3);
+    color: rgba(226, 232, 240, 0.95);
+    font-size: 13px;
+}
+
+.chipRemove {
+    width: 16px;
+    height: 16px;
+    line-height: 1;
+    border: none;
+    border-radius: 50%;
+    background: rgba(124, 58, 237, 0.25);
+    color: rgba(226, 232, 240, 0.9);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+}
+
+.chipRemove:hover {
+    background: rgba(124, 58, 237, 0.45);
+}
+
+.groupDetails {
+    display: flex;
+    flex-direction: column;
+}
+
+.descriptionInput {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 9px 14px;
+    margin-bottom: 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(124, 58, 237, 0.2);
+    background: rgba(124, 58, 237, 0.05);
+    color: rgba(226, 232, 240, 0.95);
+    font-family: inherit;
+    font-size: 14px;
+    outline: none;
+    resize: vertical;
+    transition:
+        border-color 0.2s,
+        background 0.2s;
+}
+
+.descriptionInput::placeholder {
+    color: rgba(148, 163, 184, 0.5);
+}
+
+.descriptionInput:focus {
+    border-color: rgba(167, 139, 250, 0.5);
+    background: rgba(124, 58, 237, 0.09);
+}
+
+.createBtn {
+    width: 100%;
+    padding: 10px 12px;
+    margin-top: 16px;
+    border-radius: 10px;
+    border: none;
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    color: #fff;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.createBtn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.createBtn:not(:disabled):hover {
+    opacity: 0.9;
 }
 
 .panel::-webkit-scrollbar {

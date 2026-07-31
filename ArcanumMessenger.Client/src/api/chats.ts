@@ -17,6 +17,20 @@ export async function createDirectChat(otherUserId: string): Promise<ChatSummary
     return data.success ? data.chat : null;
 }
 
+export async function createGroupChat(
+    title: string,
+    description: string | undefined,
+    memberIds: string[],
+): Promise<ChatSummary | null> {
+    const res = await apiFetch("/api/chats", {
+        method: "POST",
+        credentials: "include",
+        body: JSON.stringify({ type: "group", title, description, memberIds }),
+    });
+    const data = await res.json();
+    return data.success ? data.chat : null;
+}
+
 export async function markChatRead(chatId: string): Promise<void> {
     await apiFetch(`/api/chats/${chatId}/read`, {
         method: "POST",
