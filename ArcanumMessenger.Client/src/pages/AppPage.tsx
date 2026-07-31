@@ -286,6 +286,8 @@ export default function AppPage() {
             }
         };
 
+        const handleChatDeleted = (chatId: string) => handleChatRemoved(chatId);
+
         const handleUserOnline = (userId: string) => {
             setPresence((prev) => ({
                 ...prev,
@@ -304,6 +306,7 @@ export default function AppPage() {
         connection.on("MessageDeleted", handleMessageDeleted);
         connection.on("MessageEdited", handleMessageEdited);
         connection.on("ChatCreated", handleChatCreated);
+        connection.on("ChatDeleted", handleChatDeleted);
         connection.on("UserOnline", handleUserOnline);
         connection.on("UserOffline", handleUserOffline);
 
@@ -312,6 +315,7 @@ export default function AppPage() {
             connection.off("MessageDeleted", handleMessageDeleted);
             connection.off("MessageEdited", handleMessageEdited);
             connection.off("ChatCreated", handleChatCreated);
+            connection.off("ChatDeleted", handleChatDeleted);
             connection.off("UserOnline", handleUserOnline);
             connection.off("UserOffline", handleUserOffline);
         };
@@ -390,6 +394,11 @@ export default function AppPage() {
                 }));
             });
         }
+    };
+
+    const handleChatRemoved = (chatId: string) => {
+        setChats((prev) => prev.filter((c) => c.id !== chatId));
+        setSelectedChatId((prev) => (prev === chatId ? null : prev));
     };
 
     const handleLogout = async () => {
@@ -510,6 +519,7 @@ export default function AppPage() {
                         chat={selectedChat}
                         connection={connection}
                         onStartChat={handleStartChat}
+                        onChatRemoved={handleChatRemoved}
                         presence={selectedChat.otherUserId ? presence[selectedChat.otherUserId] : undefined}
                     />
                 ) : (

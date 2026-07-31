@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { ChatSummary } from "../types/messenger";
+import { deleteChat, leaveGroup } from "../api/chats";
 import { getUserAvatarUrl } from "../api/users";
 import AvatarImage from "./AvatarImage";
 import styles from "./ChatInfoPanel.module.css";
@@ -7,14 +8,29 @@ import styles from "./ChatInfoPanel.module.css";
 interface ChatInfoPanelProps {
     chat: ChatSummary;
     onClose: () => void;
+    onChatRemoved: (chatId: string) => void;
 }
 
-// Media history and message count are previews - no backend for either
-// yet. Deleting a chat isn't wired up either; picking an option below
-// just says so instead of pretending to delete anything.
-export default function ChatInfoPanel({ chat, onClose }: ChatInfoPanelProps) {
-    const [confirmingDelete, setConfirmingDelete] = useState(false);
-    const [deleteNote, setDeleteNote] = useState(false);
+// Media history and message count are previews - no backend for either yet.
+export default function ChatInfoPanel({ chat, onClose, onChatRemoved }: ChatInfoPanelProps) {
+    const [confirming, setConfirming] = useState(false);
+    const [busy, setBusy] = useState(false);
+
+    const handleDelete = async (forEveryone: boolean) => {
+        if (busy) return;
+        setBusy(true);
+        const ok = await deleteChat(chat.id, forEveryone);
+        setBusy(false);
+        if (ok) onChatRemoved(chat.id);
+    };
+
+    const handleLeave = async () => {
+        if (busy) return;
+        setBusy(true);
+        const ok = await leaveGroup(chat.id);
+        setBusy(false);
+        if (ok) onChatRemoved(chat.id);
+    };
 
     return (
         <div className={styles.overlay} onClick={onClose}>
@@ -40,35 +56,53 @@ export default function ChatInfoPanel({ chat, onClose }: ChatInfoPanelProps) {
                     </svg>
                 </button>
 
-                {confirmingDelete ? (
+                {confirming ? (
                     <div className={styles.confirmView}>
-                        <h3 className={styles.confirmTitle}>Delete chat?</h3>
-                        <p className={styles.confirmText}>
-                            Choose who this disappears for.
-                        </p>
-
-                        {deleteNote ? (
-                            <p className={styles.note}>
-                                Deleting chats isn't connected yet – nothing
-                                was deleted.
-                            </p>
-                        ) : (
+                        {chat.type === "group" ? (
                             <>
+                                <h3 className={styles.confirmTitle}>Leave group?</h3>
+                                <p className={styles.confirmText}>
+                                    You won't receive messages from "{chat.title}" anymore.
+                                </p>
                                 <button
                                     className={styles.dangerBtn}
-                                    onClick={() => setDeleteNote(true)}
+                                    onClick={handleLeave}
+                                    disabled={busy}
+                                >
+                                    Leave group
+                                </button>
+                                <button
+                                    className={styles.cancelBtn}
+                                    onClick={() => setConfirming(false)}
+                                    disabled={busy}
+                                >
+                                    Cancel
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <h3 className={styles.confirmTitle}>Delete chat?</h3>
+                                <p className={styles.confirmText}>
+                                    Choose who this disappears for.
+                                </p>
+                                <button
+                                    className={styles.dangerBtn}
+                                    onClick={() => handleDelete(false)}
+                                    disabled={busy}
                                 >
                                     Delete for me
                                 </button>
                                 <button
                                     className={styles.dangerBtn}
-                                    onClick={() => setDeleteNote(true)}
+                                    onClick={() => handleDelete(true)}
+                                    disabled={busy}
                                 >
                                     Delete for everyone
                                 </button>
                                 <button
                                     className={styles.cancelBtn}
-                                    onClick={() => setConfirmingDelete(false)}
+                                    onClick={() => setConfirming(false)}
+                                    disabled={busy}
                                 >
                                     Cancel
                                 </button>
@@ -123,24 +157,30 @@ export default function ChatInfoPanel({ chat, onClose }: ChatInfoPanelProps) {
                             </div>
                         </section>
 
-                        <button
-                            className={styles.deleteBtn}
-                            onClick={() => setConfirmingDelete(true)}
-                        >
-                            <svg
-                                width="16"
-                                height="16"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
+                        {chat.type !== "saved" && (
+                            <button
+                                className={styles.deleteBtn}
+                                onClick={() => setConfirming(true)}
                             >
-                                <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z" />
-                            </svg>
-                            Delete chat
-                        </button>
+                                <svg
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                >
+                                    {chat.type === "group" ? (
+                                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+                                    ) : (
+                                        <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z" />
+                                    )}
+                                </svg>
+                                {chat.type === "group" ? "Leave group" : "Delete chat"}
+                            </button>
+                        )}
                     </>
                 )}
             </aside>

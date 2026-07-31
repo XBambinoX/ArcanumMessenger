@@ -45,3 +45,21 @@ export async function setChatArchived(chatId: string, isArchived: boolean): Prom
         body: JSON.stringify({ isArchived }),
     });
 }
+
+export async function deleteChat(chatId: string, forEveryone: boolean): Promise<boolean> {
+    const res = await apiFetch(`/api/chats/${chatId}?forEveryone=${forEveryone}`, {
+        method: "DELETE",
+        credentials: "include",
+    });
+    const data = await res.json();
+    return data.success === true;
+}
+
+export async function leaveGroup(chatId: string): Promise<boolean> {
+    const res = await apiFetch(`/api/chats/${chatId}/leave`, {
+        method: "POST",
+        credentials: "include",
+    });
+    const data = await res.json();
+    return data.success === true;
+}

@@ -104,6 +104,7 @@ interface ChatWindowProps {
     chat: ChatSummary;
     connection: HubConnection | null;
     onStartChat: (chat: ChatSummary) => void;
+    onChatRemoved: (chatId: string) => void;
     presence?: { isOnline: boolean; lastSeen: string | null };
 }
 
@@ -122,7 +123,7 @@ function dayLabel(iso: string): string {
     });
 }
 
-export default function ChatWindow({ chat, connection, onStartChat, presence }: ChatWindowProps) {
+export default function ChatWindow({ chat, connection, onStartChat, onChatRemoved, presence }: ChatWindowProps) {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [readStates, setReadStates] = useState<ChatReadState[]>([]);
     const [hasMore, setHasMore] = useState(false);
@@ -1111,6 +1112,7 @@ export default function ChatWindow({ chat, connection, onStartChat, presence }: 
                 <ChatInfoPanel
                     chat={chat}
                     onClose={() => setChatInfoOpen(false)}
+                    onChatRemoved={onChatRemoved}
                 />
             )}
 

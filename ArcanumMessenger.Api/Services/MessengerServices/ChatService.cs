@@ -210,4 +210,62 @@ public class ChatService(
         membership.IsArchived = isArchived;
         await db.SaveChangesAsync(ct);
     }
+
+    // Direct/saved chats only - groups go through LeaveGroupAsync instead,
+    // since "for everyone" makes no sense once there's more than two people.
+    public async Task<string?> DeleteChatAsync(ChatMember membership, bool forEveryone, CancellationToken ct)
+    {
+        if (membership.Chat.Type == "saved")
+            return "cannot_delete_saved";
+        if (membership.Chat.Type == "group")
+            return "use_leave";
+
+        if (forEveryone)
+        {
+            membership.Chat.IsDeleted = true;
+            await db.SaveChangesAsync(ct);
+
+            var allMemberIds = await db.ChatMembers.AsNoTracking()
+                .Where(cm => cm.ChatId == membership.ChatId)
+                .Select(cm => cm.UserId)
+                .ToListAsync(ct);
+            foreach (var id in allMemberIds)
+                await hub.Clients.User(id.ToString()).ChatDeleted(membership.ChatId);
+        }
+        else
+        {
+            var chatId = membership.ChatId;
+            var userId = membership.UserId;
+            db.ChatMembers.Remove(membership);
+            await db.SaveChangesAsync(ct);
+
+            // Only the caller loses this chat - their other devices need to
+            // hear about it too, but the other member's view is untouched.
+            await hub.Clients.User(userId.ToString()).ChatDeleted(chatId);
+        }
+
+        return null;
+    }
+
+    public async Task<string?> LeaveGroupAsync(ChatMember membership, CancellationToken ct)
+    {
+        if (membership.Chat.Type != "group")
+            return "not_a_group";
+
+        var chatId = membership.ChatId;
+        var userId = membership.UserId;
+
+        db.ChatMembers.Remove(membership);
+        await db.SaveChangesAsync(ct);
+
+        var remainingCount = await db.ChatMembers.AsNoTracking().CountAsync(cm => cm.ChatId == chatId, ct);
+        if (remainingCount == 0)
+        {
+            await db.Chats.Where(c => c.Id == chatId).ExecuteUpdateAsync(s => s.SetProperty(c => c.IsDeleted, true), ct);
+        }
+
+        await hub.Clients.User(userId.ToString()).ChatDeleted(chatId);
+
+        return null;
+    }
 }

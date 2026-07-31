@@ -23,3 +23,7 @@ public record MarkChatReadResponse(bool Success, DateTime? LastReadAt = null, st
 public record SetArchivedRequest(bool IsArchived);
 
 public record SetArchivedResponse(bool Success, bool? IsArchived = null, string? Reason = null);
+
+public record DeleteChatResponse(bool Success, string? Reason = null);
+
+public record LeaveChatResponse(bool Success, string? Reason = null);

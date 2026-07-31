@@ -67,4 +67,33 @@ public class ChatsController(ChatService chatService, ChatAccessService chatAcce
         await chatService.SetArchivedAsync(membership, request.IsArchived, ct);
         return Ok(new SetArchivedResponse(true, request.IsArchived));
     }
+
+    [HttpDelete("{chatId:guid}")]
+    public async Task<ActionResult<DeleteChatResponse>> Delete(
+        Guid chatId, [FromQuery] bool forEveryone, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var membership = await chatAccess.GetMembershipAsync(chatId, userId, ct);
+        if (membership is null)
+            return NotFound(new DeleteChatResponse(false, "not_found"));
+
+        var reason = await chatService.DeleteChatAsync(membership, forEveryone, ct);
+        return reason is null ? Ok(new DeleteChatResponse(true)) : BadRequest(new DeleteChatResponse(false, reason));
+    }
+
+    [HttpPost("{chatId:guid}/leave")]
+    public async Task<ActionResult<LeaveChatResponse>> Leave(Guid chatId, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var membership = await chatAccess.GetMembershipAsync(chatId, userId, ct);
+        if (membership is null)
+            return NotFound(new LeaveChatResponse(false, "not_found"));
+
+        var reason = await chatService.LeaveGroupAsync(membership, ct);
+        return reason is null ? Ok(new LeaveChatResponse(true)) : BadRequest(new LeaveChatResponse(false, reason));
+    }
 }
