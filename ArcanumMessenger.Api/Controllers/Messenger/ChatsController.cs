@@ -82,6 +82,34 @@ public class ChatsController(ChatService chatService, ChatAccessService chatAcce
         return Ok(new ChatMembersResponse(true, description, members));
     }
 
+    [HttpPost("{chatId:guid}/members/{memberId:guid}/promote")]
+    public async Task<ActionResult<PromoteMemberResponse>> PromoteMember(Guid chatId, Guid memberId, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var membership = await chatAccess.GetMembershipAsync(chatId, userId, ct);
+        if (membership is null)
+            return NotFound(new PromoteMemberResponse(false, "not_found"));
+
+        var reason = await chatService.PromoteToAdminAsync(membership, memberId, ct);
+        return reason is null ? Ok(new PromoteMemberResponse(true)) : BadRequest(new PromoteMemberResponse(false, reason));
+    }
+
+    [HttpPost("{chatId:guid}/members/{memberId:guid}/demote")]
+    public async Task<ActionResult<DemoteMemberResponse>> DemoteMember(Guid chatId, Guid memberId, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var membership = await chatAccess.GetMembershipAsync(chatId, userId, ct);
+        if (membership is null)
+            return NotFound(new DemoteMemberResponse(false, "not_found"));
+
+        var reason = await chatService.DemoteToMemberAsync(membership, memberId, ct);
+        return reason is null ? Ok(new DemoteMemberResponse(true)) : BadRequest(new DemoteMemberResponse(false, reason));
+    }
+
     [HttpDelete("{chatId:guid}")]
     public async Task<ActionResult<DeleteChatResponse>> Delete(
         Guid chatId, [FromQuery] bool forEveryone, CancellationToken ct)

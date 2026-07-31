@@ -196,6 +196,7 @@
 
 .memberBody {
     display: flex;
+    flex: 1;
     flex-direction: column;
     min-width: 0;
 }
@@ -222,6 +223,41 @@
     background: rgba(124, 58, 237, 0.15);
     border-radius: 6px;
     padding: 1px 6px;
+}
+
+.ownerBadge {
+    flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: rgba(251, 191, 36, 0.95);
+    background: rgba(251, 191, 36, 0.15);
+    border-radius: 6px;
+    padding: 1px 6px;
+}
+
+.roleBtn {
+    flex-shrink: 0;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: rgba(167, 139, 250, 0.85);
+    background: rgba(124, 58, 237, 0.1);
+    border: 1px solid rgba(124, 58, 237, 0.25);
+    border-radius: 8px;
+    padding: 5px 9px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.roleBtn:hover:not(:disabled) {
+    background: rgba(124, 58, 237, 0.18);
+    border-color: rgba(167, 139, 250, 0.45);
+}
+
+.roleBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .memberStatus {

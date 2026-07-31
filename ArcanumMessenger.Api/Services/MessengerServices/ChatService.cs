@@ -245,12 +245,75 @@ public class ChatService(
 
         var members = rows
             .Select(r => new ChatMemberDto(
-                r.UserId, names.GetValueOrDefault(r.UserId, "Unknown user"), r.Role, r.UserId == membership.UserId))
-            .OrderByDescending(m => m.Role == "admin")
+                r.UserId, names.GetValueOrDefault(r.UserId, "Unknown user"), r.Role,
+                r.UserId == membership.UserId, r.UserId == membership.Chat.CreatedBy))
+            .OrderByDescending(m => m.IsOwner)
+            .ThenByDescending(m => m.Role == "admin")
             .ThenBy(m => m.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         return (membership.Chat.Description, members);
+    }
+
+    // Only the group's owner (its creator) can grant or revoke admin - admins
+    // themselves can't promote/demote each other. "Perks" that come with
+    // being an admin land later; today the role is just a badge.
+    public async Task<string?> PromoteToAdminAsync(ChatMember callerMembership, Guid targetUserId, CancellationToken ct)
+    {
+        if (callerMembership.Chat.Type != "group")
+            return "not_a_group";
+        if (callerMembership.UserId != callerMembership.Chat.CreatedBy)
+            return "forbidden";
+        if (targetUserId == callerMembership.Chat.CreatedBy)
+            return null;
+
+        var target = await db.ChatMembers
+            .FirstOrDefaultAsync(cm => cm.ChatId == callerMembership.ChatId && cm.UserId == targetUserId, ct);
+        if (target is null)
+            return "not_found";
+
+        if (target.Role != "admin")
+        {
+            target.Role = "admin";
+            await db.SaveChangesAsync(ct);
+        }
+
+        await BroadcastRoleChangeAsync(callerMembership.ChatId, targetUserId, "admin", ct);
+        return null;
+    }
+
+    public async Task<string?> DemoteToMemberAsync(ChatMember callerMembership, Guid targetUserId, CancellationToken ct)
+    {
+        if (callerMembership.Chat.Type != "group")
+            return "not_a_group";
+        if (callerMembership.UserId != callerMembership.Chat.CreatedBy)
+            return "forbidden";
+        if (targetUserId == callerMembership.Chat.CreatedBy)
+            return "forbidden";
+
+        var target = await db.ChatMembers
+            .FirstOrDefaultAsync(cm => cm.ChatId == callerMembership.ChatId && cm.UserId == targetUserId, ct);
+        if (target is null)
+            return "not_found";
+
+        if (target.Role != "admin")
+            return null;
+
+        target.Role = "member";
+        await db.SaveChangesAsync(ct);
+
+        await BroadcastRoleChangeAsync(callerMembership.ChatId, targetUserId, "member", ct);
+        return null;
+    }
+
+    private async Task BroadcastRoleChangeAsync(Guid chatId, Guid targetUserId, string role, CancellationToken ct)
+    {
+        var memberIds = await db.ChatMembers.AsNoTracking()
+            .Where(cm => cm.ChatId == chatId)
+            .Select(cm => cm.UserId)
+            .ToListAsync(ct);
+        foreach (var id in memberIds)
+            await hub.Clients.User(id.ToString()).ChatMemberRoleChanged(chatId, targetUserId, role);
     }
 
     public async Task SetArchivedAsync(ChatMember membership, bool isArchived, CancellationToken ct)
@@ -260,8 +323,9 @@ public class ChatService(
     }
 
     // A group has no "for me"/"for everyone" split like a direct chat does -
-    // only its admin can delete it outright, and doing so always wipes it for
-    // every member. Anyone else has to go through LeaveGroupAsync instead.
+    // only its owner (the one who created it) can delete it outright, and
+    // doing so always wipes it for every member. Admins can't - they can only
+    // leave, same as anyone else, via LeaveGroupAsync.
     public async Task<string?> DeleteChatAsync(ChatMember membership, bool forEveryone, CancellationToken ct)
     {
         if (membership.Chat.Type == "saved")
@@ -269,7 +333,7 @@ public class ChatService(
 
         if (membership.Chat.Type == "group")
         {
-            if (membership.Role != "admin")
+            if (membership.UserId != membership.Chat.CreatedBy)
                 return "forbidden";
 
             membership.Chat.IsDeleted = true;

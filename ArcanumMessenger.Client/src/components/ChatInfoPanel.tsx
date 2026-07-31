@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
 import type { HubConnection } from "@microsoft/signalr";
 import type { ChatSummary } from "../types/messenger";
-import { deleteChat, leaveGroup, getChatMembers, type ChatMemberInfo } from "../api/chats";
+import {
+    deleteChat,
+    leaveGroup,
+    getChatMembers,
+    promoteToAdmin,
+    demoteToMember,
+    type ChatMemberInfo,
+} from "../api/chats";
 import { getUserAvatarUrl, getPresenceBulk } from "../api/users";
 import { formatChatTime } from "../lib/time";
 import AvatarImage from "./AvatarImage";
@@ -25,6 +32,14 @@ function statusLabel(presence: PresenceInfo | undefined): string {
     return presence.lastSeen ? `last seen ${formatChatTime(presence.lastSeen)}` : "offline";
 }
 
+function sortMembers(members: ChatMemberInfo[]): ChatMemberInfo[] {
+    return [...members].sort((a, b) => {
+        if (a.isOwner !== b.isOwner) return a.isOwner ? -1 : 1;
+        if ((a.role === "admin") !== (b.role === "admin")) return a.role === "admin" ? -1 : 1;
+        return a.name.localeCompare(b.name);
+    });
+}
+
 // Media history and message count are previews - no backend for either yet.
 export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved }: ChatInfoPanelProps) {
     const [confirming, setConfirming] = useState(false);
@@ -32,6 +47,7 @@ export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved
     const [description, setDescription] = useState<string | null>(null);
     const [members, setMembers] = useState<ChatMemberInfo[]>([]);
     const [presence, setPresence] = useState<Record<string, PresenceInfo>>({});
+    const [roleActionId, setRoleActionId] = useState<string | null>(null);
 
     useEffect(() => {
         if (chat.type !== "group") return;
@@ -67,15 +83,21 @@ export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved
         const handleUserOffline = (userId: string, lastSeen: string | null) => {
             setPresence((prev) => ({ ...prev, [userId]: { isOnline: false, lastSeen } }));
         };
+        const handleMemberRoleChanged = (changedChatId: string, userId: string, role: string) => {
+            if (changedChatId !== chat.id) return;
+            setMembers((prev) => sortMembers(prev.map((m) => (m.userId === userId ? { ...m, role } : m))));
+        };
 
         connection.on("UserOnline", handleUserOnline);
         connection.on("UserOffline", handleUserOffline);
+        connection.on("ChatMemberRoleChanged", handleMemberRoleChanged);
 
         return () => {
             connection.off("UserOnline", handleUserOnline);
             connection.off("UserOffline", handleUserOffline);
+            connection.off("ChatMemberRoleChanged", handleMemberRoleChanged);
         };
-    }, [chat.type, connection]);
+    }, [chat.id, chat.type, connection]);
 
     const handleDelete = async (forEveryone: boolean) => {
         if (busy) return;
@@ -93,7 +115,27 @@ export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved
         if (ok) onChatRemoved(chat.id);
     };
 
-    const isAdmin = members.some((m) => m.isSelf && m.role === "admin");
+    const isOwner = members.some((m) => m.isSelf && m.isOwner);
+
+    const handlePromote = async (userId: string) => {
+        if (roleActionId) return;
+        setRoleActionId(userId);
+        const ok = await promoteToAdmin(chat.id, userId);
+        if (ok) {
+            setMembers((prev) => sortMembers(prev.map((m) => (m.userId === userId ? { ...m, role: "admin" } : m))));
+        }
+        setRoleActionId(null);
+    };
+
+    const handleDemote = async (userId: string) => {
+        if (roleActionId) return;
+        setRoleActionId(userId);
+        const ok = await demoteToMember(chat.id, userId);
+        if (ok) {
+            setMembers((prev) => sortMembers(prev.map((m) => (m.userId === userId ? { ...m, role: "member" } : m))));
+        }
+        setRoleActionId(null);
+    };
 
     return (
         <div className={styles.overlay} onClick={onClose}>
@@ -122,7 +164,7 @@ export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved
                 {confirming ? (
                     <div className={styles.confirmView}>
                         {chat.type === "group" ? (
-                            isAdmin ? (
+                            isOwner ? (
                                 <>
                                     <h3 className={styles.confirmTitle}>Delete group?</h3>
                                     <p className={styles.confirmText}>
@@ -249,7 +291,9 @@ export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved
                                                     <div className={styles.memberBody}>
                                                         <span className={styles.memberName}>
                                                             {member.name}
-                                                            {member.role === "admin" && (
+                                                            {member.isOwner ? (
+                                                                <span className={styles.ownerBadge}>owner</span>
+                                                            ) : member.role === "admin" && (
                                                                 <span className={styles.adminBadge}>admin</span>
                                                             )}
                                                         </span>
@@ -259,6 +303,25 @@ export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved
                                                             {statusLabel(info)}
                                                         </span>
                                                     </div>
+                                                    {isOwner && !member.isSelf && !member.isOwner && (
+                                                        member.role === "admin" ? (
+                                                            <button
+                                                                className={styles.roleBtn}
+                                                                onClick={() => handleDemote(member.userId)}
+                                                                disabled={roleActionId === member.userId}
+                                                            >
+                                                                Remove admin
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                className={styles.roleBtn}
+                                                                onClick={() => handlePromote(member.userId)}
+                                                                disabled={roleActionId === member.userId}
+                                                            >
+                                                                Make admin
+                                                            </button>
+                                                        )
+                                                    )}
                                                 </li>
                                             );
                                         })}
@@ -301,13 +364,13 @@ export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
                                 >
-                                    {chat.type === "group" && !isAdmin ? (
+                                    {chat.type === "group" && !isOwner ? (
                                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
                                     ) : (
                                         <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z" />
                                     )}
                                 </svg>
-                                {chat.type === "group" ? (isAdmin ? "Delete group" : "Leave group") : "Delete chat"}
+                                {chat.type === "group" ? (isOwner ? "Delete group" : "Leave group") : "Delete chat"}
                             </button>
                         )}
                     </>

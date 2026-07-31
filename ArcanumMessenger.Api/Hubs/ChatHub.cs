@@ -20,6 +20,7 @@ public interface IChatClient
     Task UserOffline(Guid userId, DateTime? lastSeen);
     Task ChatRead(Guid chatId, Guid userId, DateTime readAt);
     Task ChatDeleted(Guid chatId);
+    Task ChatMemberRoleChanged(Guid chatId, Guid userId, string role);
 }
 
 [Authorize]

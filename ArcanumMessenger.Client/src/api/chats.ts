@@ -65,6 +65,7 @@ export interface ChatMemberInfo {
     name: string;
     role: string;
     isSelf: boolean;
+    isOwner: boolean;
 }
 
 export async function getChatMembers(
@@ -74,6 +75,24 @@ export async function getChatMembers(
     const data = await res.json();
     if (!data.success) return null;
     return { description: data.description ?? null, members: data.members ?? [] };
+}
+
+export async function promoteToAdmin(chatId: string, userId: string): Promise<boolean> {
+    const res = await apiFetch(`/api/chats/${chatId}/members/${userId}/promote`, {
+        method: "POST",
+        credentials: "include",
+    });
+    const data = await res.json();
+    return data.success === true;
+}
+
+export async function demoteToMember(chatId: string, userId: string): Promise<boolean> {
+    const res = await apiFetch(`/api/chats/${chatId}/members/${userId}/demote`, {
+        method: "POST",
+        credentials: "include",
+    });
+    const data = await res.json();
+    return data.success === true;
 }
 
 export async function leaveGroup(chatId: string): Promise<boolean> {
