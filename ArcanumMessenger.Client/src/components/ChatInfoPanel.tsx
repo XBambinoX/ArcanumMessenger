@@ -203,11 +203,6 @@ export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved
                             <>
                                 {description && (
                                     <section className={styles.infoSection}>
-                                        <div className={styles.infoRow}>
-                                            <span className={styles.infoLabel}>
-                                                Description
-                                            </span>
-                                        </div>
                                         <p className={styles.description}>{description}</p>
                                     </section>
                                 )}

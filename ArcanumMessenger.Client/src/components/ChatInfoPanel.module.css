@@ -133,6 +133,7 @@
     margin: 0;
     font-size: 13px;
     line-height: 1.5;
+    text-align: center;
     color: rgba(226, 232, 240, 0.85);
     white-space: pre-wrap;
     word-break: break-word;
