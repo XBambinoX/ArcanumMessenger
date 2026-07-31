@@ -28,7 +28,7 @@ public record DeleteChatResponse(bool Success, string? Reason = null);
 
 public record LeaveChatResponse(bool Success, string? Reason = null);
 
-public record ChatMemberDto(Guid UserId, string Name, string Role);
+public record ChatMemberDto(Guid UserId, string Name, string Role, bool IsSelf);
 
 public record ChatMembersResponse(
     bool Success, string? Description = null, IReadOnlyList<ChatMemberDto>? Members = null, string? Reason = null);

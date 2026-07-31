@@ -217,7 +217,8 @@ public class ChatService(
         var names = await displayNames.GetDisplayNamesAsync(rows.Select(r => r.UserId), ct);
 
         var members = rows
-            .Select(r => new ChatMemberDto(r.UserId, names.GetValueOrDefault(r.UserId, "Unknown user"), r.Role))
+            .Select(r => new ChatMemberDto(
+                r.UserId, names.GetValueOrDefault(r.UserId, "Unknown user"), r.Role, r.UserId == membership.UserId))
             .OrderByDescending(m => m.Role == "admin")
             .ThenBy(m => m.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -231,14 +232,31 @@ public class ChatService(
         await db.SaveChangesAsync(ct);
     }
 
-    // Direct/saved chats only - groups go through LeaveGroupAsync instead,
-    // since "for everyone" makes no sense once there's more than two people.
+    // A group has no "for me"/"for everyone" split like a direct chat does -
+    // only its admin can delete it outright, and doing so always wipes it for
+    // every member. Anyone else has to go through LeaveGroupAsync instead.
     public async Task<string?> DeleteChatAsync(ChatMember membership, bool forEveryone, CancellationToken ct)
     {
         if (membership.Chat.Type == "saved")
             return "cannot_delete_saved";
+
         if (membership.Chat.Type == "group")
-            return "use_leave";
+        {
+            if (membership.Role != "admin")
+                return "forbidden";
+
+            membership.Chat.IsDeleted = true;
+            await db.SaveChangesAsync(ct);
+
+            var groupMemberIds = await db.ChatMembers.AsNoTracking()
+                .Where(cm => cm.ChatId == membership.ChatId)
+                .Select(cm => cm.UserId)
+                .ToListAsync(ct);
+            foreach (var id in groupMemberIds)
+                await hub.Clients.User(id.ToString()).ChatDeleted(membership.ChatId);
+
+            return null;
+        }
 
         if (forEveryone)
         {

@@ -59,6 +59,7 @@ export interface ChatMemberInfo {
     userId: string;
     name: string;
     role: string;
+    isSelf: boolean;
 }
 
 export async function getChatMembers(

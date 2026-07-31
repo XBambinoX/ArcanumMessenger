@@ -93,6 +93,8 @@ export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved
         if (ok) onChatRemoved(chat.id);
     };
 
+    const isAdmin = members.some((m) => m.isSelf && m.role === "admin");
+
     return (
         <div className={styles.overlay} onClick={onClose}>
             <aside
@@ -120,26 +122,49 @@ export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved
                 {confirming ? (
                     <div className={styles.confirmView}>
                         {chat.type === "group" ? (
-                            <>
-                                <h3 className={styles.confirmTitle}>Leave group?</h3>
-                                <p className={styles.confirmText}>
-                                    You won't receive messages from "{chat.title}" anymore.
-                                </p>
-                                <button
-                                    className={styles.dangerBtn}
-                                    onClick={handleLeave}
-                                    disabled={busy}
-                                >
-                                    Leave group
-                                </button>
-                                <button
-                                    className={styles.cancelBtn}
-                                    onClick={() => setConfirming(false)}
-                                    disabled={busy}
-                                >
-                                    Cancel
-                                </button>
-                            </>
+                            isAdmin ? (
+                                <>
+                                    <h3 className={styles.confirmTitle}>Delete group?</h3>
+                                    <p className={styles.confirmText}>
+                                        This deletes "{chat.title}" for everyone in it.
+                                    </p>
+                                    <button
+                                        className={styles.dangerBtn}
+                                        onClick={() => handleDelete(true)}
+                                        disabled={busy}
+                                    >
+                                        Delete group
+                                    </button>
+                                    <button
+                                        className={styles.cancelBtn}
+                                        onClick={() => setConfirming(false)}
+                                        disabled={busy}
+                                    >
+                                        Cancel
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <h3 className={styles.confirmTitle}>Leave group?</h3>
+                                    <p className={styles.confirmText}>
+                                        You won't receive messages from "{chat.title}" anymore.
+                                    </p>
+                                    <button
+                                        className={styles.dangerBtn}
+                                        onClick={handleLeave}
+                                        disabled={busy}
+                                    >
+                                        Leave group
+                                    </button>
+                                    <button
+                                        className={styles.cancelBtn}
+                                        onClick={() => setConfirming(false)}
+                                        disabled={busy}
+                                    >
+                                        Cancel
+                                    </button>
+                                </>
+                            )
                         ) : (
                             <>
                                 <h3 className={styles.confirmTitle}>Delete chat?</h3>
@@ -276,13 +301,13 @@ export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
                                 >
-                                    {chat.type === "group" ? (
+                                    {chat.type === "group" && !isAdmin ? (
                                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
                                     ) : (
                                         <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z" />
                                     )}
                                 </svg>
-                                {chat.type === "group" ? "Leave group" : "Delete chat"}
+                                {chat.type === "group" ? (isAdmin ? "Delete group" : "Leave group") : "Delete chat"}
                             </button>
                         )}
                     </>
