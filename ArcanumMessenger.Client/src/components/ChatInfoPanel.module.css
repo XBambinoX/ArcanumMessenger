@@ -237,27 +237,48 @@
     padding: 1px 6px;
 }
 
-.roleBtn {
-    flex-shrink: 0;
-    font-size: 11.5px;
-    font-weight: 600;
-    color: rgba(167, 139, 250, 0.85);
-    background: rgba(124, 58, 237, 0.1);
-    border: 1px solid rgba(124, 58, 237, 0.25);
-    border-radius: 8px;
-    padding: 5px 9px;
+.adminListRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 6px;
+    margin-bottom: 10px;
+    border: none;
+    border-radius: 10px;
+    background: rgba(124, 58, 237, 0.06);
+    color: rgba(226, 232, 240, 0.95);
+    font-family: inherit;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.15s;
 }
 
-.roleBtn:hover:not(:disabled) {
-    background: rgba(124, 58, 237, 0.18);
-    border-color: rgba(167, 139, 250, 0.45);
+.adminListRow:hover {
+    background: rgba(124, 58, 237, 0.12);
 }
 
-.roleBtn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+.adminListIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    color: #fff;
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+}
+
+.adminListLabel {
+    flex: 1;
+    text-align: left;
+    font-size: 13.5px;
+    font-weight: 600;
+}
+
+.adminListCount {
+    font-size: 12.5px;
+    color: rgba(148, 163, 184, 0.6);
 }
 
 .memberStatus {

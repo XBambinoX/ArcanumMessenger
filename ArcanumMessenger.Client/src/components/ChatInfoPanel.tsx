@@ -12,6 +12,7 @@ import {
 import { getUserAvatarUrl, getPresenceBulk } from "../api/users";
 import { formatChatTime } from "../lib/time";
 import AvatarImage from "./AvatarImage";
+import AdminListPanel from "./AdminListPanel";
 import styles from "./ChatInfoPanel.module.css";
 
 interface ChatInfoPanelProps {
@@ -48,6 +49,7 @@ export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved
     const [members, setMembers] = useState<ChatMemberInfo[]>([]);
     const [presence, setPresence] = useState<Record<string, PresenceInfo>>({});
     const [roleActionId, setRoleActionId] = useState<string | null>(null);
+    const [adminListOpen, setAdminListOpen] = useState(false);
 
     useEffect(() => {
         if (chat.type !== "group") return;
@@ -138,6 +140,7 @@ export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved
     };
 
     return (
+        <>
         <div className={styles.overlay} onClick={onClose}>
             <aside
                 className={styles.panel}
@@ -275,6 +278,24 @@ export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved
                                 )}
 
                                 <section className={styles.membersSection}>
+                                    <button
+                                        className={styles.adminListRow}
+                                        onClick={() => setAdminListOpen(true)}
+                                    >
+                                        <span className={styles.adminListIcon}>
+                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z" />
+                                            </svg>
+                                        </span>
+                                        <span className={styles.adminListLabel}>Admins</span>
+                                        <span className={styles.adminListCount}>
+                                            {members.filter((m) => m.isOwner || m.role === "admin").length}
+                                        </span>
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M9 18l6-6-6-6" />
+                                        </svg>
+                                    </button>
+
                                     <h3 className={styles.membersTitle}>Members</h3>
                                     <ul className={styles.memberList}>
                                         {members.map((member) => {
@@ -303,25 +324,6 @@ export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved
                                                             {statusLabel(info)}
                                                         </span>
                                                     </div>
-                                                    {isOwner && !member.isSelf && !member.isOwner && (
-                                                        member.role === "admin" ? (
-                                                            <button
-                                                                className={styles.roleBtn}
-                                                                onClick={() => handleDemote(member.userId)}
-                                                                disabled={roleActionId === member.userId}
-                                                            >
-                                                                Remove admin
-                                                            </button>
-                                                        ) : (
-                                                            <button
-                                                                className={styles.roleBtn}
-                                                                onClick={() => handlePromote(member.userId)}
-                                                                disabled={roleActionId === member.userId}
-                                                            >
-                                                                Make admin
-                                                            </button>
-                                                        )
-                                                    )}
                                                 </li>
                                             );
                                         })}
@@ -377,5 +379,17 @@ export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved
                 )}
             </aside>
         </div>
+
+        {adminListOpen && (
+            <AdminListPanel
+                members={members}
+                isOwner={isOwner}
+                roleActionId={roleActionId}
+                onPromote={handlePromote}
+                onDemote={handleDemote}
+                onClose={() => setAdminListOpen(false)}
+            />
+        )}
+        </>
     );
 }
