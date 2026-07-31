@@ -117,6 +117,27 @@ public class ChatService(
         }
     }
 
+    // Callers whose WhoCanAddMe is set to Contacts can still be reached by
+    // anyone who already has them added back - this only blocks the add for
+    // people the target hasn't reciprocated with.
+    private async Task<List<Guid>> FilterAddRestrictedAsync(Guid callerId, List<Guid> targetIds, CancellationToken ct)
+    {
+        var restrictedTargets = await db.UserSettings.AsNoTracking()
+            .Where(s => targetIds.Contains(s.UserId) && s.WhoCanAddMe == AddPermission.Contacts)
+            .Select(s => s.UserId)
+            .ToListAsync(ct);
+
+        if (restrictedTargets.Count == 0)
+            return [];
+
+        var callerIsContactOf = await db.Contacts.AsNoTracking()
+            .Where(c => restrictedTargets.Contains(c.UserId) && c.ContactId == callerId && !c.IsBlocked)
+            .Select(c => c.UserId)
+            .ToListAsync(ct);
+
+        return restrictedTargets.Except(callerIsContactOf).ToList();
+    }
+
     public async Task<(ChatSummaryDto? Chat, string? Reason)> CreateDirectChatAsync(
         Guid callerId, Guid otherUserId, CancellationToken ct)
     {
@@ -128,6 +149,9 @@ public class ChatService(
 
         if (await blocks.IsBlockedEitherWayAsync(callerId, otherUserId, ct))
             return (null, "blocked");
+
+        if ((await FilterAddRestrictedAsync(callerId, [otherUserId], ct)).Count > 0)
+            return (null, "add_restricted");
 
         var existingChatId = await db.ChatMembers.AsNoTracking()
             .Where(cm => cm.UserId == callerId && cm.Chat.Type == "direct" && !cm.Chat.IsDeleted)
@@ -164,6 +188,9 @@ public class ChatService(
         var foundCount = await db.Users.CountAsync(u => members.Contains(u.Id) && !u.IsDeleted, ct);
         if (foundCount != members.Count)
             return (null, "invalid_members");
+
+        if ((await FilterAddRestrictedAsync(callerId, members, ct)).Count > 0)
+            return (null, "restricted_members");
 
         var chat = new Chat
         {

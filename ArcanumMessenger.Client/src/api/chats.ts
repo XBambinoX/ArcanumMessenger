@@ -7,28 +7,33 @@ export async function getChats(): Promise<ChatSummary[]> {
     return data.chats ?? [];
 }
 
-export async function createDirectChat(otherUserId: string): Promise<ChatSummary | null> {
+export interface CreateChatResult {
+    chat: ChatSummary | null;
+    reason: string | null;
+}
+
+export async function createDirectChat(otherUserId: string): Promise<CreateChatResult> {
     const res = await apiFetch("/api/chats", {
         method: "POST",
         credentials: "include",
         body: JSON.stringify({ type: "direct", otherUserId }),
     });
     const data = await res.json();
-    return data.success ? data.chat : null;
+    return { chat: data.success ? data.chat : null, reason: data.reason ?? null };
 }
 
 export async function createGroupChat(
     title: string,
     description: string | undefined,
     memberIds: string[],
-): Promise<ChatSummary | null> {
+): Promise<CreateChatResult> {
     const res = await apiFetch("/api/chats", {
         method: "POST",
         credentials: "include",
         body: JSON.stringify({ type: "group", title, description, memberIds }),
     });
     const data = await res.json();
-    return data.success ? data.chat : null;
+    return { chat: data.success ? data.chat : null, reason: data.reason ?? null };
 }
 
 export async function markChatRead(chatId: string): Promise<void> {

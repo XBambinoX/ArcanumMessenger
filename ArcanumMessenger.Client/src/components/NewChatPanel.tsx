@@ -27,6 +27,7 @@ export default function NewChatPanel({ onClose, onStartChat }: NewChatPanelProps
     const [groupTitle, setGroupTitle] = useState("");
     const [groupDescription, setGroupDescription] = useState("");
     const [creatingGroup, setCreatingGroup] = useState(false);
+    const [groupError, setGroupError] = useState<string | null>(null);
     const query = search.trim();
 
     useEffect(() => {
@@ -65,8 +66,9 @@ export default function NewChatPanel({ onClose, onStartChat }: NewChatPanelProps
         if (!title || groupMembers.size === 0 || creatingGroup) return;
 
         setCreatingGroup(true);
+        setGroupError(null);
         try {
-            const chat = await createGroupChat(
+            const { chat, reason } = await createGroupChat(
                 title,
                 groupDescription.trim() || undefined,
                 [...groupMembers.keys()],
@@ -74,6 +76,12 @@ export default function NewChatPanel({ onClose, onStartChat }: NewChatPanelProps
             if (chat) {
                 onStartChat(chat);
                 onClose();
+            } else {
+                setGroupError(
+                    reason === "restricted_members"
+                        ? "Someone in this group only accepts chats from their contacts."
+                        : "Couldn't create this group.",
+                );
             }
         } finally {
             setCreatingGroup(false);
@@ -160,6 +168,7 @@ export default function NewChatPanel({ onClose, onStartChat }: NewChatPanelProps
                         <p className={styles.note}>
                             {groupMembers.size} member{groupMembers.size === 1 ? "" : "s"} selected
                         </p>
+                        {groupError && <p className={styles.errorNote}>{groupError}</p>}
                         <button
                             className={styles.createBtn}
                             onClick={handleCreateGroup}

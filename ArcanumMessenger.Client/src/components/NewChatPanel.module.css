@@ -217,6 +217,13 @@
     color: rgba(148, 163, 184, 0.6);
 }
 
+.errorNote {
+    margin: 8px 0 0;
+    font-size: 12.5px;
+    color: #f87171;
+    text-align: center;
+}
+
 .memberCheckbox {
     flex-shrink: 0;
     width: 18px;

@@ -24,14 +24,21 @@ export default function UserInfoPanel({
 }: UserInfoPanelProps) {
     const [isContact, setIsContact] = useState(user.isContact);
     const [isBlocked, setIsBlocked] = useState(user.isBlocked);
+    const [writeError, setWriteError] = useState<string | null>(null);
     const canInteract = !isBlocked && !user.isBlockedByOther;
 
     const handleWrite = async () => {
         if (!canInteract) return;
-        const chat = await createDirectChat(userId);
+        const { chat, reason } = await createDirectChat(userId);
         if (chat) {
             onStartChat(chat);
             onClose();
+        } else {
+            setWriteError(
+                reason === "add_restricted"
+                    ? `${user.name} only accepts messages from their contacts.`
+                    : "Couldn't start this chat.",
+            );
         }
     };
 
@@ -91,6 +98,8 @@ export default function UserInfoPanel({
                                     : "Last seen a while ago"}
                     </span>
                 </div>
+
+                {writeError && <p className={styles.blockNote}>{writeError}</p>}
 
                 <div className={styles.actionRow}>
                     <button className={styles.actionBtn} onClick={handleWrite} disabled={!canInteract}>
