@@ -68,6 +68,20 @@ public class ChatsController(ChatService chatService, ChatAccessService chatAcce
         return Ok(new SetArchivedResponse(true, request.IsArchived));
     }
 
+    [HttpGet("{chatId:guid}/members")]
+    public async Task<ActionResult<ChatMembersResponse>> GetMembers(Guid chatId, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var membership = await chatAccess.GetMembershipAsync(chatId, userId, ct);
+        if (membership is null)
+            return NotFound(new ChatMembersResponse(false, Reason: "not_found"));
+
+        var (description, members) = await chatService.GetChatMembersAsync(membership, ct);
+        return Ok(new ChatMembersResponse(true, description, members));
+    }
+
     [HttpDelete("{chatId:guid}")]
     public async Task<ActionResult<DeleteChatResponse>> Delete(
         Guid chatId, [FromQuery] bool forEveryone, CancellationToken ct)

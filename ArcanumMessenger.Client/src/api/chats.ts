@@ -55,6 +55,21 @@ export async function deleteChat(chatId: string, forEveryone: boolean): Promise<
     return data.success === true;
 }
 
+export interface ChatMemberInfo {
+    userId: string;
+    name: string;
+    role: string;
+}
+
+export async function getChatMembers(
+    chatId: string,
+): Promise<{ description: string | null; members: ChatMemberInfo[] } | null> {
+    const res = await apiFetch(`/api/chats/${chatId}/members`, { credentials: "include" });
+    const data = await res.json();
+    if (!data.success) return null;
+    return { description: data.description ?? null, members: data.members ?? [] };
+}
+
 export async function leaveGroup(chatId: string): Promise<boolean> {
     const res = await apiFetch(`/api/chats/${chatId}/leave`, {
         method: "POST",

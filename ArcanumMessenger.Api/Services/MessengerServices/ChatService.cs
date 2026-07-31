@@ -206,6 +206,25 @@ public class ChatService(
         return membership.LastReadAt;
     }
 
+    public async Task<(string? Description, List<ChatMemberDto> Members)> GetChatMembersAsync(
+        ChatMember membership, CancellationToken ct)
+    {
+        var rows = await db.ChatMembers.AsNoTracking()
+            .Where(cm => cm.ChatId == membership.ChatId)
+            .Select(cm => new { cm.UserId, cm.Role })
+            .ToListAsync(ct);
+
+        var names = await displayNames.GetDisplayNamesAsync(rows.Select(r => r.UserId), ct);
+
+        var members = rows
+            .Select(r => new ChatMemberDto(r.UserId, names.GetValueOrDefault(r.UserId, "Unknown user"), r.Role))
+            .OrderByDescending(m => m.Role == "admin")
+            .ThenBy(m => m.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return (membership.Chat.Description, members);
+    }
+
     public async Task SetArchivedAsync(ChatMember membership, bool isArchived, CancellationToken ct)
     {
         membership.IsArchived = isArchived;

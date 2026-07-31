@@ -15,6 +15,8 @@
     box-sizing: border-box;
     width: 320px;
     max-width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
     background: #12102a;
@@ -22,6 +24,19 @@
     border-radius: 16px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
     padding: 18px;
+}
+
+.panel::-webkit-scrollbar {
+    width: 6px;
+}
+
+.panel::-webkit-scrollbar-thumb {
+    background: rgba(124, 58, 237, 0.35);
+    border-radius: 3px;
+}
+
+.panel::-webkit-scrollbar-track {
+    background: transparent;
 }
 
 .closeBtn {
@@ -112,6 +127,109 @@
 .infoValue {
     font-size: 13px;
     color: rgba(148, 163, 184, 0.7);
+}
+
+.description {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: rgba(226, 232, 240, 0.85);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.membersSection {
+    border-top: 1px solid rgba(124, 58, 237, 0.12);
+    padding-top: 14px;
+    margin-bottom: 16px;
+}
+
+.membersTitle {
+    margin: 0 0 8px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(167, 139, 250, 0.6);
+}
+
+.memberList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.memberRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 7px 4px;
+}
+
+.memberAvatar {
+    position: relative;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+}
+
+.onlineDot {
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: #4fb85c;
+    border: 2px solid #12102a;
+    box-sizing: border-box;
+}
+
+.memberBody {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.memberName {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: rgba(226, 232, 240, 0.95);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.adminBadge {
+    flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: rgba(167, 139, 250, 0.9);
+    background: rgba(124, 58, 237, 0.15);
+    border-radius: 6px;
+    padding: 1px 6px;
+}
+
+.memberStatus {
+    font-size: 12px;
+    color: rgba(148, 163, 184, 0.55);
+}
+
+.memberStatusOnline {
+    color: #4fb85c;
 }
 
 .deleteBtn {

@@ -1,20 +1,81 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import type { HubConnection } from "@microsoft/signalr";
 import type { ChatSummary } from "../types/messenger";
-import { deleteChat, leaveGroup } from "../api/chats";
-import { getUserAvatarUrl } from "../api/users";
+import { deleteChat, leaveGroup, getChatMembers, type ChatMemberInfo } from "../api/chats";
+import { getUserAvatarUrl, getPresenceBulk } from "../api/users";
+import { formatChatTime } from "../lib/time";
 import AvatarImage from "./AvatarImage";
 import styles from "./ChatInfoPanel.module.css";
 
 interface ChatInfoPanelProps {
     chat: ChatSummary;
+    connection: HubConnection | null;
     onClose: () => void;
     onChatRemoved: (chatId: string) => void;
 }
 
+interface PresenceInfo {
+    isOnline: boolean;
+    lastSeen: string | null;
+}
+
+function statusLabel(presence: PresenceInfo | undefined): string {
+    if (!presence) return "";
+    if (presence.isOnline) return "online";
+    return presence.lastSeen ? `last seen ${formatChatTime(presence.lastSeen)}` : "offline";
+}
+
 // Media history and message count are previews - no backend for either yet.
-export default function ChatInfoPanel({ chat, onClose, onChatRemoved }: ChatInfoPanelProps) {
+export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved }: ChatInfoPanelProps) {
     const [confirming, setConfirming] = useState(false);
     const [busy, setBusy] = useState(false);
+    const [description, setDescription] = useState<string | null>(null);
+    const [members, setMembers] = useState<ChatMemberInfo[]>([]);
+    const [presence, setPresence] = useState<Record<string, PresenceInfo>>({});
+
+    useEffect(() => {
+        if (chat.type !== "group") return;
+
+        let cancelled = false;
+        getChatMembers(chat.id).then((data) => {
+            if (cancelled || !data) return;
+            setDescription(data.description);
+            setMembers(data.members);
+
+            const memberIds = data.members.map((m) => m.userId);
+            getPresenceBulk(memberIds).then((items) => {
+                if (cancelled) return;
+                setPresence((prev) => {
+                    const next = { ...prev };
+                    for (const item of items) next[item.userId] = { isOnline: item.isOnline, lastSeen: item.lastSeen };
+                    return next;
+                });
+            });
+        });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [chat.id, chat.type]);
+
+    useEffect(() => {
+        if (chat.type !== "group" || !connection) return;
+
+        const handleUserOnline = (userId: string) => {
+            setPresence((prev) => ({ ...prev, [userId]: { isOnline: true, lastSeen: null } }));
+        };
+        const handleUserOffline = (userId: string, lastSeen: string | null) => {
+            setPresence((prev) => ({ ...prev, [userId]: { isOnline: false, lastSeen } }));
+        };
+
+        connection.on("UserOnline", handleUserOnline);
+        connection.on("UserOffline", handleUserOffline);
+
+        return () => {
+            connection.off("UserOnline", handleUserOnline);
+            connection.off("UserOffline", handleUserOffline);
+        };
+    }, [chat.type, connection]);
 
     const handleDelete = async (forEveryone: boolean) => {
         if (busy) return;
@@ -131,31 +192,79 @@ export default function ChatInfoPanel({ chat, onClose, onChatRemoved }: ChatInfo
                             </span>
                             <span className={styles.chatSubtitle}>
                                 {chat.type === "group"
-                                    ? "Group chat"
+                                    ? `${members.length} member${members.length === 1 ? "" : "s"}`
                                     : chat.type === "saved"
                                     ? "Saved Messages"
                                     : "Direct chat"}
                             </span>
                         </div>
 
-                        <section className={styles.infoSection}>
-                            <div className={styles.infoRow}>
-                                <span className={styles.infoLabel}>
-                                    Media
-                                </span>
-                                <span className={styles.infoValue}>
-                                    No media yet
-                                </span>
-                            </div>
-                            <div className={styles.infoRow}>
-                                <span className={styles.infoLabel}>
-                                    Messages
-                                </span>
-                                <span className={styles.infoValue}>
-                                    Coming soon
-                                </span>
-                            </div>
-                        </section>
+                        {chat.type === "group" ? (
+                            <>
+                                {description && (
+                                    <section className={styles.infoSection}>
+                                        <div className={styles.infoRow}>
+                                            <span className={styles.infoLabel}>
+                                                Description
+                                            </span>
+                                        </div>
+                                        <p className={styles.description}>{description}</p>
+                                    </section>
+                                )}
+
+                                <section className={styles.membersSection}>
+                                    <h3 className={styles.membersTitle}>Members</h3>
+                                    <ul className={styles.memberList}>
+                                        {members.map((member) => {
+                                            const info = presence[member.userId];
+                                            return (
+                                                <li key={member.userId} className={styles.memberRow}>
+                                                    <div className={styles.memberAvatar}>
+                                                        <AvatarImage
+                                                            src={getUserAvatarUrl(member.userId)}
+                                                            fallback={member.name.charAt(0).toUpperCase()}
+                                                        />
+                                                        {info?.isOnline && <span className={styles.onlineDot} />}
+                                                    </div>
+                                                    <div className={styles.memberBody}>
+                                                        <span className={styles.memberName}>
+                                                            {member.name}
+                                                            {member.role === "admin" && (
+                                                                <span className={styles.adminBadge}>admin</span>
+                                                            )}
+                                                        </span>
+                                                        <span
+                                                            className={`${styles.memberStatus} ${info?.isOnline ? styles.memberStatusOnline : ""}`}
+                                                        >
+                                                            {statusLabel(info)}
+                                                        </span>
+                                                    </div>
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+                                </section>
+                            </>
+                        ) : (
+                            <section className={styles.infoSection}>
+                                <div className={styles.infoRow}>
+                                    <span className={styles.infoLabel}>
+                                        Media
+                                    </span>
+                                    <span className={styles.infoValue}>
+                                        No media yet
+                                    </span>
+                                </div>
+                                <div className={styles.infoRow}>
+                                    <span className={styles.infoLabel}>
+                                        Messages
+                                    </span>
+                                    <span className={styles.infoValue}>
+                                        Coming soon
+                                    </span>
+                                </div>
+                            </section>
+                        )}
 
                         {chat.type !== "saved" && (
                             <button

@@ -1117,6 +1117,7 @@ export default function ChatWindow({ chat, connection, onStartChat, onChatRemove
             {chatInfoOpen && (
                 <ChatInfoPanel
                     chat={chat}
+                    connection={connection}
                     onClose={() => setChatInfoOpen(false)}
                     onChatRemoved={onChatRemoved}
                 />

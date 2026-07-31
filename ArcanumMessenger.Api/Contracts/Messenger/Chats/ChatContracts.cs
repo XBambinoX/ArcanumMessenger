@@ -27,3 +27,8 @@ public record SetArchivedResponse(bool Success, bool? IsArchived = null, string?
 public record DeleteChatResponse(bool Success, string? Reason = null);
 
 public record LeaveChatResponse(bool Success, string? Reason = null);
+
+public record ChatMemberDto(Guid UserId, string Name, string Role);
+
+public record ChatMembersResponse(
+    bool Success, string? Description = null, IReadOnlyList<ChatMemberDto>? Members = null, string? Reason = null);
