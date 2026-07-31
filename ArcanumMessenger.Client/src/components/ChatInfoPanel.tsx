@@ -346,20 +346,18 @@ export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved
                                                         {info?.isOnline && <span className={styles.onlineDot} />}
                                                     </div>
                                                     <div className={styles.memberBody}>
-                                                        <span className={styles.memberName}>
-                                                            {member.name}
-                                                            {member.isOwner ? (
-                                                                <span className={styles.ownerBadge}>owner</span>
-                                                            ) : member.role === "admin" && (
-                                                                <span className={styles.adminBadge}>admin</span>
-                                                            )}
-                                                        </span>
+                                                        <span className={styles.memberName}>{member.name}</span>
                                                         <span
                                                             className={`${styles.memberStatus} ${info?.isOnline ? styles.memberStatusOnline : ""}`}
                                                         >
                                                             {statusLabel(info)}
                                                         </span>
                                                     </div>
+                                                    {member.isOwner ? (
+                                                        <span className={styles.ownerBadge}>owner</span>
+                                                    ) : member.role === "admin" && (
+                                                        <span className={styles.adminBadge}>admin</span>
+                                                    )}
                                                 </li>
                                             );
                                         })}
