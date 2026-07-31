@@ -21,6 +21,8 @@ public interface IChatClient
     Task ChatRead(Guid chatId, Guid userId, DateTime readAt);
     Task ChatDeleted(Guid chatId);
     Task ChatMemberRoleChanged(Guid chatId, Guid userId, string role);
+    Task ChatMemberAdded(Guid chatId, ChatMemberDto member);
+    Task ChatMemberRemoved(Guid chatId, Guid userId);
 }
 
 [Authorize]

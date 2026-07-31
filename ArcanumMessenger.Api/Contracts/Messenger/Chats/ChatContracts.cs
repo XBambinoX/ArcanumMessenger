@@ -36,3 +36,9 @@ public record ChatMembersResponse(
 public record PromoteMemberResponse(bool Success, string? Reason = null);
 
 public record DemoteMemberResponse(bool Success, string? Reason = null);
+
+public record AddMembersRequest(List<Guid>? UserIds);
+
+public record AddMembersResponse(bool Success, IReadOnlyList<ChatMemberDto>? Members = null, string? Reason = null);
+
+public record RemoveMemberResponse(bool Success, string? Reason = null);

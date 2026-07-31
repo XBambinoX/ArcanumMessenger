@@ -13,6 +13,7 @@ import { getUserAvatarUrl, getPresenceBulk } from "../api/users";
 import { formatChatTime } from "../lib/time";
 import AvatarImage from "./AvatarImage";
 import AdminListPanel from "./AdminListPanel";
+import MembersManagePanel from "./MembersManagePanel";
 import styles from "./ChatInfoPanel.module.css";
 
 interface ChatInfoPanelProps {
@@ -50,6 +51,7 @@ export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved
     const [presence, setPresence] = useState<Record<string, PresenceInfo>>({});
     const [roleActionId, setRoleActionId] = useState<string | null>(null);
     const [adminListOpen, setAdminListOpen] = useState(false);
+    const [manageMembersOpen, setManageMembersOpen] = useState(false);
 
     useEffect(() => {
         if (chat.type !== "group") return;
@@ -89,15 +91,27 @@ export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved
             if (changedChatId !== chat.id) return;
             setMembers((prev) => sortMembers(prev.map((m) => (m.userId === userId ? { ...m, role } : m))));
         };
+        const handleMemberAdded = (changedChatId: string, member: ChatMemberInfo) => {
+            if (changedChatId !== chat.id) return;
+            setMembers((prev) => (prev.some((m) => m.userId === member.userId) ? prev : sortMembers([...prev, member])));
+        };
+        const handleMemberRemoved = (changedChatId: string, userId: string) => {
+            if (changedChatId !== chat.id) return;
+            setMembers((prev) => prev.filter((m) => m.userId !== userId));
+        };
 
         connection.on("UserOnline", handleUserOnline);
         connection.on("UserOffline", handleUserOffline);
         connection.on("ChatMemberRoleChanged", handleMemberRoleChanged);
+        connection.on("ChatMemberAdded", handleMemberAdded);
+        connection.on("ChatMemberRemoved", handleMemberRemoved);
 
         return () => {
             connection.off("UserOnline", handleUserOnline);
             connection.off("UserOffline", handleUserOffline);
             connection.off("ChatMemberRoleChanged", handleMemberRoleChanged);
+            connection.off("ChatMemberAdded", handleMemberAdded);
+            connection.off("ChatMemberRemoved", handleMemberRemoved);
         };
     }, [chat.id, chat.type, connection]);
 
@@ -118,6 +132,8 @@ export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved
     };
 
     const isOwner = members.some((m) => m.isSelf && m.isOwner);
+    // The owner's row is stored with Role "admin" too, so this already covers both.
+    const isAdmin = members.some((m) => m.isSelf && m.role === "admin");
 
     const handlePromote = async (userId: string) => {
         if (roleActionId) return;
@@ -296,6 +312,26 @@ export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved
                                         </svg>
                                     </button>
 
+                                    {isAdmin && (
+                                        <button
+                                            className={styles.adminListRow}
+                                            onClick={() => setManageMembersOpen(true)}
+                                        >
+                                            <span className={styles.adminListIcon}>
+                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                                    <circle cx="9" cy="7" r="4" />
+                                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                                                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                                                </svg>
+                                            </span>
+                                            <span className={styles.adminListLabel}>Manage members</span>
+                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M9 18l6-6-6-6" />
+                                            </svg>
+                                        </button>
+                                    )}
+
                                     <h3 className={styles.membersTitle}>Members</h3>
                                     <ul className={styles.memberList}>
                                         {members.map((member) => {
@@ -388,6 +424,15 @@ export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved
                 onPromote={handlePromote}
                 onDemote={handleDemote}
                 onClose={() => setAdminListOpen(false)}
+            />
+        )}
+
+        {manageMembersOpen && (
+            <MembersManagePanel
+                chatId={chat.id}
+                members={members}
+                onMembersChanged={(updated) => setMembers(sortMembers(updated))}
+                onClose={() => setManageMembersOpen(false)}
             />
         )}
         </>

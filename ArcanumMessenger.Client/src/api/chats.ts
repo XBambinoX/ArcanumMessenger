@@ -95,6 +95,30 @@ export async function demoteToMember(chatId: string, userId: string): Promise<bo
     return data.success === true;
 }
 
+export interface AddMembersResult {
+    members: ChatMemberInfo[] | null;
+    reason: string | null;
+}
+
+export async function addChatMembers(chatId: string, userIds: string[]): Promise<AddMembersResult> {
+    const res = await apiFetch(`/api/chats/${chatId}/members`, {
+        method: "POST",
+        credentials: "include",
+        body: JSON.stringify({ userIds }),
+    });
+    const data = await res.json();
+    return { members: data.success ? (data.members ?? []) : null, reason: data.reason ?? null };
+}
+
+export async function removeChatMember(chatId: string, userId: string): Promise<boolean> {
+    const res = await apiFetch(`/api/chats/${chatId}/members/${userId}`, {
+        method: "DELETE",
+        credentials: "include",
+    });
+    const data = await res.json();
+    return data.success === true;
+}
+
 export async function leaveGroup(chatId: string): Promise<boolean> {
     const res = await apiFetch(`/api/chats/${chatId}/leave`, {
         method: "POST",

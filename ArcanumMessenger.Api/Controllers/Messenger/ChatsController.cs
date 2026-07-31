@@ -82,6 +82,35 @@ public class ChatsController(ChatService chatService, ChatAccessService chatAcce
         return Ok(new ChatMembersResponse(true, description, members));
     }
 
+    [HttpPost("{chatId:guid}/members")]
+    public async Task<ActionResult<AddMembersResponse>> AddMembers(
+        Guid chatId, [FromBody] AddMembersRequest request, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var membership = await chatAccess.GetMembershipAsync(chatId, userId, ct);
+        if (membership is null)
+            return NotFound(new AddMembersResponse(false, Reason: "not_found"));
+
+        var (members, reason) = await chatService.AddMembersAsync(membership, request.UserIds, ct);
+        return reason is null ? Ok(new AddMembersResponse(true, members)) : BadRequest(new AddMembersResponse(false, Reason: reason));
+    }
+
+    [HttpDelete("{chatId:guid}/members/{memberId:guid}")]
+    public async Task<ActionResult<RemoveMemberResponse>> RemoveMember(Guid chatId, Guid memberId, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var membership = await chatAccess.GetMembershipAsync(chatId, userId, ct);
+        if (membership is null)
+            return NotFound(new RemoveMemberResponse(false, "not_found"));
+
+        var reason = await chatService.RemoveMemberAsync(membership, memberId, ct);
+        return reason is null ? Ok(new RemoveMemberResponse(true)) : BadRequest(new RemoveMemberResponse(false, reason));
+    }
+
     [HttpPost("{chatId:guid}/members/{memberId:guid}/promote")]
     public async Task<ActionResult<PromoteMemberResponse>> PromoteMember(Guid chatId, Guid memberId, CancellationToken ct)
     {

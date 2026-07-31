@@ -316,6 +316,131 @@ public class ChatService(
             await hub.Clients.User(id.ToString()).ChatMemberRoleChanged(chatId, targetUserId, role);
     }
 
+    // The owner's own row is stored with Role "admin" too, so this single
+    // check already covers "admin or owner" without a separate branch.
+    public async Task<(List<ChatMemberDto>? Members, string? Reason)> AddMembersAsync(
+        ChatMember callerMembership, List<Guid>? userIds, CancellationToken ct)
+    {
+        if (callerMembership.Chat.Type != "group")
+            return (null, "not_a_group");
+        if (callerMembership.Role != "admin")
+            return (null, "forbidden");
+
+        var requested = (userIds ?? []).Distinct().ToList();
+        if (requested.Count == 0)
+            return (null, "missing_members");
+
+        var foundCount = await db.Users.CountAsync(u => requested.Contains(u.Id) && !u.IsDeleted, ct);
+        if (foundCount != requested.Count)
+            return (null, "invalid_members");
+
+        var existingMemberIds = await db.ChatMembers.AsNoTracking()
+            .Where(cm => cm.ChatId == callerMembership.ChatId && requested.Contains(cm.UserId))
+            .Select(cm => cm.UserId)
+            .ToListAsync(ct);
+        var newMemberIds = requested.Except(existingMemberIds).ToList();
+        if (newMemberIds.Count == 0)
+            return (null, "already_members");
+
+        if ((await FilterAddRestrictedAsync(callerMembership.UserId, newMemberIds, ct)).Count > 0)
+            return (null, "restricted_members");
+
+        var now = DateTime.UtcNow;
+        foreach (var userId in newMemberIds)
+            db.ChatMembers.Add(new ChatMember
+            {
+                ChatId = callerMembership.ChatId, UserId = userId, Role = "member", JoinedAt = now, LastReadAt = now,
+            });
+
+        var names = await displayNames.GetDisplayNamesAsync(newMemberIds.Append(callerMembership.UserId), ct);
+        var adderName = names.GetValueOrDefault(callerMembership.UserId, "Unknown user");
+        var addedNames = string.Join(", ", newMemberIds.Select(id => names.GetValueOrDefault(id, "Unknown user")));
+
+        var systemMessage = new Message
+        {
+            ChatId = callerMembership.ChatId,
+            SenderId = callerMembership.UserId,
+            Type = "system",
+            Content = $"{adderName} added {addedNames}",
+        };
+        db.Messages.Add(systemMessage);
+        await db.SaveChangesAsync(ct);
+
+        var existingMemberIdsAll = await db.ChatMembers.AsNoTracking()
+            .Where(cm => cm.ChatId == callerMembership.ChatId && !newMemberIds.Contains(cm.UserId))
+            .Select(cm => cm.UserId)
+            .ToListAsync(ct);
+
+        var systemDto = new ChatMessageDto(
+            systemMessage.Id, callerMembership.ChatId, callerMembership.UserId, adderName, null,
+            systemMessage.Content, "system", null, false, systemMessage.CreatedAt, false);
+        foreach (var id in existingMemberIdsAll)
+            await hub.Clients.User(id.ToString()).ReceiveMessage(systemDto);
+
+        // New members get the normal "a chat appeared" treatment, existing
+        // ones get told a member joined so their open member list stays live.
+        await NotifyChatCreatedAsync(callerMembership.ChatId, newMemberIds, ct);
+
+        var (_, members) = await GetChatMembersAsync(callerMembership, ct);
+        var newDtos = members.Where(m => newMemberIds.Contains(m.UserId)).ToList();
+        foreach (var id in existingMemberIdsAll)
+            foreach (var dto in newDtos)
+                await hub.Clients.User(id.ToString()).ChatMemberAdded(callerMembership.ChatId, dto);
+
+        return (members, null);
+    }
+
+    public async Task<string?> RemoveMemberAsync(ChatMember callerMembership, Guid targetUserId, CancellationToken ct)
+    {
+        if (callerMembership.Chat.Type != "group")
+            return "not_a_group";
+        if (callerMembership.Role != "admin")
+            return "forbidden";
+        if (targetUserId == callerMembership.Chat.CreatedBy)
+            return "forbidden";
+        if (targetUserId == callerMembership.UserId)
+            return "forbidden";
+
+        var target = await db.ChatMembers
+            .FirstOrDefaultAsync(cm => cm.ChatId == callerMembership.ChatId && cm.UserId == targetUserId, ct);
+        if (target is null)
+            return "not_found";
+
+        var names = await displayNames.GetDisplayNamesAsync([targetUserId], ct);
+        var targetName = names.GetValueOrDefault(targetUserId, "Unknown user");
+
+        db.ChatMembers.Remove(target);
+        await db.SaveChangesAsync(ct);
+
+        var remainingMemberIds = await db.ChatMembers.AsNoTracking()
+            .Where(cm => cm.ChatId == callerMembership.ChatId)
+            .Select(cm => cm.UserId)
+            .ToListAsync(ct);
+
+        var systemMessage = new Message
+        {
+            ChatId = callerMembership.ChatId,
+            SenderId = callerMembership.UserId,
+            Type = "system",
+            Content = $"{targetName} was removed from the group",
+        };
+        db.Messages.Add(systemMessage);
+        await db.SaveChangesAsync(ct);
+
+        var systemDto = new ChatMessageDto(
+            systemMessage.Id, callerMembership.ChatId, callerMembership.UserId, "", null,
+            systemMessage.Content, "system", null, false, systemMessage.CreatedAt, false);
+        foreach (var id in remainingMemberIds)
+        {
+            await hub.Clients.User(id.ToString()).ReceiveMessage(systemDto);
+            await hub.Clients.User(id.ToString()).ChatMemberRemoved(callerMembership.ChatId, targetUserId);
+        }
+
+        await hub.Clients.User(targetUserId.ToString()).ChatDeleted(callerMembership.ChatId);
+
+        return null;
+    }
+
     public async Task SetArchivedAsync(ChatMember membership, bool isArchived, CancellationToken ct)
     {
         membership.IsArchived = isArchived;
