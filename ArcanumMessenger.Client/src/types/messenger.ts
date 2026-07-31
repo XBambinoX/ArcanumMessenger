@@ -22,7 +22,7 @@ export interface ChatSummary {
     isBlocked: boolean; // blocked either way with the other member, direct chats only
 }
 
-export type MessageType = "text" | "image" | "video" | "gif" | "file";
+export type MessageType = "text" | "image" | "video" | "gif" | "file" | "system";
 
 export interface MediaAsset {
     id: string;

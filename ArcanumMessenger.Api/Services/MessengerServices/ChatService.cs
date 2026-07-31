@@ -1,4 +1,5 @@
 using ArcanumMessenger.Contracts.Messenger.Chats;
+using ArcanumMessenger.Contracts.Messenger.Messages;
 using ArcanumMessenger.Data;
 using ArcanumMessenger.Entities;
 using ArcanumMessenger.Hubs;
@@ -255,13 +256,42 @@ public class ChatService(
         var chatId = membership.ChatId;
         var userId = membership.UserId;
 
+        // Snapshot the name now, same reasoning as ForwardedFromSenderName -
+        // the message should keep saying what was true when they left, even
+        // after a later rename or account deletion.
+        var names = await displayNames.GetDisplayNamesAsync([userId], ct);
+        var leaverName = names.GetValueOrDefault(userId, "Unknown user");
+
         db.ChatMembers.Remove(membership);
         await db.SaveChangesAsync(ct);
 
-        var remainingCount = await db.ChatMembers.AsNoTracking().CountAsync(cm => cm.ChatId == chatId, ct);
-        if (remainingCount == 0)
+        var remainingMemberIds = await db.ChatMembers.AsNoTracking()
+            .Where(cm => cm.ChatId == chatId)
+            .Select(cm => cm.UserId)
+            .ToListAsync(ct);
+
+        if (remainingMemberIds.Count == 0)
         {
             await db.Chats.Where(c => c.Id == chatId).ExecuteUpdateAsync(s => s.SetProperty(c => c.IsDeleted, true), ct);
+        }
+        else
+        {
+            var systemMessage = new Message
+            {
+                ChatId = chatId,
+                SenderId = userId,
+                Type = "system",
+                Content = $"{leaverName} left the group",
+            };
+            db.Messages.Add(systemMessage);
+            await db.SaveChangesAsync(ct);
+
+            var dto = new ChatMessageDto(
+                systemMessage.Id, chatId, userId, leaverName, null, systemMessage.Content, "system",
+                null, false, systemMessage.CreatedAt, false);
+
+            foreach (var id in remainingMemberIds)
+                await hub.Clients.User(id.ToString()).ReceiveMessage(dto);
         }
 
         await hub.Clients.User(userId.ToString()).ChatDeleted(chatId);

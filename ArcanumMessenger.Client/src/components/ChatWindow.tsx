@@ -671,6 +671,11 @@ export default function ChatWindow({ chat, connection, onStartChat, onChatRemove
                                     <span>{dayLabel(message.createdAt)}</span>
                                 </div>
                             )}
+                            {message.type === "system" ? (
+                                <div className={styles.systemMessage}>
+                                    <span>{message.content}</span>
+                                </div>
+                            ) : (
                             <div
                                 id={`msg-${message.id}`}
                                 className={`${styles.bubbleRow} ${message.isOwn ? styles.own : ""} ${
@@ -842,6 +847,7 @@ export default function ChatWindow({ chat, connection, onStartChat, onChatRemove
                                     )}
                                 </div>
                             </div>
+                            )}
                         </div>
                     );
                 })}
