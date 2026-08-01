@@ -5,8 +5,10 @@ using Microsoft.AspNetCore.Mvc;
 namespace ArcanumMessenger.Controllers.Messenger;
 
 [Route("api/chats")]
-public class ChatsController(ChatService chatService, ChatAccessService chatAccess) : MessengerControllerBase
+public class ChatsController(ChatService chatService, ChatAccessService chatAccess, AvatarService avatars) : MessengerControllerBase
 {
+    private const long MaxAvatarUploadBytes = 10_000_000;
+
     [HttpGet]
     public async Task<ActionResult<ChatListResponse>> List(CancellationToken ct)
     {
@@ -66,6 +68,73 @@ public class ChatsController(ChatService chatService, ChatAccessService chatAcce
 
         await chatService.SetArchivedAsync(membership, request.IsArchived, ct);
         return Ok(new SetArchivedResponse(true, request.IsArchived));
+    }
+
+    // RequestFormLimits isn't needed here the way MediaController's upload
+    // needed it - 10MB is comfortably under the 128MB multipart-form default,
+    // so the two limits never disagree at this size.
+    [HttpPost("{chatId:guid}/avatar")]
+    [RequestSizeLimit(MaxAvatarUploadBytes)]
+    public async Task<ActionResult<UploadChatAvatarResponse>> UploadAvatar(Guid chatId, IFormFile? file, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var membership = await chatAccess.GetMembershipAsync(chatId, userId, ct);
+        if (membership is null)
+            return NotFound(new UploadChatAvatarResponse(false, "not_found"));
+        if (membership.Chat.Type != "group")
+            return BadRequest(new UploadChatAvatarResponse(false, "not_a_group"));
+        if (membership.Role != "admin")
+            return BadRequest(new UploadChatAvatarResponse(false, "forbidden"));
+
+        if (file is null || file.Length == 0)
+            return BadRequest(new UploadChatAvatarResponse(false, "empty_file"));
+
+        await using var stream = file.OpenReadStream();
+        var (success, reason) = await avatars.UploadChatAvatarAsync(
+            chatId, stream, file.Length, file.ContentType ?? "application/octet-stream", ct);
+
+        return success ? Ok(new UploadChatAvatarResponse(true)) : BadRequest(new UploadChatAvatarResponse(false, reason));
+    }
+
+    [HttpDelete("{chatId:guid}/avatar")]
+    public async Task<ActionResult<UploadChatAvatarResponse>> DeleteAvatar(Guid chatId, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var membership = await chatAccess.GetMembershipAsync(chatId, userId, ct);
+        if (membership is null)
+            return NotFound(new UploadChatAvatarResponse(false, "not_found"));
+        if (membership.Chat.Type != "group")
+            return BadRequest(new UploadChatAvatarResponse(false, "not_a_group"));
+        if (membership.Role != "admin")
+            return BadRequest(new UploadChatAvatarResponse(false, "forbidden"));
+
+        await avatars.DeleteChatAvatarAsync(chatId, ct);
+        return Ok(new UploadChatAvatarResponse(true));
+    }
+
+    // Any current member can view it - same open-within-the-chat model as
+    // messages/media, no extra visibility setting the way a user avatar has.
+    [HttpGet("{chatId:guid}/avatar")]
+    public async Task<IActionResult> GetAvatar(Guid chatId, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var membership = await chatAccess.GetMembershipAsync(chatId, userId, ct);
+        if (membership is null || membership.Chat.Type != "group")
+            return NotFound();
+
+        var result = await avatars.OpenChatAvatarStreamAsync(chatId, ct);
+        if (result is null)
+            return NotFound();
+
+        Response.ContentLength = result.Length;
+        Response.Headers.CacheControl = "private, max-age=300";
+        return File(result.Content, result.ContentType);
     }
 
     [HttpGet("{chatId:guid}/members")]

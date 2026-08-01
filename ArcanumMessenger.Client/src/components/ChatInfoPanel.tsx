@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { HubConnection } from "@microsoft/signalr";
 import type { ChatSummary } from "../types/messenger";
 import {
@@ -7,6 +7,9 @@ import {
     getChatMembers,
     promoteToAdmin,
     demoteToMember,
+    getChatAvatarUrl,
+    uploadChatAvatar,
+    deleteChatAvatar,
     type ChatMemberInfo,
 } from "../api/chats";
 import { getUserAvatarUrl, getPresenceBulk } from "../api/users";
@@ -52,6 +55,8 @@ export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved
     const [roleActionId, setRoleActionId] = useState<string | null>(null);
     const [adminListOpen, setAdminListOpen] = useState(false);
     const [manageMembersOpen, setManageMembersOpen] = useState(false);
+    const [avatarNonce, setAvatarNonce] = useState(0);
+    const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
     useEffect(() => {
         if (chat.type !== "group") return;
@@ -153,6 +158,22 @@ export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved
             setMembers((prev) => sortMembers(prev.map((m) => (m.userId === userId ? { ...m, role: "member" } : m))));
         }
         setRoleActionId(null);
+    };
+
+    const handleAvatarClick = () => avatarInputRef.current?.click();
+
+    const handleAvatarFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        e.target.value = "";
+        if (!file) return;
+
+        const ok = await uploadChatAvatar(chat.id, file);
+        if (ok) setAvatarNonce(Date.now());
+    };
+
+    const handleRemoveAvatar = async () => {
+        const ok = await deleteChatAvatar(chat.id);
+        if (ok) setAvatarNonce(Date.now());
     };
 
     return (
@@ -259,8 +280,18 @@ export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved
                 ) : (
                     <>
                         <div className={styles.chatHeader}>
+                            {chat.type === "group" && isAdmin && (
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    ref={avatarInputRef}
+                                    className={styles.hiddenFileInput}
+                                    onChange={handleAvatarFileSelected}
+                                />
+                            )}
                             <div
-                                className={`${styles.chatAvatar} ${chat.type === "group" ? styles.chatAvatarGroup : ""} ${chat.type === "saved" ? styles.chatAvatarSaved : ""}`}
+                                className={`${styles.chatAvatar} ${chat.type === "group" ? styles.chatAvatarGroup : ""} ${chat.type === "saved" ? styles.chatAvatarSaved : ""} ${chat.type === "group" && isAdmin ? styles.chatAvatarEditable : ""}`}
+                                onClick={chat.type === "group" && isAdmin ? handleAvatarClick : undefined}
                             >
                                 {chat.type === "saved" ? (
                                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -268,9 +299,23 @@ export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved
                                     </svg>
                                 ) : (
                                     <AvatarImage
-                                        src={chat.type === "direct" && chat.otherUserId ? getUserAvatarUrl(chat.otherUserId) : null}
+                                        src={
+                                            chat.type === "direct" && chat.otherUserId
+                                                ? getUserAvatarUrl(chat.otherUserId)
+                                                : chat.type === "group"
+                                                    ? `${getChatAvatarUrl(chat.id)}${avatarNonce ? `?t=${avatarNonce}` : ""}`
+                                                    : null
+                                        }
                                         fallback={chat.title.charAt(0).toUpperCase()}
                                     />
+                                )}
+                                {chat.type === "group" && isAdmin && (
+                                    <span className={styles.chatAvatarOverlay}>
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                                            <circle cx="12" cy="13" r="4" />
+                                        </svg>
+                                    </span>
                                 )}
                             </div>
                             <span className={styles.chatTitle}>
@@ -283,6 +328,11 @@ export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved
                                     ? "Saved Messages"
                                     : "Direct chat"}
                             </span>
+                            {chat.type === "group" && isAdmin && (
+                                <button className={styles.avatarRemoveBtn} onClick={handleRemoveAvatar}>
+                                    Remove photo
+                                </button>
+                            )}
                         </div>
 
                         {chat.type === "group" ? (

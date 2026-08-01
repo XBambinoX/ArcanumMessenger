@@ -3,6 +3,7 @@ import type { HubConnection } from "@microsoft/signalr";
 import type { ChatMessage, ChatReadState, ChatSummary, MediaAsset, User } from "../types/messenger";
 import { getMessageHistory, sendMessage, deleteMessage, editMessage, forwardMessages } from "../api/messages";
 import { getUser, getUserAvatarUrl } from "../api/users";
+import { getChatAvatarUrl } from "../api/chats";
 import { uploadMedia, deleteMedia, getMediaUrl, getMediaThumbnailUrl, getSavedGifs, saveGif, unsaveGif } from "../api/media";
 import { uploadMediaChunked, abortChunkedUpload, clearChunkedUploadResumeState, CHUNK_THRESHOLD } from "../api/chunkedUpload";
 import { formatMessageTime, formatChatTime } from "../lib/time";
@@ -600,7 +601,13 @@ export default function ChatWindow({ chat, connection, onStartChat, onChatRemove
                         </svg>
                     ) : (
                         <AvatarImage
-                            src={chat.type === "direct" && chat.otherUserId ? getUserAvatarUrl(chat.otherUserId) : null}
+                            src={
+                                chat.type === "direct" && chat.otherUserId
+                                    ? getUserAvatarUrl(chat.otherUserId)
+                                    : chat.type === "group"
+                                        ? getChatAvatarUrl(chat.id)
+                                        : null
+                            }
                             fallback={chat.title.charAt(0).toUpperCase()}
                         />
                     )}

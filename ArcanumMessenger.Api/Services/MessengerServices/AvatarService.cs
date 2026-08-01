@@ -8,10 +8,11 @@ namespace ArcanumMessenger.Services.MessengerServices;
 public record AvatarStream(Stream Content, string ContentType, long Length);
 
 // Unlike chat media, an avatar has no DB row at all - there's only ever one
-// "current" avatar per user, so a deterministic key (avatars/{userId}) that
-// gets overwritten on every change is enough. Whether a user has an avatar
-// becomes a plain existence check against MinIO instead of something that
-// needs its own column/migration to track.
+// "current" avatar per owner, so a deterministic key that gets overwritten
+// on every change is enough. Whether an owner has an avatar becomes a plain
+// existence check against MinIO instead of something that needs its own
+// column/migration to track. Users and group chats share this same scheme -
+// only the key prefix differs, so one implementation covers both.
 public class AvatarService(IAmazonS3 s3, IConfiguration config)
 {
     private const long MaxUploadBytes = 10L * 1024 * 1024;
@@ -19,10 +20,28 @@ public class AvatarService(IAmazonS3 s3, IConfiguration config)
 
     private string Bucket => config["Media:Bucket"]!;
 
-    private static string KeyFor(Guid userId) => $"avatars/{userId}";
+    public Task<(bool Success, string? Reason)> UploadAvatarAsync(
+        Guid userId, Stream content, long length, string mimeType, CancellationToken ct) =>
+        UploadAsync($"avatars/{userId}", content, length, mimeType, ct);
 
-    public async Task<(bool Success, string? Reason)> UploadAvatarAsync(
-        Guid userId, Stream content, long length, string mimeType, CancellationToken ct)
+    public Task DeleteAvatarAsync(Guid userId, CancellationToken ct) =>
+        DeleteAsync($"avatars/{userId}", ct);
+
+    public Task<AvatarStream?> OpenAvatarStreamAsync(Guid userId, CancellationToken ct) =>
+        OpenStreamAsync($"avatars/{userId}", ct);
+
+    public Task<(bool Success, string? Reason)> UploadChatAvatarAsync(
+        Guid chatId, Stream content, long length, string mimeType, CancellationToken ct) =>
+        UploadAsync($"chat-avatars/{chatId}", content, length, mimeType, ct);
+
+    public Task DeleteChatAvatarAsync(Guid chatId, CancellationToken ct) =>
+        DeleteAsync($"chat-avatars/{chatId}", ct);
+
+    public Task<AvatarStream?> OpenChatAvatarStreamAsync(Guid chatId, CancellationToken ct) =>
+        OpenStreamAsync($"chat-avatars/{chatId}", ct);
+
+    private async Task<(bool Success, string? Reason)> UploadAsync(
+        string key, Stream content, long length, string mimeType, CancellationToken ct)
     {
         if (length <= 0)
             return (false, "empty_file");
@@ -56,7 +75,7 @@ public class AvatarService(IAmazonS3 s3, IConfiguration config)
         await s3.PutObjectAsync(new PutObjectRequest
         {
             BucketName = Bucket,
-            Key = KeyFor(userId),
+            Key = key,
             InputStream = uploadStream,
             ContentType = "image/jpeg",
         }, ct);
@@ -64,19 +83,19 @@ public class AvatarService(IAmazonS3 s3, IConfiguration config)
         return (true, null);
     }
 
-    public async Task DeleteAvatarAsync(Guid userId, CancellationToken ct)
+    private async Task DeleteAsync(string key, CancellationToken ct)
     {
-        await s3.DeleteObjectAsync(Bucket, KeyFor(userId), ct);
+        await s3.DeleteObjectAsync(Bucket, key, ct);
     }
 
-    public async Task<AvatarStream?> OpenAvatarStreamAsync(Guid userId, CancellationToken ct)
+    private async Task<AvatarStream?> OpenStreamAsync(string key, CancellationToken ct)
     {
         try
         {
             var response = await s3.GetObjectAsync(new GetObjectRequest
             {
                 BucketName = Bucket,
-                Key = KeyFor(userId),
+                Key = key,
             }, ct);
 
             return new AvatarStream(response.ResponseStream, "image/jpeg", response.ContentLength);

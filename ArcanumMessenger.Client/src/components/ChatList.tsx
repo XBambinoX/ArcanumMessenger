@@ -1,6 +1,7 @@
 import type { ChatSummary } from "../types/messenger";
 import { formatChatTime } from "../lib/time";
 import { getUserAvatarUrl } from "../api/users";
+import { getChatAvatarUrl } from "../api/chats";
 import AvatarImage from "./AvatarImage";
 import styles from "./ChatList.module.css";
 
@@ -51,7 +52,13 @@ export default function ChatList({
                                     </svg>
                                 ) : (
                                     <AvatarImage
-                                        src={chat.type === "direct" && chat.otherUserId ? getUserAvatarUrl(chat.otherUserId) : null}
+                                        src={
+                                            chat.type === "direct" && chat.otherUserId
+                                                ? getUserAvatarUrl(chat.otherUserId)
+                                                : chat.type === "group"
+                                                    ? getChatAvatarUrl(chat.id)
+                                                    : null
+                                        }
                                         fallback={chat.title.charAt(0).toUpperCase()}
                                     />
                                 )}

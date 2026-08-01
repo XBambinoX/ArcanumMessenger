@@ -70,6 +70,7 @@
 }
 
 .chatAvatar {
+    position: relative;
     width: 64px;
     height: 64px;
     border-radius: 50%;
@@ -81,6 +82,45 @@
     color: #fff;
     background: linear-gradient(135deg, #7c3aed, #4f46e5);
     margin-bottom: 10px;
+}
+
+.chatAvatarEditable {
+    cursor: pointer;
+}
+
+.chatAvatarOverlay {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.45);
+    color: #fff;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.chatAvatarEditable:hover .chatAvatarOverlay {
+    opacity: 1;
+}
+
+.hiddenFileInput {
+    display: none;
+}
+
+.avatarRemoveBtn {
+    margin-top: 2px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    font-size: 12px;
+    color: rgba(248, 113, 113, 0.75);
+    cursor: pointer;
+}
+
+.avatarRemoveBtn:hover {
+    color: rgba(248, 113, 113, 0.95);
 }
 
 .chatAvatarGroup {

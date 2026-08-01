@@ -42,3 +42,5 @@ public record AddMembersRequest(List<Guid>? UserIds);
 public record AddMembersResponse(bool Success, IReadOnlyList<ChatMemberDto>? Members = null, string? Reason = null);
 
 public record RemoveMemberResponse(bool Success, string? Reason = null);
+
+public record UploadChatAvatarResponse(bool Success, string? Reason = null);

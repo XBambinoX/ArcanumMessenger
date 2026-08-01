@@ -7,6 +7,32 @@ export async function getChats(): Promise<ChatSummary[]> {
     return data.chats ?? [];
 }
 
+export function getChatAvatarUrl(chatId: string): string {
+    return `/api/chats/${chatId}/avatar`;
+}
+
+export async function uploadChatAvatar(chatId: string, file: File): Promise<boolean> {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await apiFetch(`/api/chats/${chatId}/avatar`, {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+    });
+    const data = await res.json();
+    return data.success === true;
+}
+
+export async function deleteChatAvatar(chatId: string): Promise<boolean> {
+    const res = await apiFetch(`/api/chats/${chatId}/avatar`, {
+        method: "DELETE",
+        credentials: "include",
+    });
+    const data = await res.json();
+    return data.success === true;
+}
+
 export interface CreateChatResult {
     chat: ChatSummary | null;
     reason: string | null;
