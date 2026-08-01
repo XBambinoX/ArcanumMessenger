@@ -107,6 +107,8 @@ interface ChatWindowProps {
     onStartChat: (chat: ChatSummary) => void;
     onChatRemoved: (chatId: string) => void;
     presence?: { isOnline: boolean; lastSeen: string | null };
+    chatAvatarNonce: number;
+    onChatAvatarChanged: () => void;
 }
 
 const ANIMATE_MS = 260;
@@ -124,7 +126,9 @@ function dayLabel(iso: string): string {
     });
 }
 
-export default function ChatWindow({ chat, connection, onStartChat, onChatRemoved, presence }: ChatWindowProps) {
+export default function ChatWindow({
+    chat, connection, onStartChat, onChatRemoved, presence, chatAvatarNonce, onChatAvatarChanged,
+}: ChatWindowProps) {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [readStates, setReadStates] = useState<ChatReadState[]>([]);
     const [hasMore, setHasMore] = useState(false);
@@ -605,7 +609,7 @@ export default function ChatWindow({ chat, connection, onStartChat, onChatRemove
                                 chat.type === "direct" && chat.otherUserId
                                     ? getUserAvatarUrl(chat.otherUserId)
                                     : chat.type === "group"
-                                        ? getChatAvatarUrl(chat.id)
+                                        ? `${getChatAvatarUrl(chat.id)}${chatAvatarNonce ? `?t=${chatAvatarNonce}` : ""}`
                                         : null
                             }
                             fallback={chat.title.charAt(0).toUpperCase()}
@@ -1127,6 +1131,8 @@ export default function ChatWindow({ chat, connection, onStartChat, onChatRemove
                     connection={connection}
                     onClose={() => setChatInfoOpen(false)}
                     onChatRemoved={onChatRemoved}
+                    chatAvatarNonce={chatAvatarNonce}
+                    onChatAvatarChanged={onChatAvatarChanged}
                 />
             )}
 

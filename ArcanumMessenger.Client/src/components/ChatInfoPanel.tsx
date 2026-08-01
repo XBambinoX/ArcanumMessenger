@@ -24,6 +24,8 @@ interface ChatInfoPanelProps {
     connection: HubConnection | null;
     onClose: () => void;
     onChatRemoved: (chatId: string) => void;
+    chatAvatarNonce: number;
+    onChatAvatarChanged: () => void;
 }
 
 interface PresenceInfo {
@@ -46,7 +48,9 @@ function sortMembers(members: ChatMemberInfo[]): ChatMemberInfo[] {
 }
 
 // Media history and message count are previews - no backend for either yet.
-export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved }: ChatInfoPanelProps) {
+export default function ChatInfoPanel({
+    chat, connection, onClose, onChatRemoved, chatAvatarNonce, onChatAvatarChanged,
+}: ChatInfoPanelProps) {
     const [confirming, setConfirming] = useState(false);
     const [busy, setBusy] = useState(false);
     const [description, setDescription] = useState<string | null>(null);
@@ -55,7 +59,6 @@ export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved
     const [roleActionId, setRoleActionId] = useState<string | null>(null);
     const [adminListOpen, setAdminListOpen] = useState(false);
     const [manageMembersOpen, setManageMembersOpen] = useState(false);
-    const [avatarNonce, setAvatarNonce] = useState(0);
     const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
     useEffect(() => {
@@ -168,12 +171,12 @@ export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved
         if (!file) return;
 
         const ok = await uploadChatAvatar(chat.id, file);
-        if (ok) setAvatarNonce(Date.now());
+        if (ok) onChatAvatarChanged();
     };
 
     const handleRemoveAvatar = async () => {
         const ok = await deleteChatAvatar(chat.id);
-        if (ok) setAvatarNonce(Date.now());
+        if (ok) onChatAvatarChanged();
     };
 
     return (
@@ -303,7 +306,7 @@ export default function ChatInfoPanel({ chat, connection, onClose, onChatRemoved
                                             chat.type === "direct" && chat.otherUserId
                                                 ? getUserAvatarUrl(chat.otherUserId)
                                                 : chat.type === "group"
-                                                    ? `${getChatAvatarUrl(chat.id)}${avatarNonce ? `?t=${avatarNonce}` : ""}`
+                                                    ? `${getChatAvatarUrl(chat.id)}${chatAvatarNonce ? `?t=${chatAvatarNonce}` : ""}`
                                                     : null
                                         }
                                         fallback={chat.title.charAt(0).toUpperCase()}

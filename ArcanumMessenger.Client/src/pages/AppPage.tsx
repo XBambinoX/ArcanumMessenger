@@ -50,6 +50,7 @@ export default function AppPage() {
     const [profile, setProfile] = useState<User | null>(null);
     const [displayName, setDisplayName] = useState<string | null>(null);
     const [avatarNonce, setAvatarNonce] = useState(0);
+    const [chatAvatarNonce, setChatAvatarNonce] = useState(0);
     const [folder, setFolder] = useState<ChatFolder>("all");
     const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
     const [search, setSearch] = useState("");
@@ -508,6 +509,7 @@ export default function AppPage() {
                         onSelect={handleSelectChat}
                         onToggleArchive={toggleArchive}
                         presence={presence}
+                        chatAvatarNonce={chatAvatarNonce}
                     />
                 </div>
             </aside>
@@ -521,6 +523,8 @@ export default function AppPage() {
                         onStartChat={handleStartChat}
                         onChatRemoved={handleChatRemoved}
                         presence={selectedChat.otherUserId ? presence[selectedChat.otherUserId] : undefined}
+                        chatAvatarNonce={chatAvatarNonce}
+                        onChatAvatarChanged={() => setChatAvatarNonce(Date.now())}
                     />
                 ) : (
                     <div className={styles.emptyState}>

@@ -16,6 +16,7 @@ interface ChatListProps {
     onSelect: (chatId: string) => void;
     onToggleArchive: (chatId: string) => void;
     presence: Record<string, PresenceInfo>;
+    chatAvatarNonce: number;
 }
 
 export default function ChatList({
@@ -24,6 +25,7 @@ export default function ChatList({
     onSelect,
     onToggleArchive,
     presence,
+    chatAvatarNonce,
 }: ChatListProps) {
     if (chats.length === 0) {
         return <p className={styles.empty}>No chats here yet</p>;
@@ -56,7 +58,7 @@ export default function ChatList({
                                             chat.type === "direct" && chat.otherUserId
                                                 ? getUserAvatarUrl(chat.otherUserId)
                                                 : chat.type === "group"
-                                                    ? getChatAvatarUrl(chat.id)
+                                                    ? `${getChatAvatarUrl(chat.id)}${chatAvatarNonce ? `?t=${chatAvatarNonce}` : ""}`
                                                     : null
                                         }
                                         fallback={chat.title.charAt(0).toUpperCase()}
