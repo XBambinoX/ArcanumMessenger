@@ -8,6 +8,7 @@ import { uploadMedia, deleteMedia, getMediaUrl, getMediaThumbnailUrl, getSavedGi
 import { uploadMediaChunked, abortChunkedUpload, clearChunkedUploadResumeState, CHUNK_THRESHOLD } from "../api/chunkedUpload";
 import { formatMessageTime, formatChatTime } from "../lib/time";
 import { encryptOutgoing, decryptIncoming, decryptIncomingList } from "../lib/chatCrypto";
+import { selfHealChatKeys } from "../lib/chatKeySelfHeal";
 import UserInfoPanel from "./UserInfoPanel";
 import ChatInfoPanel from "./ChatInfoPanel";
 import GifPicker from "./GifPicker";
@@ -265,6 +266,13 @@ export default function ChatWindow({
         // Re-runs if wrappedChatKey shows up later too (e.g. self-heal
         // provisioning it after the chat was first opened with none) so
         // already-loaded ciphertext gets a chance to decrypt properly.
+    }, [chat.id, chat.wrappedChatKey]);
+
+    // Best-effort, fire-and-forget: whenever this chat is opened, fix
+    // whatever missing chat-key state this client happens to be able to
+    // fix (see lib/chatKeySelfHeal.ts). Never blocks rendering.
+    useEffect(() => {
+        selfHealChatKeys(chat.id, chat.wrappedChatKey);
     }, [chat.id, chat.wrappedChatKey]);
 
     useEffect(() => {

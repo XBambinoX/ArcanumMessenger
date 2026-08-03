@@ -168,6 +168,24 @@ public class ChatsController(ChatService chatService, ChatAccessService chatAcce
         return reason is null ? Ok(new AddMembersResponse(true, members)) : BadRequest(new AddMembersResponse(false, Reason: reason));
     }
 
+    // Any member (not just an admin) can fill in a gap - this only ever
+    // provisions a currently-missing key, never overwrites one (see
+    // ChatService.SetMemberChatKeyAsync).
+    [HttpPost("{chatId:guid}/members/{memberId:guid}/key")]
+    public async Task<ActionResult<SetMemberChatKeyResponse>> SetMemberChatKey(
+        Guid chatId, Guid memberId, [FromBody] SetMemberChatKeyRequest request, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var membership = await chatAccess.GetMembershipAsync(chatId, userId, ct);
+        if (membership is null)
+            return NotFound(new SetMemberChatKeyResponse(false, "not_found"));
+
+        var reason = await chatService.SetMemberChatKeyAsync(membership, memberId, request.WrappedChatKey, ct);
+        return reason is null ? Ok(new SetMemberChatKeyResponse(true)) : BadRequest(new SetMemberChatKeyResponse(false, reason));
+    }
+
     [HttpDelete("{chatId:guid}/members/{memberId:guid}")]
     public async Task<ActionResult<RemoveMemberResponse>> RemoveMember(Guid chatId, Guid memberId, CancellationToken ct)
     {

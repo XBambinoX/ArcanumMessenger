@@ -101,6 +101,11 @@ export interface ChatMemberInfo {
     role: string;
     isSelf: boolean;
     isOwner: boolean;
+    // Whether this member already has a wrapped copy of the chat's key -
+    // never the key itself. false means this member's client can't decrypt
+    // this chat yet; see lib/chatKeySelfHeal.ts.
+    hasChatKey: boolean;
+    ecdhPublicKey: string | null;
 }
 
 export async function getChatMembers(
@@ -153,6 +158,19 @@ export async function removeChatMember(chatId: string, userId: string): Promise<
     const res = await apiFetch(`/api/chats/${chatId}/members/${userId}`, {
         method: "DELETE",
         credentials: "include",
+    });
+    const data = await res.json();
+    return data.success === true;
+}
+
+// Fills in a currently-missing wrapped chat key for a fellow member - the
+// caller must already hold the chat's real key themselves. A no-op if the
+// member already has one; never overwrites an existing wrap.
+export async function setMemberChatKey(chatId: string, userId: string, wrappedChatKey: string): Promise<boolean> {
+    const res = await apiFetch(`/api/chats/${chatId}/members/${userId}/key`, {
+        method: "POST",
+        credentials: "include",
+        body: JSON.stringify({ wrappedChatKey }),
     });
     const data = await res.json();
     return data.success === true;

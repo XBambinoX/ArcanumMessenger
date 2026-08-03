@@ -34,6 +34,13 @@ export function invalidateChatKey(chatId: string): void {
     keyCache.delete(chatId);
 }
 
+// Lets a caller that just generated a chat's key firsthand (bootstrapping
+// one where nobody had one yet) make it usable immediately, without waiting
+// for a stale wrappedChatKey prop to refresh from the server.
+export function primeChatKey(chatId: string, key: Uint8Array): void {
+    keyCache.set(chatId, key);
+}
+
 // Returns null if this chat has no usable key yet - callers must not send
 // unencrypted content as a fallback; there's simply nothing safe to send.
 export async function encryptOutgoing(chat: KeyedChat, plaintext: string): Promise<string | null> {

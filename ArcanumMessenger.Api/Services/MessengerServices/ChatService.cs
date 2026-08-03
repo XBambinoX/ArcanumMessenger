@@ -3,6 +3,7 @@ using ArcanumMessenger.Contracts.Messenger.Messages;
 using ArcanumMessenger.Data;
 using ArcanumMessenger.Entities;
 using ArcanumMessenger.Hubs;
+using ArcanumMessenger.Services.AuthServices;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
@@ -265,7 +266,7 @@ public class ChatService(
     {
         var rows = await db.ChatMembers.AsNoTracking()
             .Where(cm => cm.ChatId == membership.ChatId)
-            .Select(cm => new { cm.UserId, cm.Role })
+            .Select(cm => new { cm.UserId, cm.Role, cm.WrappedChatKey, cm.User.EcdhPublicKey })
             .ToListAsync(ct);
 
         var names = await displayNames.GetDisplayNamesAsync(rows.Select(r => r.UserId), ct);
@@ -273,13 +274,41 @@ public class ChatService(
         var members = rows
             .Select(r => new ChatMemberDto(
                 r.UserId, names.GetValueOrDefault(r.UserId, "Unknown user"), r.Role,
-                r.UserId == membership.UserId, r.UserId == membership.Chat.CreatedBy))
+                r.UserId == membership.UserId, r.UserId == membership.Chat.CreatedBy,
+                r.WrappedChatKey is not null, r.EcdhPublicKey))
             .OrderByDescending(m => m.IsOwner)
             .ThenByDescending(m => m.Role == "admin")
             .ThenBy(m => m.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         return (membership.Chat.Description, members);
+    }
+
+    // Fills in a currently-missing wrapped chat key for a fellow member -
+    // never overwrites one that's already set, so a buggy or malicious
+    // client can't clobber someone's valid key. The caller must already
+    // hold the chat's real symmetric key themselves (their own client
+    // enforces that by construction: it can only produce a valid reseal if
+    // it already unwrapped its own copy), the server just stores whatever
+    // sealed blob it's handed.
+    public async Task<string?> SetMemberChatKeyAsync(
+        ChatMember callerMembership, Guid targetUserId, string wrappedChatKey, CancellationToken ct)
+    {
+        const int WrappedChatKeySize = 125; // ephemeral pubkey(65) + nonce(12) + AES-GCM(32-byte key)+tag(48)
+        if (!PasswordHasher.IsBase64OfLength(wrappedChatKey, WrappedChatKeySize))
+            return "invalid_key_format";
+
+        var target = await db.ChatMembers
+            .FirstOrDefaultAsync(cm => cm.ChatId == callerMembership.ChatId && cm.UserId == targetUserId, ct);
+        if (target is null)
+            return "not_found";
+
+        if (target.WrappedChatKey is not null)
+            return null;
+
+        target.WrappedChatKey = wrappedChatKey;
+        await db.SaveChangesAsync(ct);
+        return null;
     }
 
     // Only the group's owner (its creator) can grant or revoke admin - admins

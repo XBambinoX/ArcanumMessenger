@@ -43,7 +43,20 @@ public record DeleteChatResponse(bool Success, string? Reason = null);
 
 public record LeaveChatResponse(bool Success, string? Reason = null);
 
-public record ChatMemberDto(Guid UserId, string Name, string Role, bool IsSelf, bool IsOwner);
+// HasChatKey/EcdhPublicKey let any member's client notice a gap (this
+// member has no wrapped copy of the chat's key yet - freshly added before
+// the seal landed, or their identity keypair rotated via password recovery)
+// and opportunistically reseal + upload one for them - see the chats
+// self-heal flow. HasChatKey only reveals presence/absence, never the key
+// itself.
+public record ChatMemberDto(Guid UserId, string Name, string Role, bool IsSelf, bool IsOwner,
+    bool HasChatKey = false, string? EcdhPublicKey = null);
+
+// WrappedChatKey here is the chat's EXISTING symmetric key, resealed by the
+// caller (who must already hold it) to the target member's public key - it
+// only ever fills a currently-null slot, never overwrites one.
+public record SetMemberChatKeyRequest(string WrappedChatKey);
+public record SetMemberChatKeyResponse(bool Success, string? Reason = null);
 
 public record ChatMembersResponse(
     bool Success, string? Description = null, IReadOnlyList<ChatMemberDto>? Members = null, string? Reason = null);
