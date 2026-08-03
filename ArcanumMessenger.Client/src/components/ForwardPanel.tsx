@@ -7,7 +7,9 @@ import styles from "./ForwardPanel.module.css";
 
 interface ForwardPanelProps {
     onClose: () => void;
-    onPick: (chatId: string) => void;
+    // The full chat, not just its id - the caller needs its wrappedChatKey
+    // to re-encrypt forwarded content for this specific destination.
+    onPick: (chat: ChatSummary) => void;
 }
 
 // A "forward to..." destination pick is a rare, deliberate one-shot action -
@@ -42,7 +44,7 @@ export default function ForwardPanel({ onClose, onPick }: ForwardPanelProps) {
 
                 <div className={styles.list}>
                     {chats.map((chat) => (
-                        <button key={chat.id} className={styles.chatRow} onClick={() => onPick(chat.id)}>
+                        <button key={chat.id} className={styles.chatRow} onClick={() => onPick(chat)}>
                             <div className={`${styles.avatar} ${chat.type === "group" ? styles.avatarGroup : ""}`}>
                                 <AvatarImage
                                     src={chat.type === "direct" && chat.otherUserId ? getUserAvatarUrl(chat.otherUserId) : null}

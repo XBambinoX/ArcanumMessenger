@@ -252,10 +252,14 @@ public class MessageService(
     }
 
     public async Task<(List<ChatMessageDto>? Messages, string? Reason)> ForwardMessagesAsync(
-        ChatMember targetMembership, List<Guid> messageIds, CancellationToken ct)
+        ChatMember targetMembership, List<ForwardItemRequest> items, CancellationToken ct)
     {
-        if (messageIds.Count == 0)
+        if (items.Count == 0)
             return (null, "empty_selection");
+
+        var messageIds = items.Select(i => i.SourceMessageId).ToList();
+        if (messageIds.Distinct().Count() != messageIds.Count)
+            return (null, "invalid_messages");
 
         if (targetMembership.Chat.Type == "direct")
         {
@@ -288,18 +292,23 @@ public class MessageService(
             sources.Select(m => m.SenderId).Append(targetMembership.UserId), ct);
         var sourceById = sources.ToDictionary(m => m.Id);
         var forwarderName = senderNames.GetValueOrDefault(targetMembership.UserId, "Unknown user");
+        // Each item's EncryptedContent is already sealed under the
+        // DESTINATION chat's key by the client - the server never sees the
+        // source chat's key, so it couldn't have re-encrypted this itself.
+        var contentById = items.ToDictionary(i => i.SourceMessageId, i => i.EncryptedContent);
 
         // messageIds carries the order the caller selected them in (chronological,
         // since that's the order they appear in the chat) - preserve it here too.
         var newMessages = messageIds.Select(id =>
         {
             var src = sourceById[id];
+            var content = contentById[id];
             return new Message
             {
                 ChatId = targetMembership.ChatId,
                 SenderId = targetMembership.UserId,
                 Type = src.Type,
-                Content = src.Content,
+                Content = string.IsNullOrEmpty(content) ? null : content,
                 MediaId = src.MediaId,
                 ForwardedFromSenderId = src.SenderId,
                 ForwardedFromSenderName = senderNames.GetValueOrDefault(src.SenderId, "Unknown user"),

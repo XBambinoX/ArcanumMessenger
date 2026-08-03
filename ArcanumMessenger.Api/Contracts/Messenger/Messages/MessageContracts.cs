@@ -36,6 +36,10 @@ public record EditMessageRequest(string? Content);
 
 public record EditMessageResponse(bool Success, ChatMessageDto? Message, string? Reason = null);
 
-public record ForwardMessagesRequest(List<Guid> MessageIds);
+// Forwarding across chats with different keys can't be done server-side
+// under E2EE - the client decrypts each source message (it already has the
+// plaintext on screen) and re-encrypts it under the DESTINATION chat's key.
+public record ForwardItemRequest(Guid SourceMessageId, string EncryptedContent);
+public record ForwardMessagesRequest(List<ForwardItemRequest> Items);
 
 public record ForwardMessagesResponse(bool Success, List<ChatMessageDto>? Messages, string? Reason = null);

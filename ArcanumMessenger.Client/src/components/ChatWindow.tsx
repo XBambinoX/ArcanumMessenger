@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { HubConnection } from "@microsoft/signalr";
 import type { ChatMessage, ChatReadState, ChatSummary, MediaAsset, User } from "../types/messenger";
-import { getMessageHistory, sendMessage, deleteMessage, editMessage, forwardMessages } from "../api/messages";
+import { getMessageHistory, sendMessage, deleteMessage, editMessage, forwardMessages, type ForwardItem } from "../api/messages";
 import { getUser, getUserAvatarUrl } from "../api/users";
 import { getChatAvatarUrl } from "../api/chats";
 import { uploadMedia, deleteMedia, getMediaUrl, getMediaThumbnailUrl, getSavedGifs, saveGif, unsaveGif } from "../api/media";
@@ -530,12 +530,31 @@ export default function ChatWindow({
         handleCancelSelect();
     };
 
-    const handleForwardPick = async (targetChatId: string) => {
+    const handleForwardPick = async (targetChat: ChatSummary) => {
         const ids = forwardIds ?? [];
         setForwardIds(null);
-        const forwarded = await forwardMessages(targetChatId, ids);
-        if (forwarded && targetChatId === chat.id) {
-            setMessages((prev) => appendUnique(prev, forwarded));
+
+        // Each source message is already decrypted in local state (that's
+        // how it's on screen right now) - it gets re-encrypted here under
+        // the DESTINATION chat's key, since the server can't do that
+        // transcoding itself under E2EE.
+        const items: ForwardItem[] = [];
+        for (const id of ids) {
+            const source = messages.find((m) => m.id === id);
+            if (!source) continue;
+            const encryptedContent = source.content ? await encryptOutgoing(targetChat, source.content) : "";
+            if (source.content && encryptedContent === null) continue; // no key for the destination yet
+            items.push({ sourceMessageId: id, encryptedContent: encryptedContent ?? "" });
+        }
+        if (items.length === 0) {
+            if (selectMode) handleCancelSelect();
+            return;
+        }
+
+        const forwarded = await forwardMessages(targetChat.id, items);
+        if (forwarded && targetChat.id === chat.id) {
+            const decrypted = await decryptIncomingList(chat, forwarded);
+            setMessages((prev) => appendUnique(prev, decrypted));
         }
         if (selectMode) handleCancelSelect();
     };
