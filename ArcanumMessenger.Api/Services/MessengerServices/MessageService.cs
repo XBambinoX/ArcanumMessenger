@@ -192,7 +192,7 @@ public class MessageService(
         var newLast = await db.Messages.AsNoTracking()
             .Where(m => m.ChatId == chatId && !m.IsDeleted)
             .OrderByDescending(m => m.CreatedAt)
-            .Select(m => new { m.Content, m.CreatedAt })
+            .Select(m => new { m.Content, m.Type, m.CreatedAt })
             .FirstOrDefaultAsync(ct);
 
         var allMemberIds = await db.ChatMembers.AsNoTracking()
@@ -201,7 +201,7 @@ public class MessageService(
             .ToListAsync(ct);
 
         foreach (var id in allMemberIds)
-            await hub.Clients.User(id.ToString()).MessageDeleted(chatId, messageId, newLast?.Content, newLast?.CreatedAt);
+            await hub.Clients.User(id.ToString()).MessageDeleted(chatId, messageId, newLast?.Content, newLast?.Type, newLast?.CreatedAt);
 
         return (true, null);
     }

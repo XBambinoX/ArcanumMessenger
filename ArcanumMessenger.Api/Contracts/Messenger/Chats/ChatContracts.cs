@@ -3,7 +3,9 @@ namespace ArcanumMessenger.Contracts.Messenger.Chats;
 // WrappedChatKey is the CALLER's own copy of this chat's symmetric key,
 // sealed to their ECDH public key - nobody else's key material, including
 // the server's, can open it. Null means it still needs (re)provisioning
-// (see the chats self-heal flow).
+// (see the chats self-heal flow). LastMessageText is ciphertext (unless
+// LastMessageType is "system") - the client decrypts it with WrappedChatKey
+// before ever displaying it.
 public record ChatSummaryDto(
     Guid Id,
     string Type,
@@ -15,7 +17,8 @@ public record ChatSummaryDto(
     bool IsArchived,
     Guid? OtherUserId,
     bool IsBlocked,
-    string? WrappedChatKey = null);
+    string? WrappedChatKey = null,
+    string? LastMessageType = null);
 
 public record ChatListResponse(bool Success, IReadOnlyList<ChatSummaryDto>? Chats, string? Reason = null);
 

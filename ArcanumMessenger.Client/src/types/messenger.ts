@@ -23,6 +23,9 @@ export interface ChatSummary {
     // This device's own copy of the chat's symmetric key, sealed to its
     // identity public key - null means it still needs (re)provisioning.
     wrappedChatKey: string | null;
+    // Type of the message lastMessageText came from - "system" (or null,
+    // no last message) means it's plain text, never ciphertext.
+    lastMessageType: MessageType | null;
 }
 
 export type MessageType = "text" | "image" | "video" | "gif" | "file" | "system";

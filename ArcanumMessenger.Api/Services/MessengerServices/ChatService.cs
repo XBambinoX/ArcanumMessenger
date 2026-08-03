@@ -14,7 +14,7 @@ public class ChatService(
     private sealed record RawChatSummary(
         Guid ChatId, string Type, string? Title, DateTime ChatCreatedAt,
         bool IsMuted, bool IsArchived,
-        string? LastMessageContent, DateTime? LastMessageAt,
+        string? LastMessageContent, string? LastMessageType, DateTime? LastMessageAt,
         int UnreadCount, Guid? OtherMemberId, bool IsBlocked, string? WrappedChatKey);
 
     private static IQueryable<RawChatSummary> ProjectSummaries(AppDbContext db, IQueryable<ChatMember> memberships, Guid callerId) =>
@@ -26,6 +26,9 @@ public class ChatService(
                 cm.Chat.Messages.Where(m => !m.IsDeleted)
                     .OrderByDescending(m => m.CreatedAt)
                     .Select(m => m.Content).FirstOrDefault(),
+                cm.Chat.Messages.Where(m => !m.IsDeleted)
+                    .OrderByDescending(m => m.CreatedAt)
+                    .Select(m => m.Type).FirstOrDefault(),
                 cm.Chat.Messages.Where(m => !m.IsDeleted)
                     .OrderByDescending(m => m.CreatedAt)
                     .Select(m => (DateTime?)m.CreatedAt).FirstOrDefault(),
@@ -65,7 +68,8 @@ public class ChatService(
                     r.IsArchived,
                     r.OtherMemberId,
                     r.IsBlocked,
-                    r.WrappedChatKey),
+                    r.WrappedChatKey,
+                    r.LastMessageType),
                 SortKey = r.Type == "saved" ? DateTime.MaxValue : (r.LastMessageAt ?? r.ChatCreatedAt),
             })
             .OrderByDescending(x => x.SortKey)

@@ -42,22 +42,39 @@ export async function encryptOutgoing(chat: KeyedChat, plaintext: string): Promi
     return encryptContent(key, chat.id, plaintext);
 }
 
-export async function decryptIncoming(chat: KeyedChat, message: ChatMessage): Promise<ChatMessage> {
-    if (message.type === "system" || !message.content) return message;
-
+// Decrypts one ciphertext blob under a chat's key. Used directly wherever
+// only a bare content string is available (e.g. a chat list's last-message
+// preview), and by decryptIncoming below for full message objects.
+export async function decryptText(chat: KeyedChat, ciphertext: string): Promise<string> {
     const key = await getChatKey(chat);
-    if (!key) return message;
+    if (!key) return ciphertext;
 
     try {
-        const content = await decryptContent(key, chat.id, message.content);
-        return { ...message, content };
+        return await decryptContent(key, chat.id, ciphertext);
     } catch {
         // Wrong/stale key, corruption, or tampering - fail closed rather than
         // show ciphertext or throw and break the whole message list.
-        return { ...message, content: "[unable to decrypt]" };
+        return "[unable to decrypt]";
     }
+}
+
+export async function decryptIncoming(chat: KeyedChat, message: ChatMessage): Promise<ChatMessage> {
+    if (message.type === "system" || !message.content) return message;
+    const content = await decryptText(chat, message.content);
+    return { ...message, content };
 }
 
 export async function decryptIncomingList(chat: KeyedChat, messages: ChatMessage[]): Promise<ChatMessage[]> {
     return Promise.all(messages.map((m) => decryptIncoming(chat, m)));
+}
+
+// Same "system"/empty-content skip as decryptIncoming, for a chat list's
+// last-message preview where only the bare text and type are on hand.
+export async function decryptLastMessagePreview(
+    chat: KeyedChat,
+    lastMessageText: string | null,
+    lastMessageType: string | null,
+): Promise<string | null> {
+    if (!lastMessageText || lastMessageType === "system") return lastMessageText;
+    return decryptText(chat, lastMessageText);
 }
