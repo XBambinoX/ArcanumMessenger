@@ -55,16 +55,21 @@ export async function resendCode(
 
 // The plain password never leaves the client: we send an Argon2id-derived
 // authKey plus the salt used to derive it (the server needs it again at login).
+// ecdhPublicKey/wrappedEcdhPrivateKey are this account's E2EE identity keypair,
+// generated in the same step - the private key wrapped with encKey, unreadable
+// to the server.
 export async function submitPassword(
     sessionId: string,
     authKey: string,
     kdfSalt: string,
+    ecdhPublicKey: string,
+    wrappedEcdhPrivateKey: string,
 ): Promise<{ success: boolean; reason?: string }> {
     const res = await apiFetch("/api/register/password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ sessionId, authKey, kdfSalt }),
+        body: JSON.stringify({ sessionId, authKey, kdfSalt, ecdhPublicKey, wrappedEcdhPrivateKey }),
     });
     return res.json();
 }

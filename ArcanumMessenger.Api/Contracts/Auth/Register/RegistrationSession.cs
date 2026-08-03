@@ -26,6 +26,12 @@ public class RegistrationSession
     // Salt the client used to derive authKey from the password; needed again at login
     public string? KdfSalt { get; set; }
 
+    // E2EE identity keypair, generated client-side alongside the password step.
+    // EcdhPublicKey is plaintext; WrappedEcdhPrivateKey is encrypted with encKey
+    // (derived from the password) and unreadable to the server.
+    public string? EcdhPublicKey { get; set; }
+    public string? WrappedEcdhPrivateKey { get; set; }
+
     // Argon2id over the client-side phrase hashes; plaintext phrases never reach the server
     public string? RecoveryPhrase1Hash { get; set; }
     public string? RecoveryPhrase2Hash { get; set; }

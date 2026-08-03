@@ -48,9 +48,12 @@ export async function submitLoginTotp(
     return res.json();
 }
 
-export async function completeLogin(
-    sessionId: string
-): Promise<{ success: boolean; reason?: string }> {
+export async function completeLogin(sessionId: string): Promise<{
+    success: boolean;
+    reason?: string;
+    ecdhPublicKey?: string | null;
+    wrappedEcdhPrivateKey?: string | null;
+}> {
     const res = await apiFetch("/api/login/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

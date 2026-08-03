@@ -13,6 +13,9 @@ namespace ArcanumMessenger.Controllers.Messenger;
 public class UsersController(AppDbContext db, EncryptionService encryption, PublicIdHasher publicIdHasher, PresenceService presence, AvatarService avatars) : MessengerControllerBase
 {
     private const long MaxAvatarUploadBytes = 10_000_000;
+    private const int EcdhPublicKeySize = 65; // uncompressed P-256 point
+    private const int WrappedPrivateKeyMaxSize = 512;
+
     [HttpGet("me")]
     public async Task<ActionResult<GetUserResponce>> GetMe(CancellationToken ct)
     {
@@ -176,6 +179,37 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
                                    reason: null,
                                    Bio: bio,
                                    Phone: phone);
+    }
+
+    // Only for legacy accounts that registered before E2EE shipped and still
+    // have no identity keypair - the client calls this right after login
+    // completion when CompleteLoginResponse comes back with no key. Rejects
+    // if a key is already set: overwriting it is password recovery's job
+    // (RecoveryService.ResetPasswordAsync), which also invalidates every
+    // chat's now-stale wrapped key for this user.
+    [HttpPost("me/identity-key")]
+    public async Task<ActionResult<SetIdentityKeyResponse>> SetIdentityKey(
+        [FromBody] SetIdentityKeyRequest request, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        if (!PasswordHasher.IsBase64OfLength(request.EcdhPublicKey, EcdhPublicKeySize) ||
+            !PasswordHasher.IsBase64OfMaxLength(request.WrappedEcdhPrivateKey, WrappedPrivateKeyMaxSize))
+            return StatusCode(StatusCodes.Status422UnprocessableEntity, new SetIdentityKeyResponse(false, "invalid_key_format"));
+
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted, ct);
+        if (user is null)
+            return NotFound(new SetIdentityKeyResponse(false, "not_found"));
+
+        if (user.EcdhPublicKey is not null)
+            return Conflict(new SetIdentityKeyResponse(false, "already_set"));
+
+        user.EcdhPublicKey = request.EcdhPublicKey;
+        user.WrappedEcdhPrivateKey = request.WrappedEcdhPrivateKey;
+        await db.SaveChangesAsync(ct);
+
+        return Ok(new SetIdentityKeyResponse(true));
     }
 
     [HttpGet("{targetUserId:guid}/presence")]

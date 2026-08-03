@@ -24,6 +24,16 @@ import { useAuth } from "../context/AuthContext";
  *     Verifies the 6-digit TOTP code and completes the login.
  */
 import { startLogin, submitLoginPassword, submitLoginTotp, completeLogin } from "../api/login";
+import { setIdentityKey } from "../api/users";
+import {
+    generateIdentityKeyPair,
+    exportPrivateKeyPkcs8,
+    importPrivateKeyPkcs8,
+    unwrapPrivateKey,
+    wrapPrivateKey,
+} from "../crypto/ecdh";
+import { toBase64, fromBase64 } from "../crypto/encoding";
+import * as sessionKeys from "../lib/sessionKeys";
 
 type Step = 0 | 1 | 2;
 const CODE_LENGTH = 6;
@@ -44,6 +54,11 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
 
     const codeInputs = useRef<(HTMLInputElement | null)[]>([]);
+    // Derived alongside authKey at the password step and needed again once
+    // login completes (possibly after an intervening TOTP step) to unwrap
+    // this device's identity private key - kept in a ref rather than state
+    // since it's sensitive and never needs to trigger a re-render.
+    const encKeyRef = useRef<Uint8Array | null>(null);
 
     const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     const isCodeComplete = code.every((d) => d !== "");
@@ -53,6 +68,31 @@ export default function LoginPage() {
     const goBack = () => {
         setError("");
         setStep((s) => Math.max(s - 1, 0) as Step);
+    };
+
+    // Unwraps this device's identity private key with the encKey derived at
+    // the password step, or - for accounts that predate E2EE and have none
+    // yet - generates and uploads a fresh keypair. Either way, caches the
+    // result via sessionKeys for the rest of this tab's session.
+    const establishIdentity = async (
+        ecdhPublicKey: string | null | undefined,
+        wrappedEcdhPrivateKey: string | null | undefined,
+    ) => {
+        const encKey = encKeyRef.current;
+        if (!encKey) return;
+
+        if (ecdhPublicKey && wrappedEcdhPrivateKey) {
+            const privateKeyPkcs8 = await unwrapPrivateKey(encKey, wrappedEcdhPrivateKey);
+            const privateKey = await importPrivateKeyPkcs8(privateKeyPkcs8);
+            sessionKeys.setIdentity(privateKeyPkcs8, fromBase64(ecdhPublicKey), privateKey);
+            return;
+        }
+
+        const identity = await generateIdentityKeyPair();
+        const privateKeyPkcs8 = await exportPrivateKeyPkcs8(identity.privateKey);
+        const wrapped = await wrapPrivateKey(encKey, privateKeyPkcs8);
+        await setIdentityKey(toBase64(identity.publicKeyRaw), wrapped);
+        sessionKeys.setIdentity(privateKeyPkcs8, identity.publicKeyRaw, identity.privateKey);
     };
 
     const handleEmailSubmit = async () => {
@@ -92,7 +132,8 @@ export default function LoginPage() {
         }
         setLoading(true);
         try {
-            const { authKey } = await deriveKeys(password, kdfSalt!);
+            const { authKey, encKey } = await deriveKeys(password, kdfSalt!);
+            encKeyRef.current = encKey;
             const { success, requiresTotp, reason } = await submitLoginPassword(
                 sessionId!,
                 authKey,
@@ -120,6 +161,7 @@ export default function LoginPage() {
                 return;
             }
 
+            await establishIdentity(completeRes.ecdhPublicKey, completeRes.wrappedEcdhPrivateKey);
             setAuthenticated(true);
             navigate("/app");
         } catch {
@@ -158,6 +200,7 @@ export default function LoginPage() {
                 setError("Something went wrong, try again");
                 return;
             }
+            await establishIdentity(completeRes.ecdhPublicKey, completeRes.wrappedEcdhPrivateKey);
             setAuthenticated(true);
             navigate("/app");
         } catch {

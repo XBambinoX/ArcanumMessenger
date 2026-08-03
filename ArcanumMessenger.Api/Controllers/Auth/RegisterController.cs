@@ -31,6 +31,8 @@ public class RegisterController(
 
     private const int AuthKeySize = 32;
     private const int KdfSaltSize = 16;
+    private const int EcdhPublicKeySize = 65; // uncompressed P-256 point
+    private const int WrappedPrivateKeyMaxSize = 512;
 
     private static string GenerateCode() => Rng.Next(0, 1_000_000).ToString("D6");
 
@@ -206,9 +208,15 @@ public class RegisterController(
         if (!PasswordHasher.IsBase64OfLength(request.AuthKey, AuthKeySize) || !PasswordHasher.IsBase64OfLength(request.KdfSalt, KdfSaltSize))
             return StatusCode(StatusCodes.Status422UnprocessableEntity, new SubmitPasswordResponse(Success: false, Reason: "invalid_key_format"));
 
+        if (!PasswordHasher.IsBase64OfLength(request.EcdhPublicKey, EcdhPublicKeySize) ||
+            !PasswordHasher.IsBase64OfMaxLength(request.WrappedEcdhPrivateKey, WrappedPrivateKeyMaxSize))
+            return StatusCode(StatusCodes.Status422UnprocessableEntity, new SubmitPasswordResponse(Success: false, Reason: "invalid_key_format"));
+
         // Argon2id again on the server: a DB dump must not contain ready-to-use login keys
         session.PasswordHash = PasswordHasher.Hash(request.AuthKey);
         session.KdfSalt = request.KdfSalt;
+        session.EcdhPublicKey = request.EcdhPublicKey;
+        session.WrappedEcdhPrivateKey = request.WrappedEcdhPrivateKey;
         session.Step = 3;
 
         await registrationSession.UpdateAsync(request.SessionId, session, ct);
@@ -258,7 +266,8 @@ public class RegisterController(
             return Conflict(new FinalizeRegistrationResponse(Success: false, Reason: "recovery_not_confirmed"));
 
         if (session.PasswordHash is null || session.KdfSalt is null || session.PlainEmail is null ||
-            session.RecoveryPhrase1Hash is null || session.RecoveryPhrase2Hash is null)
+            session.RecoveryPhrase1Hash is null || session.RecoveryPhrase2Hash is null ||
+            session.EcdhPublicKey is null || session.WrappedEcdhPrivateKey is null)
             return Conflict(new FinalizeRegistrationResponse(Success: false, Reason: "incomplete_session"));
 
         var emailHash = emailHasher.Hash(session.PlainEmail);
@@ -308,6 +317,8 @@ public class RegisterController(
             RecoveryPhrase1Hash = session.RecoveryPhrase1Hash,
             RecoveryPhrase2Hash = session.RecoveryPhrase2Hash,
             WrappedDek = wrappedDek,
+            EcdhPublicKey = session.EcdhPublicKey,
+            WrappedEcdhPrivateKey = session.WrappedEcdhPrivateKey,
             LastSeen = now,
             CreatedAt = now,
             IsDeleted = false,

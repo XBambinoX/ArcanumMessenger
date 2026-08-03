@@ -40,7 +40,9 @@ public class RecoveryController(RecoveryService recoveryService) : ControllerBas
         [FromBody] ResetPasswordRequest request,
         CancellationToken ct)
     {
-        var result = await recoveryService.ResetPasswordAsync(request.SessionId, request.AuthKey, request.KdfSalt, ct);
+        var result = await recoveryService.ResetPasswordAsync(
+            request.SessionId, request.AuthKey, request.KdfSalt,
+            request.EcdhPublicKey, request.WrappedEcdhPrivateKey, ct);
 
         if (!result.Success)
         {

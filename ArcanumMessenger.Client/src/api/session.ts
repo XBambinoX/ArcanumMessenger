@@ -1,4 +1,5 @@
 import { apiFetch } from "../lib/apiFetch";
+import * as sessionKeys from "../lib/sessionKeys";
 
 export async function checkSession(): Promise<{ success: boolean; userId?: string }> {
     const res = await apiFetch("/api/auth/me", { credentials: "include" });
@@ -18,4 +19,5 @@ export async function logout(): Promise<void> {
         method: "POST",
         credentials: "include",
     });
+    sessionKeys.clearIdentity();
 }

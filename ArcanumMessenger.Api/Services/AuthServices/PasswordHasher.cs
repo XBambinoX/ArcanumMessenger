@@ -66,6 +66,18 @@ public static class PasswordHasher
         return argon2.GetBytes(HashSize);
     }
 
+    // For blobs whose exact size isn't fixed (e.g. a wrapped private key -
+    // nonce + ciphertext + tag) but that must still be plausible base64
+    // within a sane upper bound, rather than an exact byte count.
+    public static bool IsBase64OfMaxLength(string? value, int maxBytes)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        Span<byte> buffer = stackalloc byte[maxBytes];
+        return Convert.TryFromBase64String(value, buffer, out var written) && written > 0;
+    }
+
     public static bool IsHexOfLength(string? value, int expectedChars)
     {
         if (string.IsNullOrWhiteSpace(value) || value.Length != expectedChars)
