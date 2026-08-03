@@ -14,7 +14,11 @@ public class MessageService(
 {
     private const int DefaultTake = 30;
     private const int MaxTake = 100;
-    private const int MaxContentLength = 4000;
+    // Content is a client-encrypted ciphertext blob now (base64(nonce ||
+    // ciphertext+tag)), not the plaintext the user typed - this is a limit
+    // on that blob's length, generous enough to cover the base64/AES-GCM
+    // overhead over what used to be a 4000-character plaintext cap.
+    private const int MaxContentLength = 20000;
 
     private static ChatMessageDto BuildDto(Message message, string senderName, MediaAsset? media, Guid callerId) =>
         new(
