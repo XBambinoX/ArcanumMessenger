@@ -482,6 +482,7 @@ export default function ChatInfoPanel({
             <MembersManagePanel
                 chatId={chat.id}
                 members={members}
+                myWrappedChatKey={chat.wrappedChatKey}
                 onMembersChanged={(updated) => setMembers(sortMembers(updated))}
                 onClose={() => setManageMembersOpen(false)}
             />

@@ -20,6 +20,9 @@ export interface ChatSummary {
     isArchived: boolean;
     otherUserId: string | null; // the other member's real id, direct chats only
     isBlocked: boolean; // blocked either way with the other member, direct chats only
+    // This device's own copy of the chat's symmetric key, sealed to its
+    // identity public key - null means it still needs (re)provisioning.
+    wrappedChatKey: string | null;
 }
 
 export type MessageType = "text" | "image" | "video" | "gif" | "file" | "system";

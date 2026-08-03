@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { getContacts } from "../api/contacts";
 import { searchUsers, getUser, getUserAvatarUrl } from "../api/users";
 import { createGroupChat } from "../api/chats";
+import { sealNewChatKey } from "../lib/chatKeys";
 import type { ChatSummary, User, UserSearchResult } from "../types/messenger";
 import UserInfoPanel from "./UserInfoPanel";
 import AvatarImage from "./AvatarImage";
@@ -68,10 +69,16 @@ export default function NewChatPanel({ onClose, onStartChat }: NewChatPanelProps
         setCreatingGroup(true);
         setGroupError(null);
         try {
+            const members = [...groupMembers.values()].map((m) => ({
+                userId: m.id,
+                ecdhPublicKey: m.ecdhPublicKey,
+            }));
+            const memberKeys = await sealNewChatKey(members);
             const { chat, reason } = await createGroupChat(
                 title,
                 groupDescription.trim() || undefined,
                 [...groupMembers.keys()],
+                memberKeys,
             );
             if (chat) {
                 onStartChat(chat);

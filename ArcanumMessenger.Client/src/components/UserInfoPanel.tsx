@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { ChatSummary, User } from "../types/messenger";
 import { createDirectChat } from "../api/chats";
 import { addContact, removeContact, blockUser, unblockUser } from "../api/contacts";
+import { sealNewChatKey } from "../lib/chatKeys";
 import { getUserAvatarUrl } from "../api/users";
 import { formatChatTime } from "../lib/time";
 import AvatarImage from "./AvatarImage";
@@ -29,7 +30,8 @@ export default function UserInfoPanel({
 
     const handleWrite = async () => {
         if (!canInteract) return;
-        const { chat, reason } = await createDirectChat(userId);
+        const memberKeys = await sealNewChatKey([{ userId, ecdhPublicKey: user.ecdhPublicKey }]);
+        const { chat, reason } = await createDirectChat(userId, memberKeys);
         if (chat) {
             onStartChat(chat);
             onClose();

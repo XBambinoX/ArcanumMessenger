@@ -15,7 +15,7 @@ public class ChatService(
         Guid ChatId, string Type, string? Title, DateTime ChatCreatedAt,
         bool IsMuted, bool IsArchived,
         string? LastMessageContent, DateTime? LastMessageAt,
-        int UnreadCount, Guid? OtherMemberId, bool IsBlocked);
+        int UnreadCount, Guid? OtherMemberId, bool IsBlocked, string? WrappedChatKey);
 
     private static IQueryable<RawChatSummary> ProjectSummaries(AppDbContext db, IQueryable<ChatMember> memberships, Guid callerId) =>
         memberships
@@ -36,7 +36,8 @@ public class ChatService(
                 cm.Chat.Type == "direct" && cm.Chat.Members.Any(m => m.UserId != callerId &&
                     db.Contacts.Any(c => c.IsBlocked &&
                         ((c.UserId == callerId && c.ContactId == m.UserId) ||
-                         (c.UserId == m.UserId && c.ContactId == callerId))))));
+                         (c.UserId == m.UserId && c.ContactId == callerId)))),
+                cm.WrappedChatKey));
 
     private async Task<List<ChatSummaryDto>> MaterializeAsync(List<RawChatSummary> raw, CancellationToken ct)
     {
@@ -63,7 +64,8 @@ public class ChatService(
                     r.IsMuted,
                     r.IsArchived,
                     r.OtherMemberId,
-                    r.IsBlocked),
+                    r.IsBlocked,
+                    r.WrappedChatKey),
                 SortKey = r.Type == "saved" ? DateTime.MaxValue : (r.LastMessageAt ?? r.ChatCreatedAt),
             })
             .OrderByDescending(x => x.SortKey)
@@ -139,7 +141,7 @@ public class ChatService(
     }
 
     public async Task<(ChatSummaryDto? Chat, string? Reason)> CreateDirectChatAsync(
-        Guid callerId, Guid otherUserId, CancellationToken ct)
+        Guid callerId, Guid otherUserId, List<MemberKeyDto>? memberKeys, CancellationToken ct)
     {
         if (callerId == otherUserId)
             return (null, "self_chat");
@@ -162,12 +164,22 @@ public class ChatService(
         if (existingChatId is { } id)
             return (await GetChatSummaryAsync(id, callerId, ct), null);
 
+        var keyByUserId = (memberKeys ?? []).ToDictionary(k => k.UserId, k => k.WrappedChatKey);
+
         var chat = new Chat { Type = "direct", CreatedBy = callerId };
         db.Chats.Add(chat);
 
         var now = DateTime.UtcNow;
-        db.ChatMembers.Add(new ChatMember { Chat = chat, UserId = callerId, Role = "member", JoinedAt = now, LastReadAt = now });
-        db.ChatMembers.Add(new ChatMember { Chat = chat, UserId = otherUserId, Role = "member", JoinedAt = now, LastReadAt = now });
+        db.ChatMembers.Add(new ChatMember
+        {
+            Chat = chat, UserId = callerId, Role = "member", JoinedAt = now, LastReadAt = now,
+            WrappedChatKey = keyByUserId.GetValueOrDefault(callerId),
+        });
+        db.ChatMembers.Add(new ChatMember
+        {
+            Chat = chat, UserId = otherUserId, Role = "member", JoinedAt = now, LastReadAt = now,
+            WrappedChatKey = keyByUserId.GetValueOrDefault(otherUserId),
+        });
         await db.SaveChangesAsync(ct);
 
         await NotifyChatCreatedAsync(chat.Id, [otherUserId], ct);
@@ -176,7 +188,8 @@ public class ChatService(
     }
 
     public async Task<(ChatSummaryDto? Chat, string? Reason)> CreateGroupChatAsync(
-        Guid callerId, string? title, string? description, List<Guid>? memberIds, CancellationToken ct)
+        Guid callerId, string? title, string? description, List<Guid>? memberIds,
+        List<MemberKeyDto>? memberKeys, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(title))
             return (null, "missing_title");
@@ -192,6 +205,8 @@ public class ChatService(
         if ((await FilterAddRestrictedAsync(callerId, members, ct)).Count > 0)
             return (null, "restricted_members");
 
+        var keyByUserId = (memberKeys ?? []).ToDictionary(k => k.UserId, k => k.WrappedChatKey);
+
         var chat = new Chat
         {
             Type = "group",
@@ -202,9 +217,17 @@ public class ChatService(
         db.Chats.Add(chat);
 
         var now = DateTime.UtcNow;
-        db.ChatMembers.Add(new ChatMember { Chat = chat, UserId = callerId, Role = "admin", JoinedAt = now, LastReadAt = now });
+        db.ChatMembers.Add(new ChatMember
+        {
+            Chat = chat, UserId = callerId, Role = "admin", JoinedAt = now, LastReadAt = now,
+            WrappedChatKey = keyByUserId.GetValueOrDefault(callerId),
+        });
         foreach (var memberId in members)
-            db.ChatMembers.Add(new ChatMember { Chat = chat, UserId = memberId, Role = "member", JoinedAt = now, LastReadAt = now });
+            db.ChatMembers.Add(new ChatMember
+            {
+                Chat = chat, UserId = memberId, Role = "member", JoinedAt = now, LastReadAt = now,
+                WrappedChatKey = keyByUserId.GetValueOrDefault(memberId),
+            });
         await db.SaveChangesAsync(ct);
 
         await NotifyChatCreatedAsync(chat.Id, members, ct);
@@ -319,7 +342,7 @@ public class ChatService(
     // The owner's own row is stored with Role "admin" too, so this single
     // check already covers "admin or owner" without a separate branch.
     public async Task<(List<ChatMemberDto>? Members, string? Reason)> AddMembersAsync(
-        ChatMember callerMembership, List<Guid>? userIds, CancellationToken ct)
+        ChatMember callerMembership, List<Guid>? userIds, List<MemberKeyDto>? memberKeys, CancellationToken ct)
     {
         if (callerMembership.Chat.Type != "group")
             return (null, "not_a_group");
@@ -345,11 +368,18 @@ public class ChatService(
         if ((await FilterAddRestrictedAsync(callerMembership.UserId, newMemberIds, ct)).Count > 0)
             return (null, "restricted_members");
 
+        // The chat's symmetric key doesn't change - the adder's client already
+        // holds it (that's how it got here at all) and reseals that same key
+        // to each new member's public key, rather than the group getting a
+        // fresh key every time someone joins.
+        var keyByUserId = (memberKeys ?? []).ToDictionary(k => k.UserId, k => k.WrappedChatKey);
+
         var now = DateTime.UtcNow;
         foreach (var userId in newMemberIds)
             db.ChatMembers.Add(new ChatMember
             {
                 ChatId = callerMembership.ChatId, UserId = userId, Role = "member", JoinedAt = now, LastReadAt = now,
+                WrappedChatKey = keyByUserId.GetValueOrDefault(userId),
             });
 
         var names = await displayNames.GetDisplayNamesAsync(newMemberIds.Append(callerMembership.UserId), ct);

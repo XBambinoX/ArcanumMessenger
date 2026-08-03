@@ -38,11 +38,19 @@ export interface CreateChatResult {
     reason: string | null;
 }
 
-export async function createDirectChat(otherUserId: string): Promise<CreateChatResult> {
+// One sealed copy of a chat's symmetric key per member (see crypto/chatKey.ts
+// and crypto/ecdh.ts's seal()) - generated and sealed entirely client-side,
+// the server only ever stores these blobs.
+export interface MemberKey {
+    userId: string;
+    wrappedChatKey: string;
+}
+
+export async function createDirectChat(otherUserId: string, memberKeys: MemberKey[]): Promise<CreateChatResult> {
     const res = await apiFetch("/api/chats", {
         method: "POST",
         credentials: "include",
-        body: JSON.stringify({ type: "direct", otherUserId }),
+        body: JSON.stringify({ type: "direct", otherUserId, memberKeys }),
     });
     const data = await res.json();
     return { chat: data.success ? data.chat : null, reason: data.reason ?? null };
@@ -52,11 +60,12 @@ export async function createGroupChat(
     title: string,
     description: string | undefined,
     memberIds: string[],
+    memberKeys: MemberKey[],
 ): Promise<CreateChatResult> {
     const res = await apiFetch("/api/chats", {
         method: "POST",
         credentials: "include",
-        body: JSON.stringify({ type: "group", title, description, memberIds }),
+        body: JSON.stringify({ type: "group", title, description, memberIds, memberKeys }),
     });
     const data = await res.json();
     return { chat: data.success ? data.chat : null, reason: data.reason ?? null };
@@ -126,11 +135,15 @@ export interface AddMembersResult {
     reason: string | null;
 }
 
-export async function addChatMembers(chatId: string, userIds: string[]): Promise<AddMembersResult> {
+export async function addChatMembers(
+    chatId: string,
+    userIds: string[],
+    memberKeys: MemberKey[],
+): Promise<AddMembersResult> {
     const res = await apiFetch(`/api/chats/${chatId}/members`, {
         method: "POST",
         credentials: "include",
-        body: JSON.stringify({ userIds }),
+        body: JSON.stringify({ userIds, memberKeys }),
     });
     const data = await res.json();
     return { members: data.success ? (data.members ?? []) : null, reason: data.reason ?? null };
