@@ -19,6 +19,14 @@ public class User
     // DEK for this user, wrapped (encrypted) with the master KEK. Unwrap with
     // EncryptionService.UnwrapDek() before decrypting any *Enc field below.
     public string WrappedDek { get; set; } = null!;
+    // ECDH (P-256) identity keypair for E2EE. PublicKey is plaintext - it's
+    // not sensitive, and other users need it to seal chat keys to this
+    // account. WrappedPrivateKey is encrypted client-side with this user's
+    // own encKey (derived from their password) - the server only ever
+    // stores that ciphertext and can never unwrap it. Null for accounts
+    // created before this feature shipped, until they next log in.
+    public string? EcdhPublicKey { get; set; }
+    public string? WrappedEcdhPrivateKey { get; set; }
     public DateTime? LastSeen { get; set; }
     public bool IsDeleted { get; set; }
     // When IsDeleted was set - drives AccountCleanupService's grace period
