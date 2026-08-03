@@ -1,9 +1,13 @@
 namespace ArcanumMessenger.Contracts.Messenger.Users;
 
 
-public record GetUserResponce(string? Name, string? Id, DateTime? LastSeen, string? Email, string? Bio, string? Phone, bool IsContact, bool IsBlocked, bool IsBlockedByOther, bool success, string? reason);
+// EcdhPublicKey is this user's E2EE identity public key - unlike phone/bio/email
+// it's never visibility-gated, since anyone who can message this user needs it
+// to seal a chat key to them. Null only for accounts that predate E2EE and
+// haven't logged in since (see UsersController.SetIdentityKey).
+public record GetUserResponce(string? Name, string? Id, DateTime? LastSeen, string? Email, string? Bio, string? Phone, bool IsContact, bool IsBlocked, bool IsBlockedByOther, bool success, string? reason, string? EcdhPublicKey = null);
 
-public record UserSearchResultDto(Guid Id, string Name, string PublicId);
+public record UserSearchResultDto(Guid Id, string Name, string PublicId, string? EcdhPublicKey = null);
 
 public record SearchUsersResponse(bool Success, IReadOnlyList<UserSearchResultDto>? Results, string? Reason = null);
 

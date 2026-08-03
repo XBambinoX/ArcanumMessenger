@@ -67,10 +67,15 @@ export interface User {
     isContact: boolean;
     isBlocked: boolean; // have I blocked them
     isBlockedByOther: boolean; // have they blocked me
+    // This user's E2EE identity public key (base64, raw ECDH P-256 point) -
+    // needed to seal a chat key to them. Null only if they haven't logged in
+    // since E2EE shipped.
+    ecdhPublicKey: string | null;
 }
 
 export interface UserSearchResult {
     id: string;
     name: string;
     publicId: string;
+    ecdhPublicKey: string | null;
 }

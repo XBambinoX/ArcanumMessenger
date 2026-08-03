@@ -12,6 +12,7 @@ function toUser(data: {
     isContact: boolean;
     isBlocked: boolean;
     isBlockedByOther: boolean;
+    ecdhPublicKey: string | null;
 }): User | null {
     if (!data.success || data.name === null || data.id === null) return null;
     return {
@@ -24,6 +25,7 @@ function toUser(data: {
         isContact: data.isContact,
         isBlocked: data.isBlocked,
         isBlockedByOther: data.isBlockedByOther,
+        ecdhPublicKey: data.ecdhPublicKey,
     };
 }
 

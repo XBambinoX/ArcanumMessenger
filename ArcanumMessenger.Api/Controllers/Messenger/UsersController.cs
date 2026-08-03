@@ -57,7 +57,7 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
                 .Where(u => u.PublicIdHash == fullHash && u.Id != callerId && !u.IsDeleted)
                 .Where(u => !db.Contacts.Any(c => c.IsBlocked &&
                     ((c.UserId == callerId && c.ContactId == u.Id) || (c.UserId == u.Id && c.ContactId == callerId))))
-                .Select(u => new { u.Id, u.UserSettings.UsernameEnc, u.PublicIdEnc, u.WrappedDek })
+                .Select(u => new { u.Id, u.UserSettings.UsernameEnc, u.PublicIdEnc, u.WrappedDek, u.EcdhPublicKey })
                 .FirstOrDefaultAsync(ct);
 
             if (exact is null)
@@ -66,7 +66,7 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
             var dek = encryption.UnwrapDek(exact.WrappedDek);
             var name = encryption.Decrypt(exact.UsernameEnc, dek);
             var publicId = encryption.Decrypt(exact.PublicIdEnc, dek);
-            return Ok(new SearchUsersResponse(true, [new UserSearchResultDto(exact.Id, name, publicId)]));
+            return Ok(new SearchUsersResponse(true, [new UserSearchResultDto(exact.Id, name, publicId, exact.EcdhPublicKey)]));
         }
 
         var prefixHash = publicIdHasher.HashPrefix(normalized);
@@ -74,7 +74,7 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
             .Where(u => u.PublicIdPrefixHash == prefixHash && u.Id != callerId && !u.IsDeleted)
             .Where(u => !db.Contacts.Any(c => c.IsBlocked &&
                 ((c.UserId == callerId && c.ContactId == u.Id) || (c.UserId == u.Id && c.ContactId == callerId))))
-            .Select(u => new { u.Id, u.UserSettings.UsernameEnc, u.PublicIdEnc, u.WrappedDek })
+            .Select(u => new { u.Id, u.UserSettings.UsernameEnc, u.PublicIdEnc, u.WrappedDek, u.EcdhPublicKey })
             .ToListAsync(ct);
 
         var results = new List<UserSearchResultDto>();
@@ -83,7 +83,8 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
             var dek = encryption.UnwrapDek(candidate.WrappedDek);
             var candidatePublicId = encryption.Decrypt(candidate.PublicIdEnc, dek);
             if (PublicIdHasher.Normalize(candidatePublicId).StartsWith(normalized, StringComparison.Ordinal))
-                results.Add(new UserSearchResultDto(candidate.Id, encryption.Decrypt(candidate.UsernameEnc, dek), candidatePublicId));
+                results.Add(new UserSearchResultDto(
+                    candidate.Id, encryption.Decrypt(candidate.UsernameEnc, dek), candidatePublicId, candidate.EcdhPublicKey));
         }
 
         return Ok(new SearchUsersResponse(true, results));
@@ -107,6 +108,7 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
                             u.UserSettings.ShowPhoneNumber,
                             u.UserSettings.ShowBio,
                             u.UserSettings.ShowEmail,
+                            u.EcdhPublicKey,
                         })
                         .FirstOrDefaultAsync(ct);
 
@@ -121,7 +123,8 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
                                        success: false,
                                        reason: "not_found",
                                        Bio: null,
-                                       Phone: null );
+                                       Phone: null,
+                                       EcdhPublicKey: null );
 
         var dek = encryption.UnwrapDek(user.WrappedDek);
         var username = encryption.Decrypt(user.UsernameEnc, dek);
@@ -178,7 +181,8 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
                                    success: true,
                                    reason: null,
                                    Bio: bio,
-                                   Phone: phone);
+                                   Phone: phone,
+                                   EcdhPublicKey: user.EcdhPublicKey);
     }
 
     // Only for legacy accounts that registered before E2EE shipped and still
