@@ -14,7 +14,11 @@ public class MessageService(
 {
     private const int DefaultTake = 30;
     private const int MaxTake = 100;
-    private const int MaxContentLength = 4000;
+    // Content is a client-encrypted ciphertext blob now (base64(nonce ||
+    // ciphertext+tag)), not the plaintext the user typed - this is a limit
+    // on that blob's length, generous enough to cover the base64/AES-GCM
+    // overhead over what used to be a 4000-character plaintext cap.
+    private const int MaxContentLength = 20000;
 
     private static ChatMessageDto BuildDto(Message message, string senderName, MediaAsset? media, Guid callerId) =>
         new(
@@ -188,7 +192,7 @@ public class MessageService(
         var newLast = await db.Messages.AsNoTracking()
             .Where(m => m.ChatId == chatId && !m.IsDeleted)
             .OrderByDescending(m => m.CreatedAt)
-            .Select(m => new { m.Content, m.CreatedAt })
+            .Select(m => new { m.Content, m.Type, m.CreatedAt })
             .FirstOrDefaultAsync(ct);
 
         var allMemberIds = await db.ChatMembers.AsNoTracking()
@@ -197,7 +201,7 @@ public class MessageService(
             .ToListAsync(ct);
 
         foreach (var id in allMemberIds)
-            await hub.Clients.User(id.ToString()).MessageDeleted(chatId, messageId, newLast?.Content, newLast?.CreatedAt);
+            await hub.Clients.User(id.ToString()).MessageDeleted(chatId, messageId, newLast?.Content, newLast?.Type, newLast?.CreatedAt);
 
         return (true, null);
     }
@@ -248,10 +252,14 @@ public class MessageService(
     }
 
     public async Task<(List<ChatMessageDto>? Messages, string? Reason)> ForwardMessagesAsync(
-        ChatMember targetMembership, List<Guid> messageIds, CancellationToken ct)
+        ChatMember targetMembership, List<ForwardItemRequest> items, CancellationToken ct)
     {
-        if (messageIds.Count == 0)
+        if (items.Count == 0)
             return (null, "empty_selection");
+
+        var messageIds = items.Select(i => i.SourceMessageId).ToList();
+        if (messageIds.Distinct().Count() != messageIds.Count)
+            return (null, "invalid_messages");
 
         if (targetMembership.Chat.Type == "direct")
         {
@@ -284,18 +292,23 @@ public class MessageService(
             sources.Select(m => m.SenderId).Append(targetMembership.UserId), ct);
         var sourceById = sources.ToDictionary(m => m.Id);
         var forwarderName = senderNames.GetValueOrDefault(targetMembership.UserId, "Unknown user");
+        // Each item's EncryptedContent is already sealed under the
+        // DESTINATION chat's key by the client - the server never sees the
+        // source chat's key, so it couldn't have re-encrypted this itself.
+        var contentById = items.ToDictionary(i => i.SourceMessageId, i => i.EncryptedContent);
 
         // messageIds carries the order the caller selected them in (chronological,
         // since that's the order they appear in the chat) - preserve it here too.
         var newMessages = messageIds.Select(id =>
         {
             var src = sourceById[id];
+            var content = contentById[id];
             return new Message
             {
                 ChatId = targetMembership.ChatId,
                 SenderId = targetMembership.UserId,
                 Type = src.Type,
-                Content = src.Content,
+                Content = string.IsNullOrEmpty(content) ? null : content,
                 MediaId = src.MediaId,
                 ForwardedFromSenderId = src.SenderId,
                 ForwardedFromSenderName = senderNames.GetValueOrDefault(src.SenderId, "Unknown user"),

@@ -20,6 +20,12 @@ export interface ChatSummary {
     isArchived: boolean;
     otherUserId: string | null; // the other member's real id, direct chats only
     isBlocked: boolean; // blocked either way with the other member, direct chats only
+    // This device's own copy of the chat's symmetric key, sealed to its
+    // identity public key - null means it still needs (re)provisioning.
+    wrappedChatKey: string | null;
+    // Type of the message lastMessageText came from - "system" (or null,
+    // no last message) means it's plain text, never ciphertext.
+    lastMessageType: MessageType | null;
 }
 
 export type MessageType = "text" | "image" | "video" | "gif" | "file" | "system";
@@ -67,10 +73,15 @@ export interface User {
     isContact: boolean;
     isBlocked: boolean; // have I blocked them
     isBlockedByOther: boolean; // have they blocked me
+    // This user's E2EE identity public key (base64, raw ECDH P-256 point) -
+    // needed to seal a chat key to them. Null only if they haven't logged in
+    // since E2EE shipped.
+    ecdhPublicKey: string | null;
 }
 
 export interface UserSearchResult {
     id: string;
     name: string;
     publicId: string;
+    ecdhPublicKey: string | null;
 }

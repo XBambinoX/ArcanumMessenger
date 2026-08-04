@@ -8,13 +8,14 @@ import { createChatHubConnection } from "../lib/chatHub";
 import { type UserSettingsResponse, getUserSettings  } from "../api/userSettings";
 import { playNotificationSound } from "../lib/notificationSound";
 import { requestDesktopNotificationPermission, showDesktopNotification } from "../lib/desktopNotification";
+import { decryptLastMessagePreview } from "../lib/chatCrypto";
 import { useAuth } from "../context/AuthContext";
 import ChatList from "../components/ChatList";
 import ChatWindow from "../components/ChatWindow";
 import ProfilePanel from "../components/ProfilePanel";
 import NewChatPanel from "../components/NewChatPanel";
 import AvatarImage from "../components/AvatarImage";
-import type { ChatFolder, ChatMessage, ChatSummary, User } from "../types/messenger";
+import type { ChatFolder, ChatMessage, ChatSummary, MessageType, User } from "../types/messenger";
 import styles from "./AppPage.module.css";
 
 interface PresenceInfo {
@@ -106,8 +107,14 @@ export default function AppPage() {
     }, [notificationSettings]);
 
     useEffect(() => {
-        getChats().then((loadedChats) => {
-            setChats(loadedChats);
+        getChats().then(async (loadedChats) => {
+            const decrypted = await Promise.all(
+                loadedChats.map(async (chat) => ({
+                    ...chat,
+                    lastMessageText: await decryptLastMessagePreview(chat, chat.lastMessageText, chat.lastMessageType),
+                })),
+            );
+            setChats(decrypted);
 
             const otherUserIds = loadedChats
                 .filter((c) => c.type === "direct" && c.otherUserId)
@@ -198,18 +205,24 @@ export default function AppPage() {
     useEffect(() => {
         if (!connection) return;
 
-    const handleReceiveMessage = (message: ChatMessage) => {
+    const handleReceiveMessage = async (message: ChatMessage) => {
             // A chat can be "open" in the UI while the user is idle - they're
             // not actually reading it, so it shouldn't auto-mark-read or skip
             // the away notification just because it happens to be selected.
             const isViewing = message.chatId === selectedChatId && !isIdleRef.current;
+
+            const chat = chatsRef.current.find((c) => c.id === message.chatId);
+            const previewText = chat
+                ? await decryptLastMessagePreview(chat, message.content, message.type)
+                : message.content;
 
             setChats((prev) =>
                 prev.map((c) =>
                     c.id === message.chatId
                         ? {
                             ...c,
-                            lastMessageText: message.content,
+                            lastMessageText: previewText,
+                            lastMessageType: message.type,
                             lastMessageAt: message.createdAt,
                             unreadCount: isViewing || message.isOwn ? c.unreadCount : c.unreadCount + 1,
                         }
@@ -220,7 +233,6 @@ export default function AppPage() {
             if (isViewing) {
                 markChatRead(message.chatId);
             } else if (!message.isOwn) {
-                const chat = chatsRef.current.find((c) => c.id === message.chatId);
                 const settings = notificationSettingsRef.current;
 
                 if (chat && !chat.isMuted && settings) {
@@ -233,7 +245,7 @@ export default function AppPage() {
                         playNotificationSound(settings.notificationSound);
 
                         if (isIdleRef.current) {
-                            showDesktopNotification(chat.title, message.content, () => {
+                            showDesktopNotification(chat.title, previewText ?? "", () => {
                                 setSelectedChatId(message.chatId);
                             });
                         }
@@ -247,14 +259,22 @@ export default function AppPage() {
         // it, forwarding into a chat you're not currently looking at would
         // mark your own outgoing message as unread.
 
-        const handleMessageDeleted = (
+        const handleMessageDeleted = async (
             chatId: string,
             _messageId: string,
             lastMessageText: string | null,
+            lastMessageType: MessageType | null,
             lastMessageAt: string | null,
         ) => {
+            const chat = chatsRef.current.find((c) => c.id === chatId);
+            const decrypted = chat
+                ? await decryptLastMessagePreview(chat, lastMessageText, lastMessageType)
+                : lastMessageText;
+
             setChats((prev) =>
-                prev.map((c) => (c.id === chatId ? { ...c, lastMessageText, lastMessageAt } : c)),
+                prev.map((c) =>
+                    c.id === chatId ? { ...c, lastMessageText: decrypted, lastMessageType, lastMessageAt } : c,
+                ),
             );
         };
 
@@ -262,11 +282,15 @@ export default function AppPage() {
         // message that's currently shown as the chat's last one - comparing
         // timestamps (edits don't change createdAt) says exactly that without
         // the chat list needing to track message ids at all.
-        const handleMessageEdited = (message: ChatMessage) => {
+        const handleMessageEdited = async (message: ChatMessage) => {
+            const chat = chatsRef.current.find((c) => c.id === message.chatId);
+            if (!chat || chat.lastMessageAt !== message.createdAt) return;
+
+            const content = await decryptLastMessagePreview(chat, message.content, message.type);
             setChats((prev) =>
                 prev.map((c) =>
                     c.id === message.chatId && c.lastMessageAt === message.createdAt
-                        ? { ...c, lastMessageText: message.content }
+                        ? { ...c, lastMessageText: content }
                         : c,
                 ),
             );

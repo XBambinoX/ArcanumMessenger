@@ -54,14 +54,22 @@ export async function editMessage(chatId: string, messageId: string, content: st
     return data.success ? data.message : null;
 }
 
+export interface ForwardItem {
+    sourceMessageId: string;
+    encryptedContent: string;
+}
+
+// Forwarding across chats with different keys can't happen server-side under
+// E2EE - the caller already decrypted each source message to render it, and
+// re-encrypts it under the destination chat's key before this call.
 export async function forwardMessages(
     targetChatId: string,
-    messageIds: string[],
+    items: ForwardItem[],
 ): Promise<ChatMessage[] | null> {
     const res = await apiFetch(`/api/chats/${targetChatId}/messages/forward`, {
         method: "POST",
         credentials: "include",
-        body: JSON.stringify({ messageIds }),
+        body: JSON.stringify({ items }),
     });
     const data = await res.json();
     return data.success ? data.messages : null;

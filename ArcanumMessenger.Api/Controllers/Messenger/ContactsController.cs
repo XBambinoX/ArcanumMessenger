@@ -20,7 +20,10 @@ public class ContactsController(AppDbContext db, EncryptionService encryption, B
 
         var contacts = await db.Contacts.AsNoTracking()
             .Where(c => c.UserId == userId && !c.IsBlocked && !c.ContactUser.IsDeleted)
-            .Select(c => new { c.ContactId, c.ContactUser.UserSettings.UsernameEnc, c.ContactUser.PublicIdEnc, c.ContactUser.WrappedDek })
+            .Select(c => new {
+                c.ContactId, c.ContactUser.UserSettings.UsernameEnc, c.ContactUser.PublicIdEnc,
+                c.ContactUser.WrappedDek, c.ContactUser.EcdhPublicKey,
+            })
             .ToListAsync(ct);
 
         var results = contacts.Select(c =>
@@ -29,7 +32,8 @@ public class ContactsController(AppDbContext db, EncryptionService encryption, B
             return new UserSearchResultDto(
                 c.ContactId,
                 encryption.Decrypt(c.UsernameEnc, dek),
-                encryption.Decrypt(c.PublicIdEnc, dek));
+                encryption.Decrypt(c.PublicIdEnc, dek),
+                c.EcdhPublicKey);
         }).ToList();
 
         return Ok(new ContactsListResponse(true, results));
@@ -82,7 +86,10 @@ public class ContactsController(AppDbContext db, EncryptionService encryption, B
 
         var blocked = await db.Contacts.AsNoTracking()
             .Where(c => c.UserId == userId && c.IsBlocked && !c.ContactUser.IsDeleted)
-            .Select(c => new { c.ContactId, c.ContactUser.UserSettings.UsernameEnc, c.ContactUser.PublicIdEnc, c.ContactUser.WrappedDek })
+            .Select(c => new {
+                c.ContactId, c.ContactUser.UserSettings.UsernameEnc, c.ContactUser.PublicIdEnc,
+                c.ContactUser.WrappedDek, c.ContactUser.EcdhPublicKey,
+            })
             .ToListAsync(ct);
 
         var results = blocked.Select(c =>
@@ -91,7 +98,8 @@ public class ContactsController(AppDbContext db, EncryptionService encryption, B
             return new UserSearchResultDto(
                 c.ContactId,
                 encryption.Decrypt(c.UsernameEnc, dek),
-                encryption.Decrypt(c.PublicIdEnc, dek));
+                encryption.Decrypt(c.PublicIdEnc, dek),
+                c.EcdhPublicKey);
         }).ToList();
 
         return Ok(new BlockedUsersListResponse(true, results));

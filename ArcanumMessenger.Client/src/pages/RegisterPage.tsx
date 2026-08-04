@@ -11,6 +11,8 @@ import {
 } from "../api/register";
 import { deriveKeys, generateKdfSalt } from "../crypto/kdf";
 import { generateRecoveryPhrase, hashPhrase } from "../crypto/phrases";
+import { generateIdentityKeyPair, exportPrivateKeyPkcs8, wrapPrivateKey } from "../crypto/ecdh";
+import { toBase64 } from "../crypto/encoding";
 
 import { useNavigate } from "react-router";
 import zxcvbn from "zxcvbn";
@@ -230,14 +232,22 @@ export default function RegisterPage() {
         try {
             // The password itself never leaves the browser: we derive authKey
             // from it (Argon2id, ~0.5s) and send only the key + its salt.
-            // encKey from the same derivation stays local for future E2EE.
             const kdfSalt = generateKdfSalt();
-            const { authKey } = await deriveKeys(password, kdfSalt);
+            const { authKey, encKey } = await deriveKeys(password, kdfSalt);
+
+            // This account's E2EE identity keypair: the public half is sent
+            // as-is, the private half only ever leaves the browser wrapped
+            // with encKey - the server can never unwrap it.
+            const identity = await generateIdentityKeyPair();
+            const privateKeyPkcs8 = await exportPrivateKeyPkcs8(identity.privateKey);
+            const wrappedEcdhPrivateKey = await wrapPrivateKey(encKey, privateKeyPkcs8);
 
             const { success, reason } = await submitPassword(
                 sessionId!,
                 authKey,
                 kdfSalt,
+                toBase64(identity.publicKeyRaw),
+                wrappedEcdhPrivateKey,
             );
             if (!success) {
                 setError(

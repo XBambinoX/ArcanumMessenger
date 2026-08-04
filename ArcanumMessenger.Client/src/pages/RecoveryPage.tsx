@@ -3,6 +3,8 @@ import { useNavigate } from "react-router";
 import { startRecovery, verifyRecovery, resetPassword } from "../api/recovery";
 import { hashPhrase } from "../crypto/phrases";
 import { deriveKeys, generateKdfSalt } from "../crypto/kdf";
+import { generateIdentityKeyPair, exportPrivateKeyPkcs8, wrapPrivateKey } from "../crypto/ecdh";
+import { toBase64 } from "../crypto/encoding";
 import styles from "./RecoveryPage.module.css";
 import zxcvbn from "zxcvbn";
 
@@ -97,8 +99,22 @@ export default function RecoveryPage() {
         setLoading(true);
         try {
             const kdfSalt = generateKdfSalt();
-            const { authKey } = await deriveKeys(password, kdfSalt);
-            const { success, reason } = await resetPassword(sessionId!, authKey, kdfSalt);
+            const { authKey, encKey } = await deriveKeys(password, kdfSalt);
+
+            // Recovering via phrase can't know the old password, so the old
+            // identity keypair (and anything wrapped only for it) is
+            // abandoned here in favor of a brand-new one.
+            const identity = await generateIdentityKeyPair();
+            const privateKeyPkcs8 = await exportPrivateKeyPkcs8(identity.privateKey);
+            const wrappedEcdhPrivateKey = await wrapPrivateKey(encKey, privateKeyPkcs8);
+
+            const { success, reason } = await resetPassword(
+                sessionId!,
+                authKey,
+                kdfSalt,
+                toBase64(identity.publicKeyRaw),
+                wrappedEcdhPrivateKey,
+            );
             if (!success) {
                 setError(
                     reason === "session_expired" ? "Session expired, please start over" :

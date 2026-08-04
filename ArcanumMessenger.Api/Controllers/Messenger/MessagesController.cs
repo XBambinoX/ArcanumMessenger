@@ -85,7 +85,7 @@ public class MessagesController(MessageService messageService, ChatAccessService
         if (membership is null)
             return NotFound(new ForwardMessagesResponse(false, null, "not_found"));
 
-        var (messages, reason) = await messageService.ForwardMessagesAsync(membership, request.MessageIds, ct);
+        var (messages, reason) = await messageService.ForwardMessagesAsync(membership, request.Items, ct);
         return messages is null
             ? BadRequest(new ForwardMessagesResponse(false, null, reason))
             : Ok(new ForwardMessagesResponse(true, messages));

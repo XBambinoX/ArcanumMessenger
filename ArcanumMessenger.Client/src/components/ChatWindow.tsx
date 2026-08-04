@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import type { HubConnection } from "@microsoft/signalr";
 import type { ChatMessage, ChatReadState, ChatSummary, MediaAsset, User } from "../types/messenger";
-import { getMessageHistory, sendMessage, deleteMessage, editMessage, forwardMessages } from "../api/messages";
+import { getMessageHistory, sendMessage, deleteMessage, editMessage, forwardMessages, type ForwardItem } from "../api/messages";
 import { getUser, getUserAvatarUrl } from "../api/users";
 import { getChatAvatarUrl } from "../api/chats";
 import { uploadMedia, deleteMedia, getMediaUrl, getMediaThumbnailUrl, getSavedGifs, saveGif, unsaveGif } from "../api/media";
 import { uploadMediaChunked, abortChunkedUpload, clearChunkedUploadResumeState, CHUNK_THRESHOLD } from "../api/chunkedUpload";
 import { formatMessageTime, formatChatTime } from "../lib/time";
+import { encryptOutgoing, decryptIncoming, decryptIncomingList } from "../lib/chatCrypto";
+import { selfHealChatKeys } from "../lib/chatKeySelfHeal";
 import UserInfoPanel from "./UserInfoPanel";
 import ChatInfoPanel from "./ChatInfoPanel";
 import GifPicker from "./GifPicker";
@@ -248,29 +250,45 @@ export default function ChatWindow({
     useEffect(() => {
         let cancelled = false;
 
-        getMessageHistory(chat.id).then((history) => {
+        (async () => {
+            const history = await getMessageHistory(chat.id);
             if (cancelled) return;
-            setMessages(history.messages);
+            const decrypted = await decryptIncomingList({ id: chat.id, wrappedChatKey: chat.wrappedChatKey }, history.messages);
+            if (cancelled) return;
+            setMessages(decrypted);
             setHasMore(history.hasMore);
             setReadStates(history.readStates);
-        });
+        })();
 
         return () => {
             cancelled = true;
         };
-    }, [chat.id]);
+        // Re-runs if wrappedChatKey shows up later too (e.g. self-heal
+        // provisioning it after the chat was first opened with none) so
+        // already-loaded ciphertext gets a chance to decrypt properly.
+    }, [chat.id, chat.wrappedChatKey]);
+
+    // Best-effort, fire-and-forget: whenever this chat is opened, fix
+    // whatever missing chat-key state this client happens to be able to
+    // fix (see lib/chatKeySelfHeal.ts). Never blocks rendering.
+    useEffect(() => {
+        selfHealChatKeys(chat.id, chat.wrappedChatKey);
+    }, [chat.id, chat.wrappedChatKey]);
 
     useEffect(() => {
         if (!connection) return;
 
-        const handleReceiveMessage = (message: ChatMessage) => {
+        const keyedChat = { id: chat.id, wrappedChatKey: chat.wrappedChatKey };
+
+        const handleReceiveMessage = async (message: ChatMessage) => {
             if (message.chatId !== chat.id) return;
             // Own sends/forwards now echo back through this same event too (so
             // the sidebar's chat list learns about them) - this window already
             // added its own copy optimistically from the HTTP response, so a
             // duplicate by id here is expected and just needs to be skipped.
-            setMessages((prev) => appendUnique(prev, [message]));
-            markAnimated(message.id);
+            const decrypted = await decryptIncoming(keyedChat, message);
+            setMessages((prev) => appendUnique(prev, [decrypted]));
+            markAnimated(decrypted.id);
         };
 
         const handleMessageDeleted = (chatId: string, messageId: string) => {
@@ -278,9 +296,10 @@ export default function ChatWindow({
             setMessages((prev) => prev.filter((m) => m.id !== messageId));
         };
 
-        const handleMessageEdited = (message: ChatMessage) => {
+        const handleMessageEdited = async (message: ChatMessage) => {
             if (message.chatId !== chat.id) return;
-            setMessages((prev) => prev.map((m) => (m.id === message.id ? message : m)));
+            const decrypted = await decryptIncoming(keyedChat, message);
+            setMessages((prev) => prev.map((m) => (m.id === decrypted.id ? decrypted : m)));
         };
 
         const handleChatRead = (readChatId: string, userId: string, readAt: string) => {
@@ -304,7 +323,7 @@ export default function ChatWindow({
             connection.off("MessageEdited", handleMessageEdited);
             connection.off("ChatRead", handleChatRead);
         };
-    }, [connection, chat.id]);
+    }, [connection, chat.id, chat.wrappedChatKey]);
 
     useEffect(() => {
         if (prependingRef.current) {
@@ -322,9 +341,10 @@ export default function ChatWindow({
         const previousHeight = container?.scrollHeight ?? 0;
 
         const older = await getMessageHistory(chat.id, messages[0].id);
+        const decrypted = await decryptIncomingList(chat, older.messages);
 
         prependingRef.current = true;
-        setMessages((prev) => [...older.messages, ...prev]);
+        setMessages((prev) => [...decrypted, ...prev]);
         setHasMore(older.hasMore);
         setLoadingMore(false);
 
@@ -342,15 +362,23 @@ export default function ChatWindow({
 
         if (editTarget) {
             if (!content) return;
+            // Bails without clearing anything if there's genuinely no chat
+            // key to encrypt under yet - there's nothing safe to send.
+            const encrypted = await encryptOutgoing(chat, content);
+            if (encrypted === null) return;
             setDraft("");
             const target = editTarget;
             setEditTarget(null);
-            const updated = await editMessage(chat.id, target.id, content);
-            if (updated) setMessages((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+            const updated = await editMessage(chat.id, target.id, encrypted);
+            if (updated) setMessages((prev) => prev.map((m) => (m.id === updated.id ? { ...updated, content } : m)));
             return;
         }
 
         if (!content && !pendingMedia) return;
+
+        // An empty caption needs no key at all - only real content does.
+        const encrypted = content ? await encryptOutgoing(chat, content) : "";
+        if (encrypted === null) return;
 
         setDraft("");
         const media = pendingMedia;
@@ -359,9 +387,9 @@ export default function ChatWindow({
         setPendingMedia(null);
         setSendAsGif(false);
         setReplyTarget(null);
-        const sent = await sendMessage(chat.id, content, media?.id, asGif, replyToId);
+        const sent = await sendMessage(chat.id, encrypted, media?.id, asGif, replyToId);
         if (sent) {
-            setMessages((prev) => appendUnique(prev, [sent]));
+            setMessages((prev) => appendUnique(prev, [{ ...sent, content }]));
             markAnimated(sent.id);
         }
     };
@@ -510,12 +538,31 @@ export default function ChatWindow({
         handleCancelSelect();
     };
 
-    const handleForwardPick = async (targetChatId: string) => {
+    const handleForwardPick = async (targetChat: ChatSummary) => {
         const ids = forwardIds ?? [];
         setForwardIds(null);
-        const forwarded = await forwardMessages(targetChatId, ids);
-        if (forwarded && targetChatId === chat.id) {
-            setMessages((prev) => appendUnique(prev, forwarded));
+
+        // Each source message is already decrypted in local state (that's
+        // how it's on screen right now) - it gets re-encrypted here under
+        // the DESTINATION chat's key, since the server can't do that
+        // transcoding itself under E2EE.
+        const items: ForwardItem[] = [];
+        for (const id of ids) {
+            const source = messages.find((m) => m.id === id);
+            if (!source) continue;
+            const encryptedContent = source.content ? await encryptOutgoing(targetChat, source.content) : "";
+            if (source.content && encryptedContent === null) continue; // no key for the destination yet
+            items.push({ sourceMessageId: id, encryptedContent: encryptedContent ?? "" });
+        }
+        if (items.length === 0) {
+            if (selectMode) handleCancelSelect();
+            return;
+        }
+
+        const forwarded = await forwardMessages(targetChat.id, items);
+        if (forwarded && targetChat.id === chat.id) {
+            const decrypted = await decryptIncomingList(chat, forwarded);
+            setMessages((prev) => appendUnique(prev, decrypted));
         }
         if (selectMode) handleCancelSelect();
     };

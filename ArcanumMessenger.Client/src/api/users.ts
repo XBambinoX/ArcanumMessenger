@@ -12,6 +12,7 @@ function toUser(data: {
     isContact: boolean;
     isBlocked: boolean;
     isBlockedByOther: boolean;
+    ecdhPublicKey: string | null;
 }): User | null {
     if (!data.success || data.name === null || data.id === null) return null;
     return {
@@ -24,6 +25,7 @@ function toUser(data: {
         isContact: data.isContact,
         isBlocked: data.isBlocked,
         isBlockedByOther: data.isBlockedByOther,
+        ecdhPublicKey: data.ecdhPublicKey,
     };
 }
 
@@ -36,6 +38,24 @@ export async function getMe(): Promise<User | null> {
 export async function getUser(id: string): Promise<User | null> {
     const res = await apiFetch(`/api/users/${id}`, { credentials: "include" });
     return toUser(await res.json());
+}
+
+// For accounts that predate E2EE and log in with no identity keypair yet -
+// sets one, but never overwrites an existing keypair (that's password
+// recovery's job, since it also has to invalidate every chat's stale
+// wrapped key for this user).
+export async function setIdentityKey(
+    ecdhPublicKey: string,
+    wrappedEcdhPrivateKey: string,
+): Promise<boolean> {
+    const res = await apiFetch("/api/users/me/identity-key", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ ecdhPublicKey, wrappedEcdhPrivateKey }),
+    });
+    const data = await res.json();
+    return data.success === true;
 }
 
 export async function searchUsers(query: string): Promise<UserSearchResult[]> {

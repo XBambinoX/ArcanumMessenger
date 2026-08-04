@@ -3,6 +3,7 @@ import { getContacts } from "../api/contacts";
 import { searchUsers } from "../api/users";
 import { addChatMembers, removeChatMember, type ChatMemberInfo } from "../api/chats";
 import { getUserAvatarUrl } from "../api/users";
+import { unwrapOwnChatKey, sealChatKeyFor } from "../lib/chatKeys";
 import type { UserSearchResult } from "../types/messenger";
 import AvatarImage from "./AvatarImage";
 import styles from "./MembersManagePanel.module.css";
@@ -13,13 +14,16 @@ const SEARCH_DEBOUNCE_MS = 350;
 interface MembersManagePanelProps {
     chatId: string;
     members: ChatMemberInfo[];
+    myWrappedChatKey: string | null;
     onMembersChanged: (members: ChatMemberInfo[]) => void;
     onClose: () => void;
 }
 
 type Mode = "list" | "add";
 
-export default function MembersManagePanel({ chatId, members, onMembersChanged, onClose }: MembersManagePanelProps) {
+export default function MembersManagePanel({
+    chatId, members, myWrappedChatKey, onMembersChanged, onClose,
+}: MembersManagePanelProps) {
     const [mode, setMode] = useState<Mode>("list");
     const [removingId, setRemovingId] = useState<string | null>(null);
     const [search, setSearch] = useState("");
@@ -70,7 +74,12 @@ export default function MembersManagePanel({ chatId, members, onMembersChanged, 
         if (adding || selected.size === 0) return;
         setAdding(true);
         setError(null);
-        const { members: updated, reason } = await addChatMembers(chatId, [...selected.keys()]);
+
+        const chatKey = myWrappedChatKey ? await unwrapOwnChatKey(myWrappedChatKey) : null;
+        const candidates = [...selected.values()].map((c) => ({ userId: c.id, ecdhPublicKey: c.ecdhPublicKey }));
+        const memberKeys = chatKey ? await sealChatKeyFor(chatKey, candidates) : [];
+
+        const { members: updated, reason } = await addChatMembers(chatId, [...selected.keys()], memberKeys);
         setAdding(false);
         if (updated) {
             onMembersChanged(updated);

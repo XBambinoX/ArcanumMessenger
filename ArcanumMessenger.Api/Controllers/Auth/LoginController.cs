@@ -137,6 +137,7 @@ public class LoginController(
 
         await loginSession.DeleteAsync(request.SessionId, ct);
 
-        return Ok(new CompleteLoginResponse(Success: true));
+        return Ok(new CompleteLoginResponse(
+            Success: true, EcdhPublicKey: user.EcdhPublicKey, WrappedEcdhPrivateKey: user.WrappedEcdhPrivateKey));
     }
 }
