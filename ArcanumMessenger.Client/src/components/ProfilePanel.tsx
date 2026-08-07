@@ -24,10 +24,10 @@ interface ProfilePanelProps {
     onAvatarChange?: () => void;
 }
 
-type Section = "main" | "account" | "notifications" | "privacy" | "chats" | "blocked";
+type Section = "main" | "account" | "notifications" | "privacy" | "chats" | "language" | "blocked";
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 type PrivacyField = "showLastSeen" | "showOnlineStatus" | "readReceipts" | "showPhoneNumber" | "showBio" | "showAvatar" | "showEmail" | "whoCanAddMe" | "totpEnabled";
-type ChatField = "theme" | "wallpaper" | "linkPreviews" | "autoDownloadMedia";
+type ChatField = "theme" | "language" | "wallpaper" | "linkPreviews" | "autoDownloadMedia";
 
 // Mirrors Entities.UserSettings, plus a few visual-only extras below.
 // Not persisted yet — wiring to GET/PUT /api/users/me/settings is next.
@@ -50,6 +50,7 @@ interface SettingsState {
     whoCanAddMe: "everyone" | "contacts";
     readReceipts: boolean;
     theme: "system" | "dark" | "light";
+    language: "en" | "uk" | "de";
     wallpaper: string;
     linkPreviews: boolean;
     autoDownloadMedia: boolean;
@@ -74,6 +75,7 @@ const defaultSettings: SettingsState = {
     whoCanAddMe: "everyone",
     readReceipts: true,
     theme: "system",
+    language: "en",
     wallpaper: "Default",
     linkPreviews: true,
     autoDownloadMedia: true,
@@ -191,13 +193,19 @@ const menuItems: {
     { icon: BellIcon, color: "#f2703c", label: "Notifications and Sounds", section: "notifications" },
     { icon: LockIcon, color: "#4fb85c", label: "Privacy and Security", section: "privacy" },
     { icon: ChatIcon, color: "#4ec4dc", label: "Chat Settings", section: "chats" },
-    { icon: LanguageIcon, color: "#3fbfae", label: "Language", value: "Coming soon :)" },
+    { icon: LanguageIcon, color: "#3fbfae", label: "Language", section: "language" },
 ];
 
 const themeOptions: { id: SettingsState["theme"]; label: string; icon: () => ReactElement }[] = [
     { id: "system", label: "System", icon: ThemeSystemIcon },
     { id: "dark", label: "Dark", icon: ThemeDarkIcon },
     { id: "light", label: "Light", icon: ThemeLightIcon },
+];
+
+const languageOptions: { id: SettingsState["language"]; label: string }[] = [
+    { id: "en", label: "English" },
+    { id: "uk", label: "Українська" },
+    { id: "de", label: "Deutsch" },
 ];
 
 // Shared by phone/bio/avatar visibility - all three are the same three-way choice.
@@ -224,6 +232,7 @@ const sectionTitles: Record<Section, string> = {
     notifications: "Notifications and Sounds" ,
     privacy: "Privacy and Security",
     chats: "Chat Settings",
+    language: "Language",
     blocked: "Blocked Users",
 };
 
@@ -278,6 +287,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
 
     const chatsApiFieldMap: Record<ChatField, keyof UpdateChatSettingsRequest> = {
         theme: "theme",
+        language: "language",
         wallpaper: "wallpaper",
         linkPreviews: "linkPreviewsEnabled",
         autoDownloadMedia: "autoDownloadMedia",
@@ -529,6 +539,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                     showEmail: data.showEmail,
                     whoCanAddMe: data.whoCanAddMe,
                     theme: data.theme,
+                    language: data.language,
                     wallpaper: data.wallpaper,
                     linkPreviews: data.linkPreviewsEnabled,
                     autoDownloadMedia: data.autoDownloadMedia,
@@ -1005,6 +1016,30 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                                 onChange={(e) => handleChatSettingChange("autoDownloadMedia", e.target.checked)}
                             />
                         </label>
+                    </div>
+                );
+
+            case "language":
+                return (
+                    <div className={styles.subPage}>
+                        <div className={styles.saveStatusRow}>
+                            {chatsSaveStatus === "saving" && <span className={styles.saveStatusSaving}>Saving...</span>}
+                            {chatsSaveStatus === "saved" && <span className={styles.saveStatusSaved}>Saved</span>}
+                            {chatsSaveStatus === "error" && <span className={styles.saveStatusError}>Failed to save</span>}
+                        </div>
+
+                        <div className={styles.chipGroup}>
+                            {languageOptions.map((opt) => (
+                                <button
+                                    key={opt.id}
+                                    className={`${styles.chipButton} ${settings.language === opt.id ? styles.chipButtonActive : ""}`}
+                                    disabled={!settingsLoaded}
+                                    onClick={() => handleChatSettingChange("language", opt.id)}
+                                >
+                                    <span className={styles.chipLabel}>{opt.label}</span>
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 );
         }

@@ -74,3 +74,10 @@ public enum Notifications
     Chime,
     Bell
 }
+
+public enum Languages
+{
+    En,
+    Uk,
+    De
+}

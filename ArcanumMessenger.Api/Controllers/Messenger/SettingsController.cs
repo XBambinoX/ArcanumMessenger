@@ -49,6 +49,7 @@ public class SettingsController(AppDbContext db, EncryptionService encryption, T
             ShowEmail: settings.ShowEmail.ToApiString(),
             WhoCanAddMe: settings.WhoCanAddMe.ToApiString(),
             Theme: settings.Theme,
+            Language: settings.Language,
             Wallpaper: settings.Wallpaper,
             LinkPreviewsEnabled: settings.LinkPreviewsEnabled,
             AutoDownloadMedia: settings.AutoDownloadMedia
@@ -295,6 +296,13 @@ public class SettingsController(AppDbContext db, EncryptionService encryption, T
             if (!PrivacyEnumConverters.TryParseThemes(request.Theme, out var theme))
                 return BadRequest(new { reason = "invalid_theme" });
             settings.Theme = request.Theme;
+        }
+
+        if (request.Language is not null)
+        {
+            if (!PrivacyEnumConverters.TryParseLanguages(request.Language, out _))
+                return BadRequest(new { reason = "invalid_language" });
+            settings.Language = request.Language;
         }
 
         if (request.Wallpaper is not null)
