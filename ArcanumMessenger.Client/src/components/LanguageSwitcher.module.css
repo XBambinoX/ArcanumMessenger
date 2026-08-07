@@ -1,0 +1,36 @@
+.switcher {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 50;
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 999px;
+    background: rgba(15, 15, 25, 0.55);
+    border: 1px solid rgba(124, 58, 237, 0.25);
+    backdrop-filter: blur(8px);
+}
+
+.option {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: rgba(226, 232, 240, 0.65);
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.option:hover {
+    color: rgba(226, 232, 240, 0.9);
+}
+
+.optionActive {
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    color: #fff;
+}

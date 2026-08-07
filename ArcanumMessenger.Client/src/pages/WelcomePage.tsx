@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useNavigate } from "react-router";
 import styles from "./WelcomePage.module.css";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 
 /* ── mouse glow ── */
 function useMouseGlow(ref: RefObject<HTMLDivElement | null>) {
@@ -514,6 +515,7 @@ export default function WelcomePage() {
 
     return (
         <div className={styles.root}>
+            <LanguageSwitcher />
             <div ref={glowRef} className={styles.mouseGlow} />
             <canvas ref={canvasRef} className={styles.particles} />
             <div className={styles.orb1} />
