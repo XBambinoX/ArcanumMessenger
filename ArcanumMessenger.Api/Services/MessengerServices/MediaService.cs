@@ -15,7 +15,7 @@ public record MediaStream(Stream Content, string ContentType, long TotalLength, 
 
 public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config, MediaUploadSessionService uploadSessions)
 {
-    private const long MaxImageOrGifBytes = 25L * 1024 * 1024;
+    private const long MaxImageOrGifBytes = 50L * 1024 * 1024;
     private const long MaxOtherBytes = 200L * 1024 * 1024;
     private const long MaxChunkedTotalBytes = 5L * 1024 * 1024 * 1024; // 5 GB ceiling for the chunked path
     private const int ThumbnailMaxEdge = 320;
