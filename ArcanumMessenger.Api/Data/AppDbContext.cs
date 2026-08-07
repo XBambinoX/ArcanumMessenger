@@ -54,6 +54,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany()
                 .HasForeignKey(c => c.CreatedBy)
                 .OnDelete(DeleteBehavior.Restrict);
+            // Guards against a concurrent double-request creating two "saved" chats for the same user.
+            e.HasIndex(c => c.CreatedBy).IsUnique().HasFilter("\"Type\" = 'saved'");
         });
 
         modelBuilder.Entity<ChatMember>(e =>

@@ -89,8 +89,20 @@ public class ChatService(
         db.Chats.Add(chat);
 
         var now = DateTime.UtcNow;
-        db.ChatMembers.Add(new ChatMember { Chat = chat, UserId = userId, Role = "member", JoinedAt = now, LastReadAt = now });
-        await db.SaveChangesAsync(ct);
+        var member = new ChatMember { Chat = chat, UserId = userId, Role = "member", JoinedAt = now, LastReadAt = now };
+        db.ChatMembers.Add(member);
+
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            // Lost a race against a concurrent request for the same user - the unique index on
+            // Chats(CreatedBy) WHERE Type = 'saved' already has one, so there's nothing to do.
+            db.Entry(chat).State = EntityState.Detached;
+            db.Entry(member).State = EntityState.Detached;
+        }
     }
 
     public async Task<List<ChatSummaryDto>> GetChatSummariesAsync(Guid userId, CancellationToken ct)
