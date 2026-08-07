@@ -15,10 +15,19 @@ public class MediaController(AppDbContext db, MediaService media, MediaAccessSer
     // RequestSizeLimit alone isn't enough for a multipart upload - the form
     // parser has its own, separate default of 128MB
     // (FormOptions.MultipartBodyLengthLimit) that silently applied instead.
+    // mimeType is a separate explicit field, not file.ContentType - the
+    // uploaded bytes are E2E-encrypted ciphertext by the time they get here
+    // (see chatMediaCrypto.ts on the client), so the browser's own
+    // content-type guess for the multipart part is meaningless; the client
+    // tells us what the *plaintext* actually is. Same reasoning for
+    // width/height/durationSeconds - the server can no longer decode the
+    // bytes itself to derive them.
     [HttpPost]
     [RequestSizeLimit(MaxUploadBytes)]
     [RequestFormLimits(MultipartBodyLengthLimit = MaxUploadBytes)]
-    public async Task<ActionResult<UploadMediaResponse>> Upload(IFormFile? file, CancellationToken ct)
+    public async Task<ActionResult<UploadMediaResponse>> Upload(
+        IFormFile? file, [FromForm] string? mimeType, [FromForm] int? width, [FromForm] int? height,
+        [FromForm] double? durationSeconds, CancellationToken ct)
     {
         if (!TryGetUserId(out var userId))
             return Unauthorized();
@@ -28,7 +37,8 @@ public class MediaController(AppDbContext db, MediaService media, MediaAccessSer
 
         await using var stream = file.OpenReadStream();
         var (asset, reason) = await media.UploadAsync(
-            stream, file.Length, file.FileName, file.ContentType ?? "application/octet-stream", userId, ct);
+            stream, file.Length, file.FileName, mimeType ?? file.ContentType ?? "application/octet-stream",
+            userId, width, height, durationSeconds, ct);
 
         return asset is null
             ? BadRequest(new UploadMediaResponse(false, null, reason))
@@ -156,7 +166,8 @@ public class MediaController(AppDbContext db, MediaService media, MediaAccessSer
             return Unauthorized();
 
         var (sessionId, reason) = await media.InitiateChunkedUploadAsync(
-            request.FileName, request.MimeType, request.TotalSize, userId, ct);
+            request.FileName, request.MimeType, request.TotalSize, userId,
+            request.Width, request.Height, request.DurationSeconds, ct);
 
         return sessionId is null
             ? BadRequest(new StartChunkedUploadResponse(false, null, reason))

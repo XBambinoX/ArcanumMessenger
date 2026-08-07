@@ -24,7 +24,9 @@ public record SavedGifsResponse(bool Success, IReadOnlyList<MediaAssetDto>? Gifs
 
 public record SaveGifResponse(bool Success, string? Reason = null);
 
-public record StartChunkedUploadRequest(string FileName, string MimeType, long TotalSize);
+public record StartChunkedUploadRequest(
+    string FileName, string MimeType, long TotalSize,
+    int? Width = null, int? Height = null, double? DurationSeconds = null);
 
 public record StartChunkedUploadResponse(bool Success, string? SessionId, string? Reason = null);
 

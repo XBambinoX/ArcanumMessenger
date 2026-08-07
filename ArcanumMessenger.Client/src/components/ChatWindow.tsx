@@ -7,7 +7,7 @@ import { getChatAvatarUrl } from "../api/chats";
 import { uploadMedia, deleteMedia, getMediaUrl, getMediaThumbnailUrl, getSavedGifs, saveGif, unsaveGif } from "../api/media";
 import { uploadMediaChunked, abortChunkedUpload, clearChunkedUploadResumeState, CHUNK_THRESHOLD } from "../api/chunkedUpload";
 import { formatMessageTime, formatChatTime } from "../lib/time";
-import { encryptOutgoing, decryptIncoming, decryptIncomingList } from "../lib/chatCrypto";
+import { encryptOutgoing, decryptIncoming, decryptIncomingList, getChatKey } from "../lib/chatCrypto";
 import { selfHealChatKeys } from "../lib/chatKeySelfHeal";
 import UserInfoPanel from "./UserInfoPanel";
 import ChatInfoPanel from "./ChatInfoPanel";
@@ -415,6 +415,9 @@ export default function ChatWindow({
         e.target.value = "";
         if (!file) return;
 
+        const chatKey = await getChatKey({ id: chat.id, wrappedChatKey: chat.wrappedChatKey });
+        if (!chatKey) return; // no usable chat key yet - nothing safe to encrypt with
+
         const controller = new AbortController();
         uploadAbortRef.current = controller;
         uploadFileRef.current = file;
@@ -426,13 +429,15 @@ export default function ChatWindow({
                 setUploadProgress({ loaded: 0, total: file.size });
                 media = await uploadMediaChunked(
                     file,
+                    chatKey,
+                    chat.id,
                     (loaded, total) => setUploadProgress({ loaded, total }),
                     controller.signal,
                     (sessionId) => { uploadSessionIdRef.current = sessionId; },
                 );
             } else {
                 setUploadingFile(true);
-                media = await uploadMedia(file, controller.signal);
+                media = await uploadMedia(file, chatKey, chat.id, controller.signal);
             }
 
             if (media) setPendingMedia(media);

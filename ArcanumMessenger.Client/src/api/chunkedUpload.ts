@@ -1,7 +1,8 @@
 import { apiFetch } from "../lib/apiFetch";
 import type { MediaAsset } from "../types/messenger";
+import { encryptChunk, CHUNK_SIZE, chunkCiphertextLayout } from "../crypto/chunkedMedia";
+import { readMediaMetadata } from "../lib/mediaMetadata";
 
-const CHUNK_SIZE = 10 * 1024 * 1024; // 10MB
 export const CHUNK_THRESHOLD = 50 * 1024 * 1024; // files under this keep using the simple uploadMedia
 const RETRY_ATTEMPTS = 3;
 
@@ -13,14 +14,22 @@ function fingerprintKey(file: File): string {
     return `chunked-upload:${file.name}|${file.size}|${file.lastModified}`;
 }
 
-async function startSession(file: File, signal?: AbortSignal): Promise<string | null> {
+async function startSession(
+    file: File,
+    encryptedTotalSize: number,
+    meta: { width?: number; height?: number; durationSeconds?: number },
+    signal?: AbortSignal,
+): Promise<string | null> {
     const res = await apiFetch("/api/media/chunked", {
         method: "POST",
         credentials: "include",
         body: JSON.stringify({
             fileName: file.name,
             mimeType: file.type || "application/octet-stream",
-            totalSize: file.size,
+            totalSize: encryptedTotalSize,
+            width: meta.width,
+            height: meta.height,
+            durationSeconds: meta.durationSeconds,
         }),
         signal,
     });
@@ -86,6 +95,8 @@ export async function abortChunkedUpload(sessionId: string): Promise<boolean> {
 
 export async function uploadMediaChunked(
     file: File,
+    chatKey: Uint8Array,
+    chatId: string,
     onProgress: (loadedBytes: number, totalBytes: number) => void,
     signal?: AbortSignal,
     onSessionStart?: (sessionId: string) => void,
@@ -93,6 +104,9 @@ export async function uploadMediaChunked(
     const key = fingerprintKey(file);
     let sessionId = localStorage.getItem(key);
     let uploadedParts = new Set<number>();
+
+    const layout = chunkCiphertextLayout(file.size);
+    const encryptedTotalSize = layout.reduce((sum, c) => sum + c.length, 0);
 
     if (sessionId) {
         const parts = await getUploadedParts(sessionId, signal);
@@ -107,7 +121,8 @@ export async function uploadMediaChunked(
     }
 
     if (!sessionId) {
-        sessionId = await startSession(file, signal);
+        const meta = await readMediaMetadata(file);
+        sessionId = await startSession(file, encryptedTotalSize, meta, signal);
         if (!sessionId) return null;
         localStorage.setItem(key, sessionId);
     }
@@ -122,12 +137,14 @@ export async function uploadMediaChunked(
         if (uploadedParts.has(partNumber)) continue;
 
         const start = (partNumber - 1) * CHUNK_SIZE;
-        const chunk = file.slice(start, Math.min(start + CHUNK_SIZE, file.size));
+        const plainChunk = file.slice(start, Math.min(start + CHUNK_SIZE, file.size));
+        const plainBytes = new Uint8Array(await plainChunk.arrayBuffer());
+        const encryptedBytes = await encryptChunk(chatKey, chatId, partNumber - 1, plainBytes);
 
-        const ok = await uploadPartWithRetry(sessionId, partNumber, chunk, signal);
+        const ok = await uploadPartWithRetry(sessionId, partNumber, new Blob([encryptedBytes as BlobPart]), signal);
         if (!ok) return null; // localStorage entry stays - retrying the same file resumes, not restarts
 
-        loaded += chunk.size;
+        loaded += plainChunk.size;
         onProgress(Math.min(loaded, file.size), file.size);
     }
 

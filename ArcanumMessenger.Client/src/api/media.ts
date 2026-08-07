@@ -1,5 +1,7 @@
 import { apiFetch } from "../lib/apiFetch";
 import type { MediaAsset } from "../types/messenger";
+import { encryptChunked } from "../crypto/chunkedMedia";
+import { readMediaMetadata } from "../lib/mediaMetadata";
 
 export function getMediaUrl(mediaId: string): string {
     return `/api/media/${mediaId}`;
@@ -9,9 +11,24 @@ export function getMediaThumbnailUrl(mediaId: string): string {
     return `/api/media/${mediaId}/thumbnail`;
 }
 
-export async function uploadMedia(file: File, signal?: AbortSignal): Promise<MediaAsset | null> {
+export async function uploadMedia(
+    file: File,
+    chatKey: Uint8Array,
+    chatId: string,
+    signal?: AbortSignal,
+): Promise<MediaAsset | null> {
+    const encryptedChunks: Uint8Array[] = [];
+    for await (const chunk of encryptChunked(chatKey, chatId, file)) {
+        encryptedChunks.push(chunk);
+    }
+    const meta = await readMediaMetadata(file);
+
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", new Blob(encryptedChunks as BlobPart[]), file.name);
+    formData.append("mimeType", file.type || "application/octet-stream");
+    if (meta.width) formData.append("width", String(meta.width));
+    if (meta.height) formData.append("height", String(meta.height));
+    if (meta.durationSeconds) formData.append("durationSeconds", String(meta.durationSeconds));
 
     const res = await apiFetch("/api/media", {
         method: "POST",
