@@ -57,6 +57,7 @@ export async function editMessage(chatId: string, messageId: string, content: st
 export interface ForwardItem {
     sourceMessageId: string;
     encryptedContent: string;
+    newMediaId?: string;
 }
 
 // Forwarding across chats with different keys can't happen server-side under

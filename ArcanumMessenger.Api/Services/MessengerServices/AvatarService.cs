@@ -1,6 +1,7 @@
 using System.Net;
 using Amazon.S3;
 using Amazon.S3.Model;
+using ArcanumMessenger.Services.AuthServices;
 using SkiaSharp;
 
 namespace ArcanumMessenger.Services.MessengerServices;
@@ -13,6 +14,12 @@ public record AvatarStream(Stream Content, string ContentType, long Length);
 // existence check against MinIO instead of something that needs its own
 // column/migration to track. Users and group chats share this same scheme -
 // only the key prefix differs, so one implementation covers both.
+//
+// User avatars are encrypted at rest with that user's own DEK (dek passed in
+// by the caller, which already has it unwrapped from WrappedDek) - same
+// server-decryptable model as username/bio, not the chat-key E2E model.
+// Chat avatars have no DEK to use (chats don't have one) and stay
+// unencrypted for now - dek is null on that path.
 public class AvatarService(IAmazonS3 s3, IConfiguration config)
 {
     private const long MaxUploadBytes = 10L * 1024 * 1024;
@@ -21,27 +28,27 @@ public class AvatarService(IAmazonS3 s3, IConfiguration config)
     private string Bucket => config["Media:Bucket"]!;
 
     public Task<(bool Success, string? Reason)> UploadAvatarAsync(
-        Guid userId, Stream content, long length, string mimeType, CancellationToken ct) =>
-        UploadAsync($"avatars/{userId}", content, length, mimeType, ct);
+        Guid userId, Stream content, long length, string mimeType, byte[] dek, CancellationToken ct) =>
+        UploadAsync($"avatars/{userId}", content, length, mimeType, dek, ct);
 
     public Task DeleteAvatarAsync(Guid userId, CancellationToken ct) =>
         DeleteAsync($"avatars/{userId}", ct);
 
-    public Task<AvatarStream?> OpenAvatarStreamAsync(Guid userId, CancellationToken ct) =>
-        OpenStreamAsync($"avatars/{userId}", ct);
+    public Task<AvatarStream?> OpenAvatarStreamAsync(Guid userId, byte[] dek, CancellationToken ct) =>
+        OpenStreamAsync($"avatars/{userId}", dek, ct);
 
     public Task<(bool Success, string? Reason)> UploadChatAvatarAsync(
         Guid chatId, Stream content, long length, string mimeType, CancellationToken ct) =>
-        UploadAsync($"chat-avatars/{chatId}", content, length, mimeType, ct);
+        UploadAsync($"chat-avatars/{chatId}", content, length, mimeType, dek: null, ct);
 
     public Task DeleteChatAvatarAsync(Guid chatId, CancellationToken ct) =>
         DeleteAsync($"chat-avatars/{chatId}", ct);
 
     public Task<AvatarStream?> OpenChatAvatarStreamAsync(Guid chatId, CancellationToken ct) =>
-        OpenStreamAsync($"chat-avatars/{chatId}", ct);
+        OpenStreamAsync($"chat-avatars/{chatId}", dek: null, ct);
 
     private async Task<(bool Success, string? Reason)> UploadAsync(
-        string key, Stream content, long length, string mimeType, CancellationToken ct)
+        string key, Stream content, long length, string mimeType, byte[]? dek, CancellationToken ct)
     {
         if (length <= 0)
             return (false, "empty_file");
@@ -68,10 +75,13 @@ public class AvatarService(IAmazonS3 s3, IConfiguration config)
         using var image = SKImage.FromBitmap(resized ?? original);
         using var encoded = image.Encode(SKEncodedImageFormat.Jpeg, 85);
 
-        using var uploadStream = new MemoryStream();
-        encoded.SaveTo(uploadStream);
-        uploadStream.Position = 0;
+        using var jpegStream = new MemoryStream();
+        encoded.SaveTo(jpegStream);
+        var jpegBytes = jpegStream.ToArray();
 
+        var uploadBytes = dek is null ? jpegBytes : EncryptionService.EncryptBytes(jpegBytes, dek);
+
+        using var uploadStream = new MemoryStream(uploadBytes);
         await s3.PutObjectAsync(new PutObjectRequest
         {
             BucketName = Bucket,
@@ -88,7 +98,7 @@ public class AvatarService(IAmazonS3 s3, IConfiguration config)
         await s3.DeleteObjectAsync(Bucket, key, ct);
     }
 
-    private async Task<AvatarStream?> OpenStreamAsync(string key, CancellationToken ct)
+    private async Task<AvatarStream?> OpenStreamAsync(string key, byte[]? dek, CancellationToken ct)
     {
         try
         {
@@ -98,7 +108,14 @@ public class AvatarService(IAmazonS3 s3, IConfiguration config)
                 Key = key,
             }, ct);
 
-            return new AvatarStream(response.ResponseStream, "image/jpeg", response.ContentLength);
+            if (dek is null)
+                return new AvatarStream(response.ResponseStream, "image/jpeg", response.ContentLength);
+
+            using var buffer = new MemoryStream();
+            await response.ResponseStream.CopyToAsync(buffer, ct);
+            var plainBytes = EncryptionService.DecryptBytes(buffer.ToArray(), dek);
+
+            return new AvatarStream(new MemoryStream(plainBytes), "image/jpeg", plainBytes.Length);
         }
         catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {

@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import type { HubConnection } from "@microsoft/signalr";
-import type { ChatMessage, ChatReadState, ChatSummary, MediaAsset, User } from "../types/messenger";
+import type { ChatMessage, ChatReadState, ChatSummary, MediaAsset, SavedGifEntry, User } from "../types/messenger";
 import { getMessageHistory, sendMessage, deleteMessage, editMessage, forwardMessages, type ForwardItem } from "../api/messages";
 import { getUser, getUserAvatarUrl } from "../api/users";
-import { getChatAvatarUrl } from "../api/chats";
-import { uploadMedia, deleteMedia, getMediaUrl, getMediaThumbnailUrl, getSavedGifs, saveGif, unsaveGif } from "../api/media";
+import { getChats, getChatAvatarUrl } from "../api/chats";
+import { uploadMedia, uploadMediaThumbnail, deleteMedia, getMediaThumbnailUrl, getSavedGifs, saveGif, unsaveGif } from "../api/media";
+import { EncryptedImage, EncryptedGifVideo, EncryptedVideoPlayer, downloadMediaToDisk } from "./EncryptedMedia";
 import { uploadMediaChunked, abortChunkedUpload, clearChunkedUploadResumeState, CHUNK_THRESHOLD } from "../api/chunkedUpload";
 import { formatMessageTime, formatChatTime } from "../lib/time";
-import { encryptOutgoing, decryptIncoming, decryptIncomingList } from "../lib/chatCrypto";
+import { extractVideoFirstFrame } from "../lib/mediaMetadata";
+import { reencryptMediaAcrossChats } from "../lib/mediaReencrypt";
+import { encryptOutgoing, decryptIncoming, decryptIncomingList, getChatKey } from "../lib/chatCrypto";
 import { selfHealChatKeys } from "../lib/chatKeySelfHeal";
 import UserInfoPanel from "./UserInfoPanel";
 import ChatInfoPanel from "./ChatInfoPanel";
@@ -202,7 +205,19 @@ export default function ChatWindow({
     }, []);
 
     useEffect(() => {
-        getSavedGifs().then((gifs) => setSavedGifIds(new Set(gifs.map((g) => g.id))));
+        getSavedGifs().then((gifs) => setSavedGifIds(new Set(gifs.map((g) => g.sourceMediaId))));
+    }, []);
+
+    // Saved GIFs live in the user's own Saved Messages chat, encrypted with
+    // its key like anything else there - fetched once so saving/sending a
+    // saved gif has somewhere to re-encrypt to/from (see lib/mediaReencrypt.ts).
+    const [savedChat, setSavedChat] = useState<ChatSummary | null>(null);
+    useEffect(() => {
+        getChats().then((chats) => {
+            const saved = chats.find((c) => c.type === "saved") ?? null;
+            setSavedChat(saved);
+            if (saved) selfHealChatKeys(saved.id, saved.wrappedChatKey);
+        });
     }, []);
 
     const pendingMediaRef = useRef<MediaAsset | null>(null);
@@ -415,6 +430,9 @@ export default function ChatWindow({
         e.target.value = "";
         if (!file) return;
 
+        const chatKey = await getChatKey({ id: chat.id, wrappedChatKey: chat.wrappedChatKey });
+        if (!chatKey) return; // no usable chat key yet - nothing safe to encrypt with
+
         const controller = new AbortController();
         uploadAbortRef.current = controller;
         uploadFileRef.current = file;
@@ -426,16 +444,28 @@ export default function ChatWindow({
                 setUploadProgress({ loaded: 0, total: file.size });
                 media = await uploadMediaChunked(
                     file,
+                    chatKey,
+                    chat.id,
                     (loaded, total) => setUploadProgress({ loaded, total }),
                     controller.signal,
                     (sessionId) => { uploadSessionIdRef.current = sessionId; },
                 );
             } else {
                 setUploadingFile(true);
-                media = await uploadMedia(file, controller.signal);
+                media = await uploadMedia(file, chatKey, chat.id, controller.signal);
             }
 
-            if (media) setPendingMedia(media);
+            if (media) {
+                setPendingMedia(media);
+
+                if (file.type.startsWith("video/")) {
+                    const frame = await extractVideoFirstFrame(file);
+                    if (frame) {
+                        const ok = await uploadMediaThumbnail(media.id, frame, chatKey, chat.id);
+                        if (ok) setPendingMedia({ ...media, hasThumbnail: true });
+                    }
+                }
+            }
             setSendAsGif(false);
         } catch (err) {
             // A deliberate cancel (handleCancelUpload) - already cleaned up there.
@@ -464,27 +494,49 @@ export default function ChatWindow({
         if (media) deleteMedia(media.id);
     };
 
-    const handleSendGif = async (gif: MediaAsset) => {
+    const handleSendGif = async (entry: SavedGifEntry) => {
+        if (!savedChat) return;
         const replyToId = replyTarget?.id ?? null;
         setReplyTarget(null);
-        const sent = await sendMessage(chat.id, "", gif.id, false, replyToId);
+
+        // A saved gif is encrypted under the Saved Messages chat's key -
+        // has to be re-encrypted under this chat's key before it can be
+        // sent here, same as forwarding.
+        const reencrypted = await reencryptMediaAcrossChats(
+            savedChat, { id: chat.id, wrappedChatKey: chat.wrappedChatKey }, entry.media,
+        );
+        if (!reencrypted) return;
+
+        const sent = await sendMessage(chat.id, "", reencrypted.id, false, replyToId);
         if (sent) {
             setMessages((prev) => appendUnique(prev, [sent]));
             markAnimated(sent.id);
         }
     };
 
-    const handleToggleSaveGif = async (mediaId: string) => {
-        const isSaved = savedGifIds.has(mediaId);
-        const ok = isSaved ? await unsaveGif(mediaId) : await saveGif(mediaId);
-        if (!ok) return;
+    const handleToggleSaveGif = async (media: MediaAsset) => {
+        const isSaved = savedGifIds.has(media.id);
 
-        setSavedGifIds((prev) => {
-            const next = new Set(prev);
-            if (isSaved) next.delete(mediaId);
-            else next.add(mediaId);
-            return next;
-        });
+        if (isSaved) {
+            const ok = await unsaveGif(media.id);
+            if (!ok) return;
+            setSavedGifIds((prev) => {
+                const next = new Set(prev);
+                next.delete(media.id);
+                return next;
+            });
+            return;
+        }
+
+        if (!savedChat) return;
+        const reencrypted = await reencryptMediaAcrossChats(
+            { id: chat.id, wrappedChatKey: chat.wrappedChatKey }, savedChat, media,
+        );
+        if (!reencrypted) return;
+
+        const ok = await saveGif(media.id, reencrypted.id);
+        if (!ok) return;
+        setSavedGifIds((prev) => new Set(prev).add(media.id));
     };
 
     const handleDeleteMessage = async (messageId: string) => {
@@ -493,12 +545,7 @@ export default function ChatWindow({
     };
 
     const handleSaveAs = (media: MediaAsset) => {
-        const link = document.createElement("a");
-        link.href = getMediaUrl(media.id);
-        link.download = media.fileName;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
+        downloadMediaToDisk({ id: chat.id, wrappedChatKey: chat.wrappedChatKey }, media);
     };
 
     const handleContextMenu = (e: React.MouseEvent, message: ChatMessage) => {
@@ -543,16 +590,30 @@ export default function ChatWindow({
         setForwardIds(null);
 
         // Each source message is already decrypted in local state (that's
-        // how it's on screen right now) - it gets re-encrypted here under
+        // how it's on screen right now) - text gets re-encrypted here under
         // the DESTINATION chat's key, since the server can't do that
-        // transcoding itself under E2EE.
+        // transcoding itself under E2EE. Media can't be transcoded in place
+        // like a short string - it has to be downloaded, decrypted, and
+        // re-uploaded fully under the destination's key.
         const items: ForwardItem[] = [];
         for (const id of ids) {
             const source = messages.find((m) => m.id === id);
             if (!source) continue;
             const encryptedContent = source.content ? await encryptOutgoing(targetChat, source.content) : "";
             if (source.content && encryptedContent === null) continue; // no key for the destination yet
-            items.push({ sourceMessageId: id, encryptedContent: encryptedContent ?? "" });
+
+            let newMediaId: string | undefined;
+            if (source.media) {
+                const reencrypted = await reencryptMediaAcrossChats(
+                    { id: chat.id, wrappedChatKey: chat.wrappedChatKey },
+                    { id: targetChat.id, wrappedChatKey: targetChat.wrappedChatKey },
+                    source.media,
+                );
+                if (!reencrypted) continue; // couldn't re-encrypt the media - skip this item entirely
+                newMediaId = reencrypted.id;
+            }
+
+            items.push({ sourceMessageId: id, encryptedContent: encryptedContent ?? "", newMediaId });
         }
         if (items.length === 0) {
             if (selectMode) handleCancelSelect();
@@ -597,7 +658,7 @@ export default function ChatWindow({
             const isSaved = savedGifIds.has(media.id);
             items.push({
                 label: isSaved ? "Remove from GIFs" : "Save to GIFs",
-                onClick: () => handleToggleSaveGif(media.id),
+                onClick: () => handleToggleSaveGif(media),
             });
         }
 
@@ -796,13 +857,12 @@ export default function ChatWindow({
                                     )}
                                     {message.type === "image" && message.media && (
                                         <div className={mediaWrapClass}>
-                                            <img
+                                            <EncryptedImage
+                                                chat={{ id: chat.id, wrappedChatKey: chat.wrappedChatKey }}
+                                                media={message.media}
                                                 className={styles.mediaImage}
-                                                src={message.media.hasThumbnail
-                                                    ? getMediaThumbnailUrl(message.media.id)
-                                                    : getMediaUrl(message.media.id)}
                                                 alt={message.media.fileName}
-                                                onClick={() => window.open(getMediaUrl(message.media!.id), "_blank")}
+                                                onClick={(url) => window.open(url, "_blank")}
                                             />
                                             {bareMedia && (
                                                 <span className={styles.mediaTime}>
@@ -817,25 +877,22 @@ export default function ChatWindow({
                                     {message.type === "gif" && message.media && (
                                         <div className={mediaWrapClass}>
                                             {isVideoMime(message.media.mimeType) ? (
-                                                <video
+                                                <EncryptedGifVideo
+                                                    chat={{ id: chat.id, wrappedChatKey: chat.wrappedChatKey }}
+                                                    media={message.media}
                                                     className={styles.mediaImage}
-                                                    src={getMediaUrl(message.media.id)}
-                                                    autoPlay
-                                                    loop
-                                                    muted
-                                                    playsInline
-                                                    onClick={() => window.open(getMediaUrl(message.media!.id), "_blank")}
+                                                    onClick={(url) => window.open(url, "_blank")}
                                                 />
                                             ) : (
-                                                // A real animated GIF file - the thumbnail is a single static
-                                                // frame, so it has to be skipped here or the gif would just sit
-                                                // there frozen. The full file is small enough to always load, and
-                                                // the browser loops it forever on its own, no attributes needed.
-                                                <img
+                                                // A real animated GIF file - always decrypted and loaded in full
+                                                // (no thumbnail exists for these), and the browser loops it
+                                                // forever on its own once it's a real <img>, no attributes needed.
+                                                <EncryptedImage
+                                                    chat={{ id: chat.id, wrappedChatKey: chat.wrappedChatKey }}
+                                                    media={message.media}
                                                     className={styles.mediaImage}
-                                                    src={getMediaUrl(message.media.id)}
                                                     alt={message.media.fileName}
-                                                    onClick={() => window.open(getMediaUrl(message.media!.id), "_blank")}
+                                                    onClick={(url) => window.open(url, "_blank")}
                                                 />
                                             )}
                                             {bareMedia && (
@@ -850,10 +907,12 @@ export default function ChatWindow({
                                     )}
                                     {message.type === "video" && message.media && (
                                         <div className={mediaWrapClass}>
-                                            <video
+                                            <EncryptedVideoPlayer
+                                                chat={{ id: chat.id, wrappedChatKey: chat.wrappedChatKey }}
+                                                media={message.media}
                                                 className={styles.mediaVideo}
-                                                src={getMediaUrl(message.media.id)}
-                                                controls
+                                                placeholderClassName={styles.videoPlaceholder}
+                                                playIconClassName={styles.videoPlayIcon}
                                             />
                                             {bareMedia && (
                                                 <span className={styles.mediaTime}>
@@ -866,12 +925,13 @@ export default function ChatWindow({
                                         </div>
                                     )}
                                     {message.type === "file" && message.media && (
-                                        <a
+                                        <button
+                                            type="button"
                                             className={styles.fileCard}
-                                            href={getMediaUrl(message.media.id)}
-                                            download={message.media.fileName}
-                                            target="_blank"
-                                            rel="noreferrer"
+                                            onClick={() => downloadMediaToDisk(
+                                                { id: chat.id, wrappedChatKey: chat.wrappedChatKey },
+                                                message.media!,
+                                            )}
                                         >
                                             <span className={styles.fileIcon}>
                                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -883,7 +943,7 @@ export default function ChatWindow({
                                                 <span className={styles.fileName}>{message.media.fileName}</span>
                                                 <span className={styles.fileSize}>{formatFileSize(message.media.sizeBytes)}</span>
                                             </span>
-                                        </a>
+                                        </button>
                                     )}
                                     {message.type !== "text" && message.content && (
                                         <span className={`${styles.content} ${styles.mediaCaption}`}>
@@ -1099,8 +1159,9 @@ export default function ChatWindow({
                                                 <path d="M7 9v6M11 9v6M11 12h2M16 9v6M16 9h3M16 12h2" />
                                             </svg>
                                         </button>
-                                        {gifPickerOpen && (
+                                        {gifPickerOpen && savedChat && (
                                             <GifPicker
+                                                savedChat={savedChat}
                                                 onClose={() => setGifPickerOpen(false)}
                                                 onSelect={handleSendGif}
                                             />

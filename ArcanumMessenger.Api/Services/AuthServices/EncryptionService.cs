@@ -22,17 +22,21 @@ public class EncryptionService(IConfiguration config)
 
     public byte[] GenerateDek() => RandomNumberGenerator.GetBytes(KeySize);
 
-    public string WrapDek(byte[] dek) => EncryptBytes(dek, _kek);
+    public string WrapDek(byte[] dek) => Convert.ToBase64String(EncryptBytes(dek, _kek));
 
-    public byte[] UnwrapDek(string wrappedDek) => DecryptBytes(wrappedDek, _kek);
+    public byte[] UnwrapDek(string wrappedDek) => DecryptBytes(Convert.FromBase64String(wrappedDek), _kek);
 
     public string Encrypt(string plainText, byte[] dek) =>
-        EncryptBytes(Encoding.UTF8.GetBytes(plainText), dek);
+        Convert.ToBase64String(EncryptBytes(Encoding.UTF8.GetBytes(plainText), dek));
 
     public string Decrypt(string cipherText, byte[] dek) =>
-        Encoding.UTF8.GetString(DecryptBytes(cipherText, dek));
+        Encoding.UTF8.GetString(DecryptBytes(Convert.FromBase64String(cipherText), dek));
 
-    private static string EncryptBytes(byte[] plainBytes, byte[] key)
+    // Raw (non-base64) variants for binary blobs going straight into object
+    // storage (e.g. avatars) rather than a text DB column - same
+    // nonce||tag||ciphertext layout, just without the base64 wrapping the
+    // string-based Encrypt/Decrypt above add for text columns.
+    public static byte[] EncryptBytes(byte[] plainBytes, byte[] key)
     {
         var nonce = RandomNumberGenerator.GetBytes(NonceSize);
         var cipherBytes = new byte[plainBytes.Length];
@@ -48,13 +52,11 @@ public class EncryptionService(IConfiguration config)
         tag.CopyTo(result, nonce.Length);
         cipherBytes.CopyTo(result, nonce.Length + tag.Length);
 
-        return Convert.ToBase64String(result);
+        return result;
     }
 
-    private static byte[] DecryptBytes(string cipherText, byte[] key)
+    public static byte[] DecryptBytes(byte[] fullBytes, byte[] key)
     {
-        var fullBytes = Convert.FromBase64String(cipherText);
-
         var nonce = fullBytes[..NonceSize];
         var tag = fullBytes[NonceSize..(NonceSize + TagSize)];
         var cipherBytes = fullBytes[(NonceSize + TagSize)..];
