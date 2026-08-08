@@ -88,9 +88,12 @@ export interface RegisterTranslation {
     downloadRecoveryKit: string;
     savedBothPhrases: string;
     pleaseConfirmSavedPhrases: string;
+    emailTaken: string;
+
+    step5Title: string;
+    step5Subtitle: string;
     creatingAccount: string;
     createAccountButton: string;
-    emailTaken: string;
 
     modalTitle: string;
     modalText1: string;
@@ -317,9 +320,12 @@ export const REGISTER_TRANSLATIONS: Record<Language, RegisterTranslation> = {
         savedBothPhrases: "I've saved both recovery phrases somewhere safe",
         pleaseConfirmSavedPhrases:
             "Please confirm you've saved your recovery phrases",
+        emailTaken: "This email is already registered – try signing in instead",
+
+        step5Title: "Choose your language",
+        step5Subtitle: "You can always change this later in settings",
         creatingAccount: "Creating account…",
         createAccountButton: "Create account",
-        emailTaken: "This email is already registered – try signing in instead",
 
         modalTitle: "About your email",
         modalText1:
@@ -379,10 +385,13 @@ export const REGISTER_TRANSLATIONS: Record<Language, RegisterTranslation> = {
         savedBothPhrases: "Я зберіг обидві фрази відновлення в безпечному місці",
         pleaseConfirmSavedPhrases:
             "Будь ласка, підтвердьте, що зберегли фрази відновлення",
-        creatingAccount: "Створення акаунту…",
-        createAccountButton: "Створити акаунт",
         emailTaken:
             "Цей email вже зареєстровано – спробуйте увійти замість реєстрації",
+
+        step5Title: "Виберіть мову інтерфейсу",
+        step5Subtitle: "Ви завжди можете змінити це пізніше в налаштуваннях",
+        creatingAccount: "Створення акаунту…",
+        createAccountButton: "Створити акаунт",
 
         modalTitle: "Про вашу електронну пошту",
         modalText1:
@@ -446,10 +455,13 @@ export const REGISTER_TRANSLATIONS: Record<Language, RegisterTranslation> = {
             "Ich habe beide Wiederherstellungsphrasen sicher aufbewahrt",
         pleaseConfirmSavedPhrases:
             "Bitte bestätige, dass du deine Wiederherstellungsphrasen gespeichert hast",
-        creatingAccount: "Konto wird erstellt…",
-        createAccountButton: "Konto erstellen",
         emailTaken:
             "Diese E-Mail ist bereits registriert – melde dich stattdessen an",
+
+        step5Title: "Wähle deine Sprache",
+        step5Subtitle: "Du kannst das später jederzeit in den Einstellungen ändern",
+        creatingAccount: "Konto wird erstellt…",
+        createAccountButton: "Konto erstellen",
 
         modalTitle: "Über deine E-Mail",
         modalText1:

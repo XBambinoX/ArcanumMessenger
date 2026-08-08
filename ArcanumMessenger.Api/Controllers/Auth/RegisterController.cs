@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using ArcanumMessenger.Services.AuthServices;
 using ArcanumMessenger.Services.AuthServices.RegisterServices;
 using ArcanumMessenger.Entities;
+using ArcanumMessenger.Controllers.Messenger;
 using System.Security.Cryptography;
 
 namespace ArcanumMessenger.Controllers.Auth;
@@ -275,6 +276,14 @@ public class RegisterController(
         if (await authService.IsEmailExist(emailHash, ct))
             return Conflict(new FinalizeRegistrationResponse(Success: false, Reason: "email_taken"));
 
+        var language = "en";
+        if (request.Language is not null)
+        {
+            if (!PrivacyEnumConverters.TryParseLanguages(request.Language, out _))
+                return BadRequest(new FinalizeRegistrationResponse(Success: false, Reason: "invalid_language"));
+            language = request.Language;
+        }
+
         // One DEK per user encrypts all of their profile fields. It is stored
         // only in its wrapped (KEK-encrypted) form — the KEK itself never
         // enters the database.
@@ -328,6 +337,7 @@ public class RegisterController(
                 UserId = userId,
                 UsernameEnc = usernameEnc,
                 EmailEnc = publicEmailEnc,
+                Language = language,
                 UpdatedAt = now
             }
         };

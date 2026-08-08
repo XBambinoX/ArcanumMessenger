@@ -17,16 +17,27 @@ import { toBase64 } from "../crypto/encoding";
 import { useNavigate } from "react-router";
 import zxcvbn from "zxcvbn";
 import { downloadRecoveryPdf } from "../utils/recoveryPdf";
-import { useLanguage } from "../lib/language";
+import {
+    useLanguage,
+    getLanguage,
+    setLanguage,
+    type Language,
+} from "../lib/language";
 import {
     AUTH_COMMON,
     REGISTER_TRANSLATIONS,
     type AuthCommonTranslation,
 } from "../lib/authTranslations";
 
-type Step = 0 | 1 | 2 | 3 | 4;
+type Step = 0 | 1 | 2 | 3 | 4 | 5;
 
-const STEP_COUNT = 5;
+const STEP_COUNT = 6;
+
+const INTERFACE_LANGUAGE_OPTIONS: { id: Language; label: string }[] = [
+    { id: "en", label: "English" },
+    { id: "uk", label: "Українська" },
+    { id: "de", label: "Deutsch" },
+];
 const CODE_LENGTH = 6;
 const RESEND_COOLDOWN = 30; // seconds
 
@@ -43,6 +54,9 @@ export default function RegisterPage() {
     const [code, setCode] = useState<string[]>(Array(CODE_LENGTH).fill(""));
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+    const [interfaceLanguage, setInterfaceLanguage] = useState<Language>(
+        getLanguage(),
+    );
 
     // ── Per-step error / loading state ──
     const [error, setError] = useState<string>("");
@@ -300,7 +314,7 @@ export default function RegisterPage() {
         }
     };
 
-    const handleRecoverySubmit = async () => {
+    const handleRecoveryConfirmSubmit = async () => {
         if (!recoveryConfirmChecked) {
             setError(tr.pleaseConfirmSavedPhrases);
             return;
@@ -327,7 +341,21 @@ export default function RegisterPage() {
                 return;
             }
 
-            const { success, reason } = await finalizeRegistration(sessionId!);
+            goNext();
+        } catch {
+            setError(common.somethingWrongTryAgain);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleFinalizeSubmit = async () => {
+        setLoading(true);
+        try {
+            const { success, reason } = await finalizeRegistration(
+                sessionId!,
+                interfaceLanguage,
+            );
             if (!success) {
                 setError(
                     reason === "email_taken"
@@ -339,6 +367,7 @@ export default function RegisterPage() {
                 return;
             }
 
+            setLanguage(interfaceLanguage);
             navigate("/welcome");
         } catch {
             setError(common.somethingWrongTryAgain);
@@ -397,6 +426,10 @@ export default function RegisterPage() {
         {
             title: tr.step4Title,
             subtitle: tr.step4Subtitle,
+        },
+        {
+            title: tr.step5Title,
+            subtitle: tr.step5Subtitle,
         },
     ];
 
@@ -898,8 +931,69 @@ export default function RegisterPage() {
                             <div className={styles.actions}>
                                 <button
                                     className={styles.btnPrimary}
-                                    onClick={handleRecoverySubmit}
+                                    onClick={handleRecoveryConfirmSubmit}
                                     disabled={loading || !recoveryLoaded}
+                                >
+                                    {loading
+                                        ? common.checking
+                                        : common.continueLabel}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* ── STEP 5: Interface language ── */}
+                        <div className={styles.slide}>
+                            <h2 className={styles.stepTitle}>
+                                {stepTitles[5].title}
+                            </h2>
+                            <p className={styles.stepSubtitle}>
+                                {stepTitles[5].subtitle}
+                            </p>
+
+                            <div className={styles.langGrid}>
+                                {INTERFACE_LANGUAGE_OPTIONS.map((opt) => (
+                                    <button
+                                        key={opt.id}
+                                        type="button"
+                                        className={`${styles.langOption} ${interfaceLanguage === opt.id ? styles.langOptionActive : ""}`}
+                                        onClick={() =>
+                                            setInterfaceLanguage(opt.id)
+                                        }
+                                    >
+                                        {opt.label}
+                                        {interfaceLanguage === opt.id && (
+                                            <svg
+                                                className={styles.langCheck}
+                                                width="18"
+                                                height="18"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                strokeWidth="2.5"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                            >
+                                                <path d="M20 6L9 17l-5-5" />
+                                            </svg>
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {error && step === 5 && (
+                                <p
+                                    className={styles.errorText}
+                                    style={{ textAlign: "center" }}
+                                >
+                                    {error}
+                                </p>
+                            )}
+
+                            <div className={styles.actions}>
+                                <button
+                                    className={styles.btnPrimary}
+                                    onClick={handleFinalizeSubmit}
+                                    disabled={loading}
                                 >
                                     {loading
                                         ? tr.creatingAccount
