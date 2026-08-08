@@ -18,6 +18,9 @@ import AvatarImage from "./AvatarImage";
 import AdminListPanel from "./AdminListPanel";
 import MembersManagePanel from "./MembersManagePanel";
 import styles from "./ChatInfoPanel.module.css";
+import { useLanguage } from "../lib/language";
+import { APP_COMMON } from "../lib/appTranslations";
+import { CHAT_INFO_TRANSLATIONS, type ChatInfoPanelTranslation } from "../lib/chatManagementTranslations";
 
 interface ChatInfoPanelProps {
     chat: ChatSummary;
@@ -33,10 +36,14 @@ interface PresenceInfo {
     lastSeen: string | null;
 }
 
-function statusLabel(presence: PresenceInfo | undefined): string {
+function statusLabel(
+    presence: PresenceInfo | undefined,
+    tr: ChatInfoPanelTranslation,
+    online: string,
+): string {
     if (!presence) return "";
-    if (presence.isOnline) return "online";
-    return presence.lastSeen ? `last seen ${formatChatTime(presence.lastSeen)}` : "offline";
+    if (presence.isOnline) return online;
+    return presence.lastSeen ? `${tr.lastSeenPrefix}${formatChatTime(presence.lastSeen)}` : tr.offlineStatus;
 }
 
 function sortMembers(members: ChatMemberInfo[]): ChatMemberInfo[] {
@@ -51,6 +58,9 @@ function sortMembers(members: ChatMemberInfo[]): ChatMemberInfo[] {
 export default function ChatInfoPanel({
     chat, connection, onClose, onChatRemoved, chatAvatarNonce, onChatAvatarChanged,
 }: ChatInfoPanelProps) {
+    const language = useLanguage();
+    const common = APP_COMMON[language];
+    const tr = CHAT_INFO_TRANSLATIONS[language];
     const [confirming, setConfirming] = useState(false);
     const [busy, setBusy] = useState(false);
     const [description, setDescription] = useState<string | null>(null);
@@ -189,7 +199,7 @@ export default function ChatInfoPanel({
                 <button
                     className={styles.closeBtn}
                     onClick={onClose}
-                    aria-label="Close"
+                    aria-label={tr.closeAria}
                 >
                     <svg
                         width="16"
@@ -209,73 +219,73 @@ export default function ChatInfoPanel({
                         {chat.type === "group" ? (
                             isOwner ? (
                                 <>
-                                    <h3 className={styles.confirmTitle}>Delete group?</h3>
+                                    <h3 className={styles.confirmTitle}>{tr.deleteGroupTitle}</h3>
                                     <p className={styles.confirmText}>
-                                        This deletes "{chat.title}" for everyone in it.
+                                        {tr.deleteGroupText(chat.title)}
                                     </p>
                                     <button
                                         className={styles.dangerBtn}
                                         onClick={() => handleDelete(true)}
                                         disabled={busy}
                                     >
-                                        Delete group
+                                        {tr.deleteGroupButton}
                                     </button>
                                     <button
                                         className={styles.cancelBtn}
                                         onClick={() => setConfirming(false)}
                                         disabled={busy}
                                     >
-                                        Cancel
+                                        {common.cancel}
                                     </button>
                                 </>
                             ) : (
                                 <>
-                                    <h3 className={styles.confirmTitle}>Leave group?</h3>
+                                    <h3 className={styles.confirmTitle}>{tr.leaveGroupTitle}</h3>
                                     <p className={styles.confirmText}>
-                                        You won't receive messages from "{chat.title}" anymore.
+                                        {tr.leaveGroupText(chat.title)}
                                     </p>
                                     <button
                                         className={styles.dangerBtn}
                                         onClick={handleLeave}
                                         disabled={busy}
                                     >
-                                        Leave group
+                                        {tr.leaveGroupButton}
                                     </button>
                                     <button
                                         className={styles.cancelBtn}
                                         onClick={() => setConfirming(false)}
                                         disabled={busy}
                                     >
-                                        Cancel
+                                        {common.cancel}
                                     </button>
                                 </>
                             )
                         ) : (
                             <>
-                                <h3 className={styles.confirmTitle}>Delete chat?</h3>
+                                <h3 className={styles.confirmTitle}>{tr.deleteChatTitle}</h3>
                                 <p className={styles.confirmText}>
-                                    Choose who this disappears for.
+                                    {tr.deleteChatText}
                                 </p>
                                 <button
                                     className={styles.dangerBtn}
                                     onClick={() => handleDelete(false)}
                                     disabled={busy}
                                 >
-                                    Delete for me
+                                    {tr.deleteForMe}
                                 </button>
                                 <button
                                     className={styles.dangerBtn}
                                     onClick={() => handleDelete(true)}
                                     disabled={busy}
                                 >
-                                    Delete for everyone
+                                    {tr.deleteForEveryone}
                                 </button>
                                 <button
                                     className={styles.cancelBtn}
                                     onClick={() => setConfirming(false)}
                                     disabled={busy}
                                 >
-                                    Cancel
+                                    {common.cancel}
                                 </button>
                             </>
                         )}
@@ -326,14 +336,14 @@ export default function ChatInfoPanel({
                             </span>
                             <span className={styles.chatSubtitle}>
                                 {chat.type === "group"
-                                    ? `${members.length} member${members.length === 1 ? "" : "s"}`
+                                    ? tr.membersCount(members.length)
                                     : chat.type === "saved"
-                                    ? "Saved Messages"
-                                    : "Direct chat"}
+                                    ? tr.savedMessages
+                                    : tr.directChat}
                             </span>
                             {chat.type === "group" && isAdmin && (
                                 <button className={styles.avatarRemoveBtn} onClick={handleRemoveAvatar}>
-                                    Remove photo
+                                    {tr.removePhoto}
                                 </button>
                             )}
                         </div>
@@ -356,7 +366,7 @@ export default function ChatInfoPanel({
                                                 <path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z" />
                                             </svg>
                                         </span>
-                                        <span className={styles.adminListLabel}>Admins</span>
+                                        <span className={styles.adminListLabel}>{tr.adminsLabel}</span>
                                         <span className={styles.adminListCount}>
                                             {members.filter((m) => m.isOwner || m.role === "admin").length}
                                         </span>
@@ -378,14 +388,14 @@ export default function ChatInfoPanel({
                                                     <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                                                 </svg>
                                             </span>
-                                            <span className={styles.adminListLabel}>Manage members</span>
+                                            <span className={styles.adminListLabel}>{tr.manageMembersLabel}</span>
                                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                 <path d="M9 18l6-6-6-6" />
                                             </svg>
                                         </button>
                                     )}
 
-                                    <h3 className={styles.membersTitle}>Members</h3>
+                                    <h3 className={styles.membersTitle}>{tr.membersHeading}</h3>
                                     <ul className={styles.memberList}>
                                         {members.map((member) => {
                                             const info = presence[member.userId];
@@ -403,13 +413,13 @@ export default function ChatInfoPanel({
                                                         <span
                                                             className={`${styles.memberStatus} ${info?.isOnline ? styles.memberStatusOnline : ""}`}
                                                         >
-                                                            {statusLabel(info)}
+                                                            {statusLabel(info, tr, common.online)}
                                                         </span>
                                                     </div>
                                                     {member.isOwner ? (
-                                                        <span className={styles.ownerBadge}>owner</span>
+                                                        <span className={styles.ownerBadge}>{tr.ownerBadge}</span>
                                                     ) : member.role === "admin" && (
-                                                        <span className={styles.adminBadge}>admin</span>
+                                                        <span className={styles.adminBadge}>{tr.adminBadge}</span>
                                                     )}
                                                 </li>
                                             );
@@ -421,18 +431,18 @@ export default function ChatInfoPanel({
                             <section className={styles.infoSection}>
                                 <div className={styles.infoRow}>
                                     <span className={styles.infoLabel}>
-                                        Media
+                                        {tr.mediaLabel}
                                     </span>
                                     <span className={styles.infoValue}>
-                                        No media yet
+                                        {tr.noMediaYet}
                                     </span>
                                 </div>
                                 <div className={styles.infoRow}>
                                     <span className={styles.infoLabel}>
-                                        Messages
+                                        {tr.messagesLabel}
                                     </span>
                                     <span className={styles.infoValue}>
-                                        Coming soon
+                                        {tr.comingSoon}
                                     </span>
                                 </div>
                             </section>
@@ -459,7 +469,7 @@ export default function ChatInfoPanel({
                                         <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z" />
                                     )}
                                 </svg>
-                                {chat.type === "group" ? (isOwner ? "Delete group" : "Leave group") : "Delete chat"}
+                                {chat.type === "group" ? (isOwner ? tr.deleteGroupButton : tr.leaveGroupButton) : tr.deleteChatButton}
                             </button>
                         )}
                     </>

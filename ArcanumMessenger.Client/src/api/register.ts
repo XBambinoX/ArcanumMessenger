@@ -91,12 +91,13 @@ export async function confirmRecovery(
 
 export async function finalizeRegistration(
     sessionId: string,
+    language?: string,
 ): Promise<{ success: boolean; reason?: string }> {
     const res = await apiFetch("/api/register/finalize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ sessionId }),
+        body: JSON.stringify({ sessionId, language }),
     });
     return res.json();
 }

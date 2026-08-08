@@ -2,6 +2,8 @@ import type { ChatMemberInfo } from "../api/chats";
 import { getUserAvatarUrl } from "../api/users";
 import AvatarImage from "./AvatarImage";
 import styles from "./AdminListPanel.module.css";
+import { useLanguage } from "../lib/language";
+import { ADMIN_LIST_TRANSLATIONS } from "../lib/chatManagementTranslations";
 
 interface AdminListPanelProps {
     members: ChatMemberInfo[];
@@ -20,6 +22,7 @@ export default function AdminListPanel({
     onDemote,
     onClose,
 }: AdminListPanelProps) {
+    const tr = ADMIN_LIST_TRANSLATIONS[useLanguage()];
     const owner = members.find((m) => m.isOwner);
     const admins = members.filter((m) => !m.isOwner && m.role === "admin");
     const others = members.filter((m) => !m.isOwner && m.role !== "admin");
@@ -31,11 +34,11 @@ export default function AdminListPanel({
                 onClick={(e) => e.stopPropagation()}
             >
                 <header className={styles.header}>
-                    <h2 className={styles.title}>Admins</h2>
+                    <h2 className={styles.title}>{tr.title}</h2>
                     <button
                         className={styles.closeBtn}
                         onClick={onClose}
-                        aria-label="Close"
+                        aria-label={tr.closeAria}
                     >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
                             <path d="M18 6L6 18M6 6l12 12" />
@@ -44,7 +47,7 @@ export default function AdminListPanel({
                 </header>
 
                 {!isOwner && (
-                    <p className={styles.note}>Only the group owner can add or remove admins.</p>
+                    <p className={styles.note}>{tr.ownerOnlyNote}</p>
                 )}
 
                 <ul className={styles.memberList}>
@@ -57,7 +60,7 @@ export default function AdminListPanel({
                                 />
                             </div>
                             <span className={styles.memberName}>{owner.name}</span>
-                            <span className={styles.ownerBadge}>owner</span>
+                            <span className={styles.ownerBadge}>{tr.ownerBadge}</span>
                         </li>
                     )}
                     {admins.map((member) => (
@@ -75,10 +78,10 @@ export default function AdminListPanel({
                                     onClick={() => onDemote(member.userId)}
                                     disabled={roleActionId === member.userId}
                                 >
-                                    Remove
+                                    {tr.removeButton}
                                 </button>
                             ) : (
-                                <span className={styles.adminBadge}>admin</span>
+                                <span className={styles.adminBadge}>{tr.adminBadge}</span>
                             )}
                         </li>
                     ))}
@@ -86,9 +89,9 @@ export default function AdminListPanel({
 
                 {isOwner && (
                     <>
-                        <h3 className={styles.sectionTitle}>Add admins</h3>
+                        <h3 className={styles.sectionTitle}>{tr.addAdminsHeading}</h3>
                         {others.length === 0 ? (
-                            <p className={styles.note}>Everyone in this group is already an admin.</p>
+                            <p className={styles.note}>{tr.everyoneIsAdminNote}</p>
                         ) : (
                             <ul className={styles.memberList}>
                                 {others.map((member) => (
@@ -105,7 +108,7 @@ export default function AdminListPanel({
                                             onClick={() => onPromote(member.userId)}
                                             disabled={roleActionId === member.userId}
                                         >
-                                            Add
+                                            {tr.addButton}
                                         </button>
                                     </li>
                                 ))}

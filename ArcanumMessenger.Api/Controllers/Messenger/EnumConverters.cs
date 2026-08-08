@@ -61,4 +61,15 @@ internal static class PrivacyEnumConverters
             default: result = default; return false;
         }
     }
+
+    public static bool TryParseLanguages(string value, out Languages result)
+    {
+        switch (value)
+        {
+            case "en": result = Languages.En; return true;
+            case "uk": result = Languages.Uk; return true;
+            case "de": result = Languages.De; return true;
+            default: result = default; return false;
+        }
+    }
 }

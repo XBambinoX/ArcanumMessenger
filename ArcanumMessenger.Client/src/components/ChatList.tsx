@@ -4,6 +4,8 @@ import { getUserAvatarUrl } from "../api/users";
 import { getChatAvatarUrl } from "../api/chats";
 import AvatarImage from "./AvatarImage";
 import styles from "./ChatList.module.css";
+import { useLanguage } from "../lib/language";
+import { CHAT_LIST_TRANSLATIONS } from "../lib/appTranslations";
 
 interface PresenceInfo {
     isOnline: boolean;
@@ -27,8 +29,10 @@ export default function ChatList({
     presence,
     chatAvatarNonce,
 }: ChatListProps) {
+    const tr = CHAT_LIST_TRANSLATIONS[useLanguage()];
+
     if (chats.length === 0) {
-        return <p className={styles.empty}>No chats here yet</p>;
+        return <p className={styles.empty}>{tr.noChatsYet}</p>;
     }
 
     return (
@@ -99,13 +103,13 @@ export default function ChatList({
                                         tabIndex={0}
                                         aria-label={
                                             chat.isArchived
-                                                ? "Unarchive"
-                                                : "Archive"
+                                                ? tr.unarchiveAria
+                                                : tr.archiveAria
                                         }
                                         title={
                                             chat.isArchived
-                                                ? "Unarchive"
-                                                : "Archive"
+                                                ? tr.unarchiveAria
+                                                : tr.archiveAria
                                         }
                                         onClick={(e) => {
                                             e.stopPropagation();
@@ -149,7 +153,7 @@ export default function ChatList({
                                 </div>
                                 <div className={styles.bottomRow}>
                                     <span className={styles.preview}>
-                                        {chat.lastMessageText ?? "No messages yet"}
+                                        {chat.lastMessageText ?? tr.noMessagesYet}
                                     </span>
                                     {chat.unreadCount > 0 && (
                                         <span

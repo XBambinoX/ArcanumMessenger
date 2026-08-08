@@ -18,6 +18,7 @@ public record UserSettingsResponse(
     string ShowEmail,         // "everyone" | "contacts" | "nobody"
     string WhoCanAddMe,       // "everyone" | "contacts"
     string Theme,
+    string Language,
     string Wallpaper,
     bool LinkPreviewsEnabled,
     bool AutoDownloadMedia
@@ -53,6 +54,7 @@ public record UpdatePrivacySettingsRequest(
 
 public record UpdateChatSettingsRequest(
     string? Theme,
+    string? Language,
     string? Wallpaper,
     bool? LinkPreviewsEnabled,
     bool? AutoDownloadMedia

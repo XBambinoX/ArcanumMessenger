@@ -3,6 +3,8 @@ import { getSavedGifs } from "../api/media";
 import { EncryptedImage, EncryptedGifVideo, type KeyedChat } from "./EncryptedMedia";
 import { useEffect, useState } from "react";
 import styles from "./GifPicker.module.css";
+import { useLanguage } from "../lib/language";
+import { GIF_PICKER_TRANSLATIONS } from "../lib/chatWindowTranslations";
 
 // A gif "sent as video" has no thumbnail (thumbnails are only generated for
 // real image/gif files at upload time, before the sender's later choice to
@@ -18,6 +20,7 @@ interface GifPickerProps {
 }
 
 export default function GifPicker({ savedChat, onClose, onSelect }: GifPickerProps) {
+    const tr = GIF_PICKER_TRANSLATIONS[useLanguage()];
     const [gifs, setGifs] = useState<SavedGifEntry[]>([]);
     const [loaded, setLoaded] = useState(false);
 
@@ -31,8 +34,8 @@ export default function GifPicker({ savedChat, onClose, onSelect }: GifPickerPro
     return (
         <aside className={styles.panel}>
             <header className={styles.header}>
-                <h2 className={styles.title}>Saved GIFs</h2>
-                <button className={styles.closeBtn} onClick={onClose} aria-label="Close">
+                <h2 className={styles.title}>{tr.title}</h2>
+                <button className={styles.closeBtn} onClick={onClose} aria-label={tr.closeAria}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
                         <path d="M18 6L6 18M6 6l12 12" />
                     </svg>
@@ -41,7 +44,7 @@ export default function GifPicker({ savedChat, onClose, onSelect }: GifPickerPro
 
             {loaded && gifs.length === 0 && (
                 <p className={styles.note}>
-                    No saved GIFs yet - send or receive one, then save it from the chat to see it here.
+                    {tr.noGifsYet}
                 </p>
             )}
 
@@ -67,3 +70,4 @@ export default function GifPicker({ savedChat, onClose, onSelect }: GifPickerPro
         </aside>
     );
 }
+

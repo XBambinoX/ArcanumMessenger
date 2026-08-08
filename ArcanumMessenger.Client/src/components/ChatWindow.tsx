@@ -20,6 +20,9 @@ import ForwardPanel from "./ForwardPanel";
 import AvatarImage from "./AvatarImage";
 import MessageContextMenu, { type MessageContextMenuItem } from "./MessageContextMenu";
 import styles from "./ChatWindow.module.css";
+import { useLanguage } from "../lib/language";
+import { APP_COMMON, type AppCommonTranslation } from "../lib/appTranslations";
+import { CHAT_WINDOW_TRANSLATIONS } from "../lib/chatWindowTranslations";
 
 // "Send as GIF" keeps the file as a real video (still efficient, still has
 // real dimensions) - it's just classified as a gif message. Rendering has
@@ -47,13 +50,13 @@ function appendUnique(prev: ChatMessage[], toAdd: ChatMessage[]): ChatMessage[] 
 
 // A reply/quote preview has no room for the full bubble, and a captionless
 // photo/video/gif has no text at all to show there otherwise.
-function replySnippet(message: ChatMessage): string {
+function replySnippet(message: ChatMessage, common: AppCommonTranslation): string {
     if (message.content) return message.content;
     switch (message.type) {
-        case "image": return "Photo";
-        case "video": return "Video";
-        case "gif": return "GIF";
-        case "file": return message.media?.fileName ?? "File";
+        case "image": return common.photo;
+        case "video": return common.video;
+        case "gif": return common.gif;
+        case "file": return message.media?.fileName ?? common.file;
         default: return "";
     }
 }
@@ -118,13 +121,13 @@ interface ChatWindowProps {
 
 const ANIMATE_MS = 260;
 
-function dayLabel(iso: string): string {
+function dayLabel(iso: string, common: AppCommonTranslation): string {
     const date = new Date(iso);
     const today = new Date();
     const yesterday = new Date(Date.now() - 86_400_000);
 
-    if (date.toDateString() === today.toDateString()) return "Today";
-    if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
+    if (date.toDateString() === today.toDateString()) return common.today;
+    if (date.toDateString() === yesterday.toDateString()) return common.yesterday;
     return date.toLocaleDateString([], {
         day: "numeric",
         month: "long",
@@ -134,6 +137,9 @@ function dayLabel(iso: string): string {
 export default function ChatWindow({
     chat, connection, onStartChat, onChatRemoved, presence, chatAvatarNonce, onChatAvatarChanged,
 }: ChatWindowProps) {
+    const language = useLanguage();
+    const common = APP_COMMON[language];
+    const tr = CHAT_WINDOW_TRANSLATIONS[language];
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [readStates, setReadStates] = useState<ChatReadState[]>([]);
     const [hasMore, setHasMore] = useState(false);
@@ -633,7 +639,7 @@ export default function ChatWindow({
         const media = message.media;
 
         items.push({
-            label: "Reply",
+            label: common.reply,
             onClick: () => {
                 setReplyTarget(message);
                 setEditTarget(null);
@@ -641,34 +647,34 @@ export default function ChatWindow({
         });
 
         if (message.content) {
-            items.push({ label: "Copy text", onClick: () => navigator.clipboard.writeText(message.content) });
+            items.push({ label: common.copyText, onClick: () => navigator.clipboard.writeText(message.content) });
         }
 
-        items.push({ label: "Forward", onClick: () => setForwardIds([message.id]) });
+        items.push({ label: common.forward, onClick: () => setForwardIds([message.id]) });
 
         items.push({
-            label: "Select",
+            label: common.select,
             onClick: () => {
                 setSelectMode(true);
                 setSelectedIds(new Set([message.id]));
             },
         });
 
-        if (message.type === "gif" && media) {
+          if (message.type === "gif" && media) {
             const isSaved = savedGifIds.has(media.id);
             items.push({
-                label: isSaved ? "Remove from GIFs" : "Save to GIFs",
-                onClick: () => handleToggleSaveGif(media),
+                label: isSaved ? tr.removeFromGifs : tr.saveToGifs,
+                onClick: () => handleToggleSaveGif(media.id),
             });
         }
 
         if (media) {
-            items.push({ label: "Save as…", onClick: () => handleSaveAs(media) });
+            items.push({ label: tr.saveAs, onClick: () => handleSaveAs(media) });
         }
 
         if (message.isOwn && message.type === "text") {
             items.push({
-                label: "Edit",
+                label: common.edit,
                 onClick: () => {
                     setEditTarget(message);
                     setDraft(message.content);
@@ -679,7 +685,7 @@ export default function ChatWindow({
         }
 
         if (message.isOwn) {
-            items.push({ label: "Delete message", danger: true, onClick: () => handleDeleteMessage(message.id) });
+            items.push({ label: tr.deleteMessage, danger: true, onClick: () => handleDeleteMessage(message.id) });
         }
 
         return items;
@@ -730,21 +736,21 @@ export default function ChatWindow({
                         className={`${styles.subtitle} ${presence?.isOnline ? styles.subtitleOnline : ""}`}
                     >
                         {chat.type === "group"
-                            ? "group chat"
+                            ? tr.groupChatSubtitle
                             : chat.type === "saved"
-                            ? "only visible to you"
+                            ? tr.onlyVisibleToYou
                             : presence?.isOnline
-                            ? "online"
+                            ? common.online
                             : presence?.lastSeen
-                                ? `last seen ${formatChatTime(presence.lastSeen)}`
-                                : "offline"}
+                                ? `${tr.lastSeenPrefix}${formatChatTime(presence.lastSeen)}`
+                                : common.offline}
                     </span>
                 </div>
                 <button
                     className={styles.infoBtn}
                     onClick={() => setChatInfoOpen(true)}
-                    aria-label="Chat info"
-                    title="Chat info"
+                    aria-label={tr.chatInfoAria}
+                    title={tr.chatInfoAria}
                 >
                     <svg
                         width="18"
@@ -768,7 +774,7 @@ export default function ChatWindow({
                 onScroll={handleScroll}
             >
                 {messages.length === 0 && (
-                    <p className={styles.noMessages}>No messages yet</p>
+                    <p className={styles.noMessages}>{tr.noMessagesYet}</p>
                 )}
 
                 {messages.map((message, i) => {
@@ -787,7 +793,7 @@ export default function ChatWindow({
                         <div key={message.id}>
                             {showDay && (
                                 <div className={styles.daySeparator}>
-                                    <span>{dayLabel(message.createdAt)}</span>
+                                    <span>{dayLabel(message.createdAt, common)}</span>
                                 </div>
                             )}
                             {message.type === "system" ? (
@@ -822,7 +828,7 @@ export default function ChatWindow({
                                             className={styles.forwardedLabel}
                                             onClick={() => handleForwardedSenderClick(message.forwardedFromSenderId!)}
                                         >
-                                            Forwarded from {message.forwardedFromSenderName}
+                                            {tr.forwardedFromPrefix}{message.forwardedFromSenderName}
                                         </span>
                                     )}
                                     {chat.type === "group" &&
@@ -844,7 +850,7 @@ export default function ChatWindow({
                                             <span
                                                 className={styles.replyText}
                                             >
-                                                {replySnippet(replyTo)}
+                                                {replySnippet(replyTo, common)}
                                             </span>
                                         </div>
                                     )}
@@ -954,7 +960,7 @@ export default function ChatWindow({
                                         <span className={styles.meta}>
                                             {message.isEdited && (
                                                 <span className={styles.edited}>
-                                                    edited
+                                                    {tr.editedLabel}
                                                 </span>
                                             )}
                                             {formatMessageTime(message.createdAt)}
@@ -978,45 +984,45 @@ export default function ChatWindow({
                         <button
                             className={styles.removeAttachmentBtn}
                             onClick={handleCancelSelect}
-                            aria-label="Cancel selection"
+                            aria-label={tr.cancelSelectionAria}
                         >
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
                                 <path d="M18 6L6 18M6 6l12 12" />
                             </svg>
                         </button>
-                        <span className={styles.selectionCount}>{selectedIds.size} selected</span>
+                        <span className={styles.selectionCount}>{tr.selectedCount(selectedIds.size)}</span>
                         <div className={styles.selectionActions}>
                             <button
                                 className={styles.selectionActionBtn}
                                 onClick={handleBulkCopy}
                                 disabled={selectedIds.size === 0}
                             >
-                                Copy
+                                {tr.copyButton}
                             </button>
                             <button
                                 className={styles.selectionActionBtn}
                                 onClick={() => setForwardIds(Array.from(selectedIds))}
                                 disabled={selectedIds.size === 0}
                             >
-                                Forward
+                                {common.forward}
                             </button>
                             <button
                                 className={`${styles.selectionActionBtn} ${styles.selectionActionDanger}`}
                                 onClick={handleBulkDelete}
                                 disabled={selectedIds.size === 0}
                             >
-                                Delete
+                                {common.delete}
                             </button>
                         </div>
                     </div>
                 ) : chat.isBlocked ? (
-                    <p className={styles.blockedNote}>You can't send messages in this chat</p>
+                    <p className={styles.blockedNote}>{tr.youCantSendMessages}</p>
                 ) : (
                     <>
                         {editTarget && (
                             <div className={styles.replyBar}>
                                 <div className={styles.replyBarText}>
-                                    <span className={styles.replyBarSender}>Editing message</span>
+                                    <span className={styles.replyBarSender}>{tr.editingMessage}</span>
                                     <span className={styles.replyBarSnippet}>{editTarget.content}</span>
                                 </div>
                                 <button
@@ -1025,7 +1031,7 @@ export default function ChatWindow({
                                         setEditTarget(null);
                                         setDraft("");
                                     }}
-                                    aria-label="Cancel edit"
+                                    aria-label={tr.cancelEditAria}
                                 >
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
                                         <path d="M18 6L6 18M6 6l12 12" />
@@ -1038,13 +1044,13 @@ export default function ChatWindow({
                                 <div className={styles.replyBarText}>
                                     <span className={styles.replyBarSender}>{replyTarget.senderName}</span>
                                     <span className={styles.replyBarSnippet}>
-                                        {replySnippet(replyTarget)}
+                                        {replySnippet(replyTarget, common)}
                                     </span>
                                 </div>
                                 <button
                                     className={styles.removeAttachmentBtn}
                                     onClick={() => setReplyTarget(null)}
-                                    aria-label="Cancel reply"
+                                    aria-label={tr.cancelReplyAria}
                                 >
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
                                         <path d="M18 6L6 18M6 6l12 12" />
@@ -1056,11 +1062,11 @@ export default function ChatWindow({
                             <div className={styles.pendingAttachment}>
                                 {uploadingFile ? (
                                     <>
-                                        <span className={styles.pendingUploading}>Uploading…</span>
+                                        <span className={styles.pendingUploading}>{tr.uploading}</span>
                                         <button
                                             className={styles.removeAttachmentBtn}
                                             onClick={handleCancelUpload}
-                                            aria-label="Cancel upload"
+                                            aria-label={tr.cancelUploadAria}
                                         >
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
                                                 <path d="M18 6L6 18M6 6l12 12" />
@@ -1081,7 +1087,7 @@ export default function ChatWindow({
                                         <button
                                             className={styles.removeAttachmentBtn}
                                             onClick={handleCancelUpload}
-                                            aria-label="Cancel upload"
+                                            aria-label={tr.cancelUploadAria}
                                         >
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
                                                 <path d="M18 6L6 18M6 6l12 12" />
@@ -1112,13 +1118,13 @@ export default function ChatWindow({
                                                     checked={sendAsGif}
                                                     onChange={(e) => setSendAsGif(e.target.checked)}
                                                 />
-                                                Send as GIF
+                                                {tr.sendAsGif}
                                             </label>
                                         )}
                                         <button
                                             className={styles.removeAttachmentBtn}
                                             onClick={handleRemovePendingMedia}
-                                            aria-label="Remove attachment"
+                                            aria-label={tr.removeAttachmentAria}
                                         >
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
                                                 <path d="M18 6L6 18M6 6l12 12" />
@@ -1140,8 +1146,8 @@ export default function ChatWindow({
                                     <button
                                         className={styles.attachBtn}
                                         onClick={handleAttachClick}
-                                        aria-label="Attach file"
-                                        title="Attach file"
+                                        aria-label={tr.attachFileAria}
+                                        title={tr.attachFileAria}
                                     >
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                             <path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.33 3.33 0 0 1 4.71 4.71l-9.2 9.19a1.67 1.67 0 0 1-2.36-2.36l8.49-8.48" />
@@ -1151,8 +1157,8 @@ export default function ChatWindow({
                                         <button
                                             className={styles.attachBtn}
                                             onClick={() => setGifPickerOpen((prev) => !prev)}
-                                            aria-label="Saved GIFs"
-                                            title="Saved GIFs"
+                                            aria-label={tr.savedGifsAria}
+                                            title={tr.savedGifsAria}
                                         >
                                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                 <rect x="3" y="5" width="18" height="14" rx="2" />
@@ -1173,8 +1179,8 @@ export default function ChatWindow({
                                 <button
                                     className={styles.attachBtn}
                                     onClick={() => setEmojiPickerOpen((prev) => !prev)}
-                                    aria-label="Emoji"
-                                    title="Emoji"
+                                    aria-label={tr.emojiAria}
+                                    title={tr.emojiAria}
                                 >
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                         <circle cx="12" cy="12" r="10" />
@@ -1193,7 +1199,7 @@ export default function ChatWindow({
                                 ref={draftInputRef}
                                 className={styles.input}
                                 type="text"
-                                placeholder="Message"
+                                placeholder={tr.messagePlaceholder}
                                 value={draft}
                                 onChange={(e) => setDraft(e.target.value)}
                                 onKeyDown={(e) => e.key === "Enter" && handleSend()}
@@ -1202,7 +1208,7 @@ export default function ChatWindow({
                                 className={styles.sendBtn}
                                 onClick={handleSend}
                                 disabled={!draft.trim() && !pendingMedia}
-                                aria-label="Send"
+                                aria-label={common.send}
                             >
                                 <svg
                                     width="18"

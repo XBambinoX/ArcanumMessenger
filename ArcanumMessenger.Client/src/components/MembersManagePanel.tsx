@@ -7,6 +7,8 @@ import { unwrapOwnChatKey, sealChatKeyFor } from "../lib/chatKeys";
 import type { UserSearchResult } from "../types/messenger";
 import AvatarImage from "./AvatarImage";
 import styles from "./MembersManagePanel.module.css";
+import { useLanguage } from "../lib/language";
+import { MEMBERS_MANAGE_TRANSLATIONS } from "../lib/chatManagementTranslations";
 
 const MIN_SEARCH_LENGTH = 4;
 const SEARCH_DEBOUNCE_MS = 350;
@@ -24,6 +26,7 @@ type Mode = "list" | "add";
 export default function MembersManagePanel({
     chatId, members, myWrappedChatKey, onMembersChanged, onClose,
 }: MembersManagePanelProps) {
+    const tr = MEMBERS_MANAGE_TRANSLATIONS[useLanguage()];
     const [mode, setMode] = useState<Mode>("list");
     const [removingId, setRemovingId] = useState<string | null>(null);
     const [search, setSearch] = useState("");
@@ -88,8 +91,8 @@ export default function MembersManagePanel({
         } else {
             setError(
                 reason === "restricted_members"
-                    ? "Someone you picked only accepts adds from their contacts."
-                    : "Couldn't add these members.",
+                    ? tr.restrictedMembersError
+                    : tr.couldntAddMembers,
             );
         }
     };
@@ -109,19 +112,19 @@ export default function MembersManagePanel({
                             <button
                                 className={styles.backBtn}
                                 onClick={() => setMode("list")}
-                                aria-label="Back"
+                                aria-label={tr.backAria}
                             >
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="M15 18l-6-6 6-6" />
                                 </svg>
                             </button>
                         )}
-                        <h2 className={styles.title}>{mode === "add" ? "Add members" : "Manage members"}</h2>
+                        <h2 className={styles.title}>{mode === "add" ? tr.addMembersTitle : tr.manageMembersTitle}</h2>
                     </div>
                     <button
                         className={styles.closeBtn}
                         onClick={onClose}
-                        aria-label="Close"
+                        aria-label={tr.closeAria}
                     >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
                             <path d="M18 6L6 18M6 6l12 12" />
@@ -137,7 +140,7 @@ export default function MembersManagePanel({
                                     <path d="M12 5v14M5 12h14" />
                                 </svg>
                             </span>
-                            Add members
+                            {tr.addMembersTitle}
                         </button>
 
                         <ul className={styles.memberList}>
@@ -151,9 +154,9 @@ export default function MembersManagePanel({
                                     </div>
                                     <span className={styles.memberName}>{member.name}</span>
                                     {member.isOwner ? (
-                                        <span className={styles.ownerBadge}>owner</span>
+                                        <span className={styles.ownerBadge}>{tr.ownerBadge}</span>
                                     ) : member.role === "admin" ? (
-                                        <span className={styles.adminBadge}>admin</span>
+                                        <span className={styles.adminBadge}>{tr.adminBadge}</span>
                                     ) : null}
                                     {!member.isOwner && !member.isSelf && (
                                         <button
@@ -161,7 +164,7 @@ export default function MembersManagePanel({
                                             onClick={() => handleRemove(member.userId)}
                                             disabled={removingId === member.userId}
                                         >
-                                            Remove
+                                            {tr.removeButton}
                                         </button>
                                     )}
                                 </li>
@@ -173,7 +176,7 @@ export default function MembersManagePanel({
                         <input
                             className={styles.search}
                             type="text"
-                            placeholder="Find a user by ID"
+                            placeholder={tr.findUserPlaceholder}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
@@ -186,7 +189,7 @@ export default function MembersManagePanel({
                                         <button
                                             className={styles.chipRemove}
                                             onClick={() => toggleSelected(candidate)}
-                                            aria-label={`Remove ${candidate.name}`}
+                                            aria-label={tr.removeChipAria(candidate.name)}
                                         >
                                             ×
                                         </button>
@@ -196,13 +199,13 @@ export default function MembersManagePanel({
                         )}
 
                         <h3 className={styles.sectionTitle}>
-                            {query.length > 0 ? "Search results" : "Contacts"}
+                            {query.length > 0 ? tr.searchResultsHeading : tr.contactsHeading}
                         </h3>
                         {query.length > 0 && query.length < MIN_SEARCH_LENGTH ? (
-                            <p className={styles.note}>Type at least {MIN_SEARCH_LENGTH} characters of the ID.</p>
+                            <p className={styles.note}>{tr.typeAtLeast(MIN_SEARCH_LENGTH)}</p>
                         ) : candidates.length === 0 ? (
                             <p className={styles.note}>
-                                {query.length > 0 ? "No matches." : "No contacts to add."}
+                                {query.length > 0 ? tr.noMatches : tr.noContactsToAdd}
                             </p>
                         ) : (
                             <ul className={styles.candidateList}>
@@ -237,7 +240,7 @@ export default function MembersManagePanel({
                             onClick={handleAdd}
                             disabled={selected.size === 0 || adding}
                         >
-                            {adding ? "Adding…" : `Add ${selected.size > 0 ? selected.size : ""} member${selected.size === 1 ? "" : "s"}`}
+                            {adding ? tr.adding : tr.addMembersCount(selected.size)}
                         </button>
                     </>
                 )}

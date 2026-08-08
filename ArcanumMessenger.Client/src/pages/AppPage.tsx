@@ -17,17 +17,13 @@ import NewChatPanel from "../components/NewChatPanel";
 import AvatarImage from "../components/AvatarImage";
 import type { ChatFolder, ChatMessage, ChatSummary, MessageType, User } from "../types/messenger";
 import styles from "./AppPage.module.css";
+import { useLanguage, getLanguage, setLanguage, type Language } from "../lib/language";
+import { APP_CHROME, APP_COMMON } from "../lib/appTranslations";
 
 interface PresenceInfo {
     isOnline: boolean;
     lastSeen: string | null;
 }
-
-const folders: { id: ChatFolder; label: string }[] = [
-    { id: "all", label: "All" },
-    { id: "unread", label: "Unread" },
-    { id: "archive", label: "Archive" },
-];
 
 const MIN_SIDEBAR_WIDTH = 260;
 const MAX_SIDEBAR_WIDTH = 480;
@@ -46,6 +42,15 @@ function readStoredSidebarWidth(): number {
 export default function AppPage() {
     const navigate = useNavigate();
     const { setAuthenticated } = useAuth();
+    const language = useLanguage();
+    const tr = APP_CHROME[language];
+    const common = APP_COMMON[language];
+
+    const folders: { id: ChatFolder; label: string }[] = [
+        { id: "all", label: tr.folderAll },
+        { id: "unread", label: tr.folderUnread },
+        { id: "archive", label: tr.folderArchive },
+    ];
 
     const [chats, setChats] = useState<ChatSummary[]>([]);
     const [profile, setProfile] = useState<User | null>(null);
@@ -139,7 +144,16 @@ export default function AppPage() {
         });
 
         getUserSettings().then((settings) => {
-            if (settings) setNotificationSettings(settings);
+            if (!settings) return;
+            setNotificationSettings(settings);
+
+            // The account's saved language preference is the source of
+            // truth on login - it may differ from whatever this browser
+            // last had stored (e.g. first time on a new device).
+            const accountLanguage = settings.language as Language;
+            if (accountLanguage && accountLanguage !== getLanguage()) {
+                setLanguage(accountLanguage);
+            }
         });
 
         requestDesktopNotificationPermission();
@@ -467,8 +481,8 @@ export default function AppPage() {
                         <button
                             className={styles.profileBtn}
                             onClick={() => setProfileOpen(true)}
-                            aria-label="Profile"
-                            title="Profile"
+                            aria-label={tr.profileAria}
+                            title={tr.profileAria}
                         >
                             <span className={styles.avatarBtn}>
                                 <AvatarImage
@@ -478,14 +492,14 @@ export default function AppPage() {
                             </span>
 
                             <span className={styles.profileName}>
-                                {displayName ?? profile?.name ?? "Loading..."}
+                                {displayName ?? profile?.name ?? common.loading}
                             </span>
                         </button>
                         <button
                             className={styles.iconBtn}
                             onClick={() => setNewChatOpen(true)}
-                            aria-label="New chat"
-                            title="New chat"
+                            aria-label={tr.newChatAria}
+                            title={tr.newChatAria}
                         >
                             <svg
                                 width="18"
@@ -504,7 +518,7 @@ export default function AppPage() {
                     <input
                         className={styles.search}
                         type="text"
-                        placeholder="Search"
+                        placeholder={tr.searchPlaceholder}
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
@@ -587,7 +601,7 @@ export default function AppPage() {
                             </defs>
                         </svg>
                         <p className={styles.emptyText}>
-                            Select a chat to start messaging
+                            {tr.emptyStateText}
                         </p>
                     </div>
                 )}
