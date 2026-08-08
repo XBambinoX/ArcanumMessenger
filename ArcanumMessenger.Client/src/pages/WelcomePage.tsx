@@ -9,6 +9,11 @@ import {
 import { useNavigate } from "react-router";
 import styles from "./WelcomePage.module.css";
 import LanguageSwitcher from "../components/LanguageSwitcher";
+import { useLanguage } from "../lib/language";
+import {
+    WELCOME_TRANSLATIONS,
+    type WelcomeTranslation,
+} from "../lib/welcomeTranslations";
 
 /* ── mouse glow ── */
 function useMouseGlow(ref: RefObject<HTMLDivElement | null>) {
@@ -74,9 +79,11 @@ function useParticles(ref: RefObject<HTMLCanvasElement | null>) {
 function WelcomeCard({
     onSignIn,
     onCreate,
+    tr,
 }: {
     onSignIn: () => void;
     onCreate: () => void;
+    tr: WelcomeTranslation;
 }) {
     return (
         <div className={styles.cardWelcome}>
@@ -90,10 +97,7 @@ function WelcomeCard({
                 <span className={styles.divStar}>✦</span>
                 <span className={styles.divLineR} />
             </div>
-            <p className={styles.wcTagline}>
-                Secure messaging for those who value privacy. Communicate
-                without limits – quickly, reliably, and fully encrypted.
-            </p>
+            <p className={styles.wcTagline}>{tr.welcomeCard.tagline}</p>
             <div className={styles.wcButtons}>
                 <button className={styles.btnPrimary} onClick={onSignIn}>
                     <svg
@@ -108,7 +112,7 @@ function WelcomeCard({
                     >
                         <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" />
                     </svg>
-                    Sign in
+                    {tr.common.signIn}
                 </button>
                 <button className={styles.btnSecondary} onClick={onCreate}>
                     <svg
@@ -125,15 +129,15 @@ function WelcomeCard({
                         <circle cx="9" cy="7" r="4" />
                         <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
                     </svg>
-                    Create account
+                    {tr.common.createAccount}
                 </button>
             </div>
-            <p className={styles.wcHint}>End-to-end encrypted · Open source</p>
+            <p className={styles.wcHint}>{tr.welcomeCard.hint}</p>
             <a
                 className={styles.wcVault}
                 href="https://github.com/Blackcat-404/AuthVault---password-manager"
             >
-                Also check out AuthVault →
+                {tr.welcomeCard.vaultLink}
             </a>
         </div>
     );
@@ -142,14 +146,9 @@ function WelcomeCard({
 /* ══════════════════════════════════════
    Animated chat
 ══════════════════════════════════════ */
-const MSGS = [
-    { from: "A", text: "Hey! Have you tried Arcanum yet?" },
-    { from: "S", text: "Just signed up. So fast" },
-    { from: "A", text: "And nobody can read this" },
-    { from: "S", text: "Finally a messenger I trust 🙏" },
-] as const;
+const MSG_FROM = ["A", "S", "A", "S"] as const;
 
-function AnimatedChat() {
+function AnimatedChat({ tr }: { tr: WelcomeTranslation }) {
     const [shown, setShown] = useState<number[]>([]);
     const [typing, setTyping] = useState<"A" | "S" | null>(null);
 
@@ -208,23 +207,23 @@ function AnimatedChat() {
             <div className={styles.chatHead}>
                 <div className={`${styles.av} ${styles.avS}`}>S</div>
                 <div className={styles.chatHeadInfo}>
-                    <div className={styles.chatName}>Sam</div>
+                    <div className={styles.chatName}>{tr.chat.samName}</div>
                     <div className={styles.chatStatus}>
                         <span className={styles.onlineDot} />
-                        online
+                        {tr.chat.online}
                     </div>
                 </div>
                 <span className={styles.chatMenuDots}>···</span>
             </div>
 
             <div className={styles.chatBody}>
-                {MSGS.map((m, i) =>
+                {MSG_FROM.map((from, i) =>
                     shown.includes(i) ? (
                         <div
                             key={i}
-                            className={`${styles.chatRow} ${m.from === "A" ? styles.chatRowOwn : ""}`}
+                            className={`${styles.chatRow} ${from === "A" ? styles.chatRowOwn : ""}`}
                         >
-                            {m.from !== "A" && (
+                            {from !== "A" && (
                                 <div
                                     className={`${styles.av} ${styles.avSm} ${styles.avS}`}
                                 >
@@ -232,11 +231,11 @@ function AnimatedChat() {
                                 </div>
                             )}
                             <div
-                                className={`${styles.bubble} ${m.from === "A" ? styles.bubbleOwn : styles.bubbleOther}`}
+                                className={`${styles.bubble} ${from === "A" ? styles.bubbleOwn : styles.bubbleOther}`}
                             >
-                                {m.text}
+                                {tr.chat.msgs[i]}
                             </div>
-                            {m.from === "A" && (
+                            {from === "A" && (
                                 <div
                                     className={`${styles.av} ${styles.avSm} ${styles.avA}`}
                                 >
@@ -276,8 +275,8 @@ function AnimatedChat() {
             </div>
 
             <div className={styles.chatFoot}>
-                <div className={styles.chatInput}>Type a message…</div>
-                <button className={styles.chatSend} aria-label="Send">
+                <div className={styles.chatInput}>{tr.chat.typeMessage}</div>
+                <button className={styles.chatSend} aria-label={tr.common.send}>
                     <svg
                         width="13"
                         height="13"
@@ -299,57 +298,49 @@ function AnimatedChat() {
 /* ══════════════════════════════════════
    Split cards (landscape: text left, visual right)
 ══════════════════════════════════════ */
-function ChatCard() {
+function ChatCard({ tr }: { tr: WelcomeTranslation }) {
     return (
         <div className={styles.cardSplit}>
             <div className={styles.splitInfo}>
-                <span className={styles.eyebrow}>Live preview</span>
-                <h2 className={styles.splitTitle}>Messages that stay yours</h2>
-                <p className={styles.splitDesc}>
-                    This is how Arcanum looks in action. Every message is
-                    encrypted on your device before it leaves – the server only
-                    ever relays ciphertext.
-                </p>
+                <span className={styles.eyebrow}>{tr.chatCard.eyebrow}</span>
+                <h2 className={styles.splitTitle}>{tr.chatCard.title}</h2>
+                <p className={styles.splitDesc}>{tr.chatCard.desc}</p>
                 <ul className={styles.bullets}>
-                    <li>End-to-end encrypted delivery</li>
-                    <li>Typing indicators in real time</li>
-                    <li>No plain-text storage, ever</li>
+                    {tr.chatCard.bullets.map((b) => (
+                        <li key={b}>{b}</li>
+                    ))}
                 </ul>
             </div>
             <div className={styles.splitVisual}>
-                <AnimatedChat />
+                <AnimatedChat tr={tr} />
             </div>
         </div>
     );
 }
 
-function PrivacyCard() {
+function PrivacyCard({ tr }: { tr: WelcomeTranslation }) {
+    const rows = [
+        { id: "username" as const, value: "••••••••••" },
+        { id: "email" as const, value: "••••••••••••••" },
+        { id: "password" as const, value: "••••••••" },
+        { id: "messages" as const, value: "••••••••••••" },
+    ];
     return (
         <div className={styles.cardSplit}>
             <div className={styles.splitInfo}>
-                <span className={styles.eyebrow}>Privacy</span>
-                <h2 className={styles.splitTitle}>Zero knowledge</h2>
-                <p className={styles.splitDesc}>
-                    Passwords and recovery phrases never leave your browser in
-                    plain form, and profile data is sealed with a separate
-                    encryption key for every user. Even a full database leak
-                    reveals nothing but ciphertext.
-                </p>
+                <span className={styles.eyebrow}>{tr.privacyCard.eyebrow}</span>
+                <h2 className={styles.splitTitle}>{tr.privacyCard.title}</h2>
+                <p className={styles.splitDesc}>{tr.privacyCard.desc}</p>
                 <div className={styles.featureTag}>AES-256-GCM · Argon2id</div>
             </div>
             <div className={styles.splitVisual}>
                 <div className={styles.privRows}>
-                    {(
-                        [
-                            ["username", "••••••••••"],
-                            ["email", "••••••••••••••"],
-                            ["password", "••••••••"],
-                            ["messages", "••••••••••••"],
-                        ] as const
-                    ).map(([k, v]) => (
-                        <div key={k} className={styles.privRow}>
-                            <span className={styles.privKey}>{k}</span>
-                            <span className={styles.privVal}>{v}</span>
+                    {rows.map((row) => (
+                        <div key={row.id} className={styles.privRow}>
+                            <span className={styles.privKey}>
+                                {tr.privacyCard.rowLabels[row.id]}
+                            </span>
+                            <span className={styles.privVal}>{row.value}</span>
                         </div>
                     ))}
                 </div>
@@ -358,16 +349,13 @@ function PrivacyCard() {
     );
 }
 
-function SpeedCard() {
+function SpeedCard({ tr }: { tr: WelcomeTranslation }) {
     return (
         <div className={styles.cardSplit}>
             <div className={styles.splitInfo}>
-                <span className={styles.eyebrow}>Performance</span>
-                <h2 className={styles.splitTitle}>Instant delivery</h2>
-                <p className={styles.splitDesc}>
-                    WebSocket connections with Redis pub/sub under the hood.
-                    Messages arrive before you blink – no polling, no delays.
-                </p>
+                <span className={styles.eyebrow}>{tr.speedCard.eyebrow}</span>
+                <h2 className={styles.splitTitle}>{tr.speedCard.title}</h2>
+                <p className={styles.splitDesc}>{tr.speedCard.desc}</p>
                 <div className={styles.featureTag}>SignalR · Redis Streams</div>
             </div>
             <div className={styles.splitVisual}>
@@ -376,7 +364,7 @@ function SpeedCard() {
                         <div className={styles.speedFill} />
                     </div>
                     <span className={styles.speedLabel}>
-                        delivered in milliseconds
+                        {tr.speedCard.label}
                     </span>
                 </div>
             </div>
@@ -384,38 +372,19 @@ function SpeedCard() {
     );
 }
 
-function SecurityCard() {
+function SecurityCard({ tr }: { tr: WelcomeTranslation }) {
     return (
         <div className={styles.cardSplit}>
             <div className={styles.splitInfo}>
-                <span className={styles.eyebrow}>Recovery</span>
-                <h2 className={styles.splitTitle}>Your keys, your control</h2>
-                <p className={styles.splitDesc}>
-                    No recovery emails, no support tickets. Forgot your
-                    password? Your secret passphrase – generated right in your
-                    browser, never sent anywhere – is all you need.
-                </p>
-                <div className={styles.featureTag}>
-                    12 words · Only you hold the keys
-                </div>
+                <span className={styles.eyebrow}>{tr.securityCard.eyebrow}</span>
+                <h2 className={styles.splitTitle}>{tr.securityCard.title}</h2>
+                <p className={styles.splitDesc}>{tr.securityCard.desc}</p>
+                <div className={styles.featureTag}>{tr.securityCard.tag}</div>
             </div>
             <div className={styles.splitVisual}>
                 <div className={styles.phraseGrid}>
-                    {[
-                        "forest",
-                        "moon",
-                        "river",
-                        "stone",
-                        "echo",
-                        "flame",
-                        "tide",
-                        "veil",
-                        "amber",
-                        "drift",
-                        "haze",
-                        "north",
-                    ].map((w) => (
-                        <span key={w} className={styles.phraseWord}>
+                    {tr.securityCard.phraseWords.map((w, i) => (
+                        <span key={i} className={styles.phraseWord}>
                             {w}
                         </span>
                     ))}
@@ -428,17 +397,7 @@ function SecurityCard() {
 /* ══════════════════════════════════════
    Carousel
 ══════════════════════════════════════ */
-const CARDS = [
-    { id: "welcome", label: "Arcanum Messenger", sub: "Your private space" },
-    { id: "chat", label: "Live preview", sub: "See Arcanum in action" },
-    { id: "privacy", label: "Zero knowledge", sub: "Your data. Your rules." },
-    { id: "speed", label: "Instant delivery", sub: "Messages in milliseconds" },
-    {
-        id: "security",
-        label: "Passphrase recovery",
-        sub: "Your keys. Your control.",
-    },
-];
+const CARD_IDS = ["welcome", "chat", "privacy", "speed", "security"] as const;
 
 function posOf(i: number, active: number, n: number): number {
     const d = (((i - active) % n) + n) % n;
@@ -464,8 +423,11 @@ function slideStyle(pos: number): CSSProperties {
    Page
 ══════════════════════════════════════ */
 export default function WelcomePage() {
-    const N = CARDS.length;
+    const N = CARD_IDS.length;
     const navigate = useNavigate();
+    const language = useLanguage();
+    const tr = WELCOME_TRANSLATIONS[language];
+    const cards = CARD_IDS.map((id) => ({ id, ...tr.cards[id] }));
     const [active, setActive] = useState(0);
     const [paused, setPaused] = useState(false);
 
@@ -503,12 +465,16 @@ export default function WelcomePage() {
     function CardContent({ id }: { id: string }) {
         if (id === "welcome")
             return (
-                <WelcomeCard onSignIn={handleSignIn} onCreate={handleCreate} />
+                <WelcomeCard
+                    onSignIn={handleSignIn}
+                    onCreate={handleCreate}
+                    tr={tr}
+                />
             );
-        if (id === "chat") return <ChatCard />;
-        if (id === "privacy") return <PrivacyCard />;
-        if (id === "speed") return <SpeedCard />;
-        return <SecurityCard />;
+        if (id === "chat") return <ChatCard tr={tr} />;
+        if (id === "privacy") return <PrivacyCard tr={tr} />;
+        if (id === "speed") return <SpeedCard tr={tr} />;
+        return <SecurityCard tr={tr} />;
     }
 
     const offWelcome = active !== 0;
@@ -538,10 +504,10 @@ export default function WelcomePage() {
                     className={`${styles.topActions} ${offWelcome ? styles.topShown : ""}`}
                 >
                     <button className={styles.topSignIn} onClick={handleSignIn}>
-                        Sign in
+                        {tr.common.signIn}
                     </button>
                     <button className={styles.topCreate} onClick={handleCreate}>
-                        Create account
+                        {tr.common.createAccount}
                     </button>
                 </div>
             </header>
@@ -552,7 +518,7 @@ export default function WelcomePage() {
                 onMouseEnter={() => setPaused(true)}
                 onMouseLeave={() => setPaused(false)}
             >
-                {CARDS.map((card, i) => {
+                {cards.map((card, i) => {
                     const pos = posOf(i, active, N);
                     return (
                         <div
@@ -578,7 +544,7 @@ export default function WelcomePage() {
             <button
                 className={`${styles.navBtn} ${styles.navPrev}`}
                 onClick={() => go(-1)}
-                aria-label="Previous"
+                aria-label={tr.common.previous}
             >
                 <svg
                     width="20"
@@ -595,7 +561,7 @@ export default function WelcomePage() {
             <button
                 className={`${styles.navBtn} ${styles.navNext}`}
                 onClick={() => go(1)}
-                aria-label="Next"
+                aria-label={tr.common.next}
             >
                 <svg
                     width="20"
@@ -612,9 +578,9 @@ export default function WelcomePage() {
 
             {/* ── bottom bar ── */}
             <div className={styles.bottomBar}>
-                <p className={styles.cardCaption}>{CARDS[active].sub}</p>
+                <p className={styles.cardCaption}>{cards[active].sub}</p>
                 <div className={styles.dots}>
-                    {CARDS.map((c, i) => (
+                    {cards.map((c, i) => (
                         <button
                             key={c.id}
                             className={`${styles.dot} ${i === active ? styles.dotActive : ""}`}
