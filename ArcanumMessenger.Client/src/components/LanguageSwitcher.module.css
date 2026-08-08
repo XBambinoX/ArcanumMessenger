@@ -9,7 +9,7 @@
     padding: 4px;
     border-radius: 999px;
     background: rgba(15, 15, 25, 0.55);
-    border: 1px solid rgba(124, 58, 237, 0.25);
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
     backdrop-filter: blur(8px);
 }
 
@@ -18,7 +18,7 @@
     border: none;
     border-radius: 999px;
     background: transparent;
-    color: rgba(226, 232, 240, 0.65);
+    color: rgba(var(--text-rgb), 0.65);
     font-size: 12.5px;
     font-weight: 600;
     letter-spacing: 0.02em;
@@ -27,10 +27,10 @@
 }
 
 .option:hover {
-    color: rgba(226, 232, 240, 0.9);
+    color: rgba(var(--text-rgb), 0.9);
 }
 
 .optionActive {
-    background: linear-gradient(135deg, #7c3aed, #4f46e5);
-    color: #fff;
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
+    color: rgb(var(--white-rgb));
 }

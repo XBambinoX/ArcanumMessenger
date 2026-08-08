@@ -2,7 +2,7 @@
     position: fixed;
     inset: 0;
     z-index: 11;
-    background: rgba(6, 4, 16, 0.55);
+    background: rgba(var(--overlay-rgb), 0.55);
     backdrop-filter: blur(2px);
     display: flex;
     align-items: center;
@@ -18,10 +18,10 @@
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    background: #12102a;
-    border: 1px solid rgba(124, 58, 237, 0.2);
+    background: rgb(var(--bg-elevated-rgb));
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
     border-radius: 16px;
-    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 24px 70px rgba(var(--black-rgb), 0.5);
     padding: 20px;
     animation: panelPop 0.16s ease-out;
 }
@@ -42,7 +42,7 @@
 }
 
 .panel::-webkit-scrollbar-thumb {
-    background: rgba(124, 58, 237, 0.35);
+    background: rgba(var(--accent-rgb), 0.35);
     border-radius: 3px;
 }
 
@@ -69,7 +69,7 @@
     margin: 0;
     font-size: 18px;
     font-weight: 700;
-    background: linear-gradient(135deg, #a78bfa, #22d3ee);
+    background: linear-gradient(135deg, rgb(var(--accent-light-rgb)), rgb(var(--accent-cyan-rgb)));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -81,9 +81,9 @@
     height: 30px;
     flex-shrink: 0;
     border-radius: 9px;
-    border: 1px solid rgba(124, 58, 237, 0.25);
-    background: rgba(124, 58, 237, 0.05);
-    color: rgba(167, 139, 250, 0.8);
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    background: rgba(var(--accent-rgb), 0.05);
+    color: rgba(var(--accent-light-rgb), 0.8);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -93,8 +93,8 @@
 
 .closeBtn:hover,
 .backBtn:hover {
-    background: rgba(124, 58, 237, 0.12);
-    border-color: rgba(167, 139, 250, 0.4);
+    background: rgba(var(--accent-rgb), 0.12);
+    border-color: rgba(var(--accent-light-rgb), 0.4);
 }
 
 .search {
@@ -103,9 +103,9 @@
     padding: 9px 14px;
     margin-bottom: 12px;
     border-radius: 10px;
-    border: 1px solid rgba(124, 58, 237, 0.2);
-    background: rgba(124, 58, 237, 0.05);
-    color: rgba(226, 232, 240, 0.95);
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
+    background: rgba(var(--accent-rgb), 0.05);
+    color: rgba(var(--text-rgb), 0.95);
     font-family: inherit;
     font-size: 14px;
     outline: none;
@@ -113,12 +113,12 @@
 }
 
 .search::placeholder {
-    color: rgba(148, 163, 184, 0.5);
+    color: rgba(var(--text-muted-rgb), 0.5);
 }
 
 .search:focus {
-    border-color: rgba(167, 139, 250, 0.5);
-    background: rgba(124, 58, 237, 0.09);
+    border-color: rgba(var(--accent-light-rgb), 0.5);
+    background: rgba(var(--accent-rgb), 0.09);
 }
 
 .addBtn {
@@ -130,9 +130,9 @@
     padding: 10px 12px;
     margin-bottom: 14px;
     border-radius: 10px;
-    border: 1px solid rgba(124, 58, 237, 0.2);
-    background: rgba(124, 58, 237, 0.06);
-    color: rgba(226, 232, 240, 0.95);
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
+    background: rgba(var(--accent-rgb), 0.06);
+    color: rgba(var(--text-rgb), 0.95);
     font-family: inherit;
     font-size: 14px;
     font-weight: 600;
@@ -141,8 +141,8 @@
 }
 
 .addBtn:hover:not(:disabled) {
-    background: rgba(124, 58, 237, 0.12);
-    border-color: rgba(167, 139, 250, 0.4);
+    background: rgba(var(--accent-rgb), 0.12);
+    border-color: rgba(var(--accent-light-rgb), 0.4);
 }
 
 .addBtn:disabled {
@@ -158,8 +158,8 @@
     height: 22px;
     flex-shrink: 0;
     border-radius: 50%;
-    color: #fff;
-    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    color: rgb(var(--white-rgb));
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
 }
 
 .sectionTitle {
@@ -168,7 +168,7 @@
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: rgba(167, 139, 250, 0.6);
+    color: rgba(var(--accent-light-rgb), 0.6);
 }
 
 .memberList,
@@ -201,7 +201,7 @@
 }
 
 .candidateRow:hover {
-    background: rgba(124, 58, 237, 0.08);
+    background: rgba(var(--accent-rgb), 0.08);
 }
 
 .memberAvatar {
@@ -214,8 +214,8 @@
     justify-content: center;
     font-size: 13px;
     font-weight: 700;
-    color: #fff;
-    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    color: rgb(var(--white-rgb));
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
 }
 
 .memberName {
@@ -224,7 +224,7 @@
     text-align: left;
     font-size: 13.5px;
     font-weight: 600;
-    color: rgba(226, 232, 240, 0.95);
+    color: rgba(var(--text-rgb), 0.95);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -236,8 +236,8 @@
     font-weight: 700;
     letter-spacing: 0.03em;
     text-transform: uppercase;
-    color: rgba(251, 191, 36, 0.95);
-    background: rgba(251, 191, 36, 0.15);
+    color: rgba(var(--warning-rgb), 0.95);
+    background: rgba(var(--warning-rgb), 0.15);
     border-radius: 6px;
     padding: 3px 7px;
 }
@@ -248,8 +248,8 @@
     font-weight: 700;
     letter-spacing: 0.03em;
     text-transform: uppercase;
-    color: rgba(167, 139, 250, 0.9);
-    background: rgba(124, 58, 237, 0.15);
+    color: rgba(var(--accent-light-rgb), 0.9);
+    background: rgba(var(--accent-rgb), 0.15);
     border-radius: 6px;
     padding: 3px 7px;
 }
@@ -258,9 +258,9 @@
     flex-shrink: 0;
     font-size: 11.5px;
     font-weight: 600;
-    color: rgba(248, 113, 113, 0.9);
-    background: rgba(248, 113, 113, 0.08);
-    border: 1px solid rgba(248, 113, 113, 0.25);
+    color: rgba(var(--danger-rgb), 0.9);
+    background: rgba(var(--danger-rgb), 0.08);
+    border: 1px solid rgba(var(--danger-rgb), 0.25);
     border-radius: 8px;
     padding: 5px 9px;
     cursor: pointer;
@@ -268,8 +268,8 @@
 }
 
 .removeBtn:hover:not(:disabled) {
-    background: rgba(248, 113, 113, 0.15);
-    border-color: rgba(248, 113, 113, 0.45);
+    background: rgba(var(--danger-rgb), 0.15);
+    border-color: rgba(var(--danger-rgb), 0.45);
 }
 
 .removeBtn:disabled {
@@ -282,14 +282,14 @@
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    border: 2px solid rgba(167, 139, 250, 0.5);
-    background: rgba(15, 12, 30, 0.4);
+    border: 2px solid rgba(var(--accent-light-rgb), 0.5);
+    background: rgba(var(--bg-page-rgb), 0.4);
     transition: background 0.15s, border-color 0.15s;
 }
 
 .memberCheckboxChecked {
-    border-color: #7c3aed;
-    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    border-color: rgb(var(--accent-rgb));
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
 }
 
 .selectedChips {
@@ -307,9 +307,9 @@
     gap: 6px;
     padding: 5px 6px 5px 10px;
     border-radius: 100px;
-    background: rgba(124, 58, 237, 0.14);
-    border: 1px solid rgba(124, 58, 237, 0.3);
-    color: rgba(226, 232, 240, 0.95);
+    background: rgba(var(--accent-rgb), 0.14);
+    border: 1px solid rgba(var(--accent-rgb), 0.3);
+    color: rgba(var(--text-rgb), 0.95);
     font-size: 13px;
 }
 
@@ -319,8 +319,8 @@
     line-height: 1;
     border: none;
     border-radius: 50%;
-    background: rgba(124, 58, 237, 0.25);
-    color: rgba(226, 232, 240, 0.9);
+    background: rgba(var(--accent-rgb), 0.25);
+    color: rgba(var(--text-rgb), 0.9);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -329,18 +329,18 @@
 }
 
 .chipRemove:hover {
-    background: rgba(124, 58, 237, 0.45);
+    background: rgba(var(--accent-rgb), 0.45);
 }
 
 .note {
     margin: 0;
     font-size: 12.5px;
-    color: rgba(148, 163, 184, 0.6);
+    color: rgba(var(--text-muted-rgb), 0.6);
 }
 
 .errorNote {
     margin: 12px 0 0;
     font-size: 12.5px;
-    color: #f87171;
+    color: rgb(var(--danger-rgb));
     text-align: center;
 }

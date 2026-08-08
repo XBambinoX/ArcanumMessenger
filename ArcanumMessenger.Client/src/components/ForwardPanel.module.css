@@ -2,7 +2,7 @@
     position: fixed;
     inset: 0;
     z-index: 20;
-    background: rgba(6, 4, 16, 0.55);
+    background: rgba(var(--overlay-rgb), 0.55);
     backdrop-filter: blur(2px);
     display: flex;
     align-items: center;
@@ -18,10 +18,10 @@
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    background: #12102a;
-    border: 1px solid rgba(124, 58, 237, 0.2);
+    background: rgb(var(--bg-elevated-rgb));
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
     border-radius: 16px;
-    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 24px 70px rgba(var(--black-rgb), 0.5);
     padding: 18px;
     animation: panelPop 0.16s ease-out;
 }
@@ -49,7 +49,7 @@
     margin: 0;
     font-size: 16px;
     font-weight: 700;
-    background: linear-gradient(135deg, #a78bfa, #22d3ee);
+    background: linear-gradient(135deg, rgb(var(--accent-light-rgb)), rgb(var(--accent-cyan-rgb)));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -59,9 +59,9 @@
     width: 30px;
     height: 30px;
     border-radius: 9px;
-    border: 1px solid rgba(124, 58, 237, 0.25);
-    background: rgba(124, 58, 237, 0.05);
-    color: rgba(167, 139, 250, 0.8);
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    background: rgba(var(--accent-rgb), 0.05);
+    color: rgba(var(--accent-light-rgb), 0.8);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -70,14 +70,14 @@
 }
 
 .closeBtn:hover {
-    background: rgba(124, 58, 237, 0.12);
-    border-color: rgba(167, 139, 250, 0.4);
+    background: rgba(var(--accent-rgb), 0.12);
+    border-color: rgba(var(--accent-light-rgb), 0.4);
 }
 
 .note {
     margin: 0;
     font-size: 13px;
-    color: rgba(148, 163, 184, 0.6);
+    color: rgba(var(--text-muted-rgb), 0.6);
     text-align: center;
     padding: 20px 4px;
 }
@@ -102,7 +102,7 @@
 }
 
 .chatRow:hover {
-    background: rgba(124, 58, 237, 0.1);
+    background: rgba(var(--accent-rgb), 0.1);
 }
 
 .avatar {
@@ -115,17 +115,17 @@
     justify-content: center;
     font-size: 14px;
     font-weight: 700;
-    color: #fff;
-    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    color: rgb(var(--white-rgb));
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
 }
 
 .avatarGroup {
-    background: linear-gradient(135deg, #0891b2, #4f46e5);
+    background: linear-gradient(135deg, rgb(var(--accent-cyan3-rgb)), rgb(var(--accent2-rgb)));
 }
 
 .chatTitle {
     font-size: 14px;
-    color: rgba(226, 232, 240, 0.95);
+    color: rgba(var(--text-rgb), 0.95);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

@@ -1,15 +1,42 @@
+/*
+ * Theme tokens. "system" (the default, no [data-theme] override needed) is
+ * today's existing palette, unchanged - every value below is extracted
+ * as-is from what was previously hardcoded per-component. "dark" is a new,
+ * visually distinct second theme (cooler graphite backgrounds, blue/teal
+ * accent instead of violet) - see src/lib/theme.ts for how the attribute
+ * gets set. Status colors (danger/success/warning) and per-feature identity
+ * gradients (group/saved-chat avatars, error page icon) intentionally stay
+ * constant across themes - they're semantic/branding colors, not surface
+ * chrome, so they don't get a [data-theme="dark"] override.
+ */
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  --accent-rgb: 124, 58, 237;
+  --accent2-rgb: 79, 70, 229;
+  --accent-light-rgb: 167, 139, 250;
+  --accent-deep-rgb: 109, 40, 217;
+
+  --accent-cyan-rgb: 34, 211, 238;
+  --accent-cyan2-rgb: 6, 182, 212;
+  --accent-cyan3-rgb: 8, 145, 178;
+  --accent-blue-rgb: 56, 189, 248;
+  --accent-blue2-rgb: 37, 99, 235;
+
+  --text-rgb: 226, 232, 240;
+  --text-muted-rgb: 148, 163, 184;
+
+  --danger-rgb: 248, 113, 113;
+  --success-rgb: 79, 184, 92;
+  --warning-rgb: 251, 191, 36;
+  --error-accent-rgb: 239, 68, 68;
+  --error-accent2-rgb: 249, 115, 22;
+
+  --bg-rgb: 13, 11, 30;
+  --bg-page-rgb: 15, 12, 30;
+  --bg-elevated-rgb: 18, 16, 42;
+  --overlay-rgb: 6, 4, 16;
+
+  --white-rgb: 255, 255, 255;
+  --black-rgb: 0, 0, 0;
 
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
   --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
@@ -17,9 +44,9 @@
 
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
+  color-scheme: dark;
+  color: rgb(var(--text-rgb));
+  background: rgb(var(--bg-rgb));
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -30,24 +57,16 @@
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
+[data-theme="dark"] {
+  --accent-rgb: 59, 130, 246;
+  --accent2-rgb: 6, 182, 212;
+  --accent-light-rgb: 125, 211, 252;
+  --accent-deep-rgb: 29, 78, 216;
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+  --bg-rgb: 11, 14, 20;
+  --bg-page-rgb: 13, 15, 19;
+  --bg-elevated-rgb: 19, 23, 32;
+  --overlay-rgb: 4, 6, 10;
 }
 
 #root {
@@ -56,19 +75,4 @@
 
 body {
   margin: 0;
-}
-
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
 }

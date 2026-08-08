@@ -2,7 +2,7 @@
     position: fixed;
     inset: 0;
     z-index: 10;
-    background: rgba(6, 4, 16, 0.55);
+    background: rgba(var(--overlay-rgb), 0.55);
     backdrop-filter: blur(2px);
     display: flex;
     align-items: center;
@@ -18,10 +18,10 @@
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    background: #12102a;
-    border: 1px solid rgba(124, 58, 237, 0.2);
+    background: rgb(var(--bg-elevated-rgb));
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
     border-radius: 16px;
-    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 24px 70px rgba(var(--black-rgb), 0.5);
     padding: 20px;
     animation: panelPop 0.16s ease-out;
 }
@@ -49,7 +49,7 @@
     margin: 0;
     font-size: 18px;
     font-weight: 700;
-    background: linear-gradient(135deg, #a78bfa, #22d3ee);
+    background: linear-gradient(135deg, rgb(var(--accent-light-rgb)), rgb(var(--accent-cyan-rgb)));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -59,9 +59,9 @@
     width: 30px;
     height: 30px;
     border-radius: 9px;
-    border: 1px solid rgba(124, 58, 237, 0.25);
-    background: rgba(124, 58, 237, 0.05);
-    color: rgba(167, 139, 250, 0.8);
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    background: rgba(var(--accent-rgb), 0.05);
+    color: rgba(var(--accent-light-rgb), 0.8);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -70,8 +70,8 @@
 }
 
 .closeBtn:hover {
-    background: rgba(124, 58, 237, 0.12);
-    border-color: rgba(167, 139, 250, 0.4);
+    background: rgba(var(--accent-rgb), 0.12);
+    border-color: rgba(var(--accent-light-rgb), 0.4);
 }
 
 .profileHeader {
@@ -81,7 +81,7 @@
     text-align: center;
     padding: 8px 0 20px;
     margin-bottom: 4px;
-    border-bottom: 1px solid rgba(124, 58, 237, 0.12);
+    border-bottom: 1px solid rgba(var(--accent-rgb), 0.12);
 }
 
 .profileAvatar {
@@ -93,15 +93,15 @@
     justify-content: center;
     font-size: 24px;
     font-weight: 700;
-    color: #fff;
-    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    color: rgb(var(--white-rgb));
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
     margin-bottom: 10px;
 }
 
 .profileName {
     font-size: 16px;
     font-weight: 700;
-    color: rgba(226, 232, 240, 0.95);
+    color: rgba(var(--text-rgb), 0.95);
     margin-bottom: 8px;
 }
 
@@ -111,17 +111,17 @@
     gap: 8px;
     padding: 6px 12px;
     border-radius: 9px;
-    border: 1px solid rgba(124, 58, 237, 0.25);
-    background: rgba(124, 58, 237, 0.08);
-    color: rgba(167, 139, 250, 0.9);
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    background: rgba(var(--accent-rgb), 0.08);
+    color: rgba(var(--accent-light-rgb), 0.9);
     font-family: inherit;
     cursor: pointer;
     transition: all 0.2s;
 }
 
 .idRow:hover {
-    background: rgba(124, 58, 237, 0.15);
-    border-color: rgba(167, 139, 250, 0.4);
+    background: rgba(var(--accent-rgb), 0.15);
+    border-color: rgba(var(--accent-light-rgb), 0.4);
 }
 
 .idValue {
@@ -134,13 +134,13 @@
 .copiedHint {
     margin-top: 8px;
     font-size: 11.5px;
-    color: rgba(148, 163, 184, 0.55);
+    color: rgba(var(--text-muted-rgb), 0.55);
 }
 
 .note {
     margin: 0 0 14px;
     font-size: 12.5px;
-    color: rgba(148, 163, 184, 0.6);
+    color: rgba(var(--text-muted-rgb), 0.6);
 }
 
 .group {
@@ -153,7 +153,7 @@
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: rgba(167, 139, 250, 0.6);
+    color: rgba(var(--accent-light-rgb), 0.6);
 }
 
 .row {
@@ -169,7 +169,7 @@
 }
 
 .row:hover {
-    background: rgba(124, 58, 237, 0.07);
+    background: rgba(var(--accent-rgb), 0.07);
 }
 
 .switch {
@@ -177,7 +177,7 @@
     width: 40px;
     height: 22px;
     border-radius: 11px;
-    background: rgba(148, 163, 184, 0.25);
+    background: rgba(var(--text-muted-rgb), 0.25);
     position: relative;
     cursor: pointer;
     outline: none;
@@ -193,12 +193,12 @@
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    background: #fff;
+    background: rgb(var(--white-rgb));
     transition: transform 0.2s;
 }
 
 .switch:checked {
-    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
 }
 
 .switch:checked::after {
@@ -208,9 +208,9 @@
 .select {
     padding: 7px 10px;
     border-radius: 9px;
-    border: 1px solid rgba(124, 58, 237, 0.25);
-    background: rgba(124, 58, 237, 0.08);
-    color: rgba(226, 232, 240, 0.95);
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    background: rgba(var(--accent-rgb), 0.08);
+    color: rgba(var(--text-rgb), 0.95);
     font-family: inherit;
     font-size: 13px;
     outline: none;
@@ -218,13 +218,13 @@
 }
 
 .select option {
-    background: #12102a;
+    background: rgb(var(--bg-elevated-rgb));
 }
 
 .footer {
     margin-top: auto;
     padding-top: 16px;
-    border-top: 1px solid rgba(124, 58, 237, 0.12);
+    border-top: 1px solid rgba(var(--accent-rgb), 0.12);
 }
 
 .logoutBtn {
@@ -235,9 +235,9 @@
     width: 100%;
     padding: 11px;
     border-radius: 11px;
-    border: 1px solid rgba(248, 113, 113, 0.3);
-    background: rgba(248, 113, 113, 0.08);
-    color: rgba(248, 113, 113, 0.9);
+    border: 1px solid rgba(var(--danger-rgb), 0.3);
+    background: rgba(var(--danger-rgb), 0.08);
+    color: rgba(var(--danger-rgb), 0.9);
     font-family: inherit;
     font-size: 14px;
     font-weight: 600;
@@ -246,8 +246,8 @@
 }
 
 .logoutBtn:hover {
-    background: rgba(248, 113, 113, 0.15);
-    border-color: rgba(248, 113, 113, 0.5);
+    background: rgba(var(--danger-rgb), 0.15);
+    border-color: rgba(var(--danger-rgb), 0.5);
 }
 
 .menuList {
@@ -264,7 +264,7 @@
     padding: 10px 8px;
     border: none;
     background: transparent;
-    color: rgba(226, 232, 240, 0.95);
+    color: rgba(var(--text-rgb), 0.95);
     font-family: inherit;
     font-size: 14.5px;
     text-align: left;
@@ -274,7 +274,7 @@
 }
 
 .menuRow:hover {
-    background: rgba(124, 58, 237, 0.08);
+    background: rgba(var(--accent-rgb), 0.08);
 }
 
 .menuIcon {
@@ -300,7 +300,7 @@
 .sectionDivider {
     height: 8px;
     margin: 10px -20px;
-    background: rgba(0, 0, 0, 0.18);
+    background: rgba(var(--black-rgb), 0.18);
 }
 
 .scaleGroup {
@@ -319,7 +319,7 @@
     height: 4px;
     border-radius: 2px;
     appearance: none;
-    background: rgba(148, 163, 184, 0.25);
+    background: rgba(var(--text-muted-rgb), 0.25);
     outline: none;
     cursor: pointer;
 }
@@ -329,25 +329,25 @@
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
     cursor: pointer;
-    border: 2px solid #12102a;
+    border: 2px solid rgb(var(--bg-elevated-rgb));
 }
 
 .rangeInput::-moz-range-thumb {
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
     cursor: pointer;
-    border: 2px solid #12102a;
+    border: 2px solid rgb(var(--bg-elevated-rgb));
 }
 
 .scaleValue {
     min-width: 40px;
     text-align: right;
     font-size: 13px;
-    color: rgba(148, 163, 184, 0.8);
+    color: rgba(var(--text-muted-rgb), 0.8);
 }
 
 .menuRow:disabled {
@@ -362,7 +362,7 @@
 .menuChevron {
     display: flex;
     align-items: center;
-    color: rgba(148, 163, 184, 0.5);
+    color: rgba(var(--text-muted-rgb), 0.5);
     flex-shrink: 0;
 }
 
@@ -372,7 +372,7 @@
     gap: 4px;
     border: none;
     background: transparent;
-    color: rgba(226, 232, 240, 0.95);
+    color: rgba(var(--text-rgb), 0.95);
     font-size: 16px;
     font-weight: 700;
     cursor: pointer;
@@ -380,7 +380,7 @@
 }
 
 .backBtn:hover {
-    color: #a78bfa;
+    color: rgb(var(--accent-light-rgb));
 }
 
 /* ── Slide transition ── */
@@ -452,7 +452,7 @@
     font-weight: 600;
     letter-spacing: 0.03em;
     text-transform: uppercase;
-    color: rgba(167, 139, 250, 0.6);
+    color: rgba(var(--accent-light-rgb), 0.6);
     margin: 12px 0 6px;
 }
 
@@ -466,9 +466,9 @@
     width: 100%;
     padding: 10px 12px;
     border-radius: 10px;
-    border: 1px solid rgba(124, 58, 237, 0.25);
-    background: rgba(124, 58, 237, 0.06);
-    color: rgba(226, 232, 240, 0.95);
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    background: rgba(var(--accent-rgb), 0.06);
+    color: rgba(var(--text-rgb), 0.95);
     font-family: inherit;
     font-size: 14px;
     outline: none;
@@ -478,13 +478,13 @@
 
 .textInput:focus,
 .textArea:focus {
-    border-color: rgba(167, 139, 250, 0.5);
+    border-color: rgba(var(--accent-light-rgb), 0.5);
 }
 
 .fieldHint {
     margin: 8px 0 0;
     font-size: 12px;
-    color: rgba(148, 163, 184, 0.55);
+    color: rgba(var(--text-muted-rgb), 0.55);
 }
 
 .optionList {
@@ -500,7 +500,7 @@
     padding: 12px 10px;
     border: none;
     background: transparent;
-    color: rgba(226, 232, 240, 0.95);
+    color: rgba(var(--text-rgb), 0.95);
     font-family: inherit;
     font-size: 14.5px;
     text-align: left;
@@ -510,7 +510,7 @@
 }
 
 .optionRow:hover {
-    background: rgba(124, 58, 237, 0.08);
+    background: rgba(var(--accent-rgb), 0.08);
 }
 
 .optionCheck {
@@ -524,7 +524,7 @@
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: rgba(167, 139, 250, 0.6);
+    color: rgba(var(--accent-light-rgb), 0.6);
     margin: 18px 4px 4px;
 }
 
@@ -538,7 +538,7 @@
     gap: 14px;
     padding: 6px 4px 14px;
     margin-bottom: 4px;
-    border-bottom: 1px solid rgba(124, 58, 237, 0.12);
+    border-bottom: 1px solid rgba(var(--accent-rgb), 0.12);
 }
 
 .avatarEditPic {
@@ -551,8 +551,8 @@
     justify-content: center;
     font-size: 22px;
     font-weight: 700;
-    color: #fff;
-    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    color: rgb(var(--white-rgb));
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
     cursor: pointer;
     flex-shrink: 0;
 }
@@ -564,8 +564,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.45);
-    color: #fff;
+    background: rgba(var(--black-rgb), 0.45);
+    color: rgb(var(--white-rgb));
     opacity: 0;
     transition: opacity 0.15s;
 }
@@ -592,12 +592,12 @@
     border: none;
     background: transparent;
     font-size: 12px;
-    color: rgba(248, 113, 113, 0.75);
+    color: rgba(var(--danger-rgb), 0.75);
     cursor: pointer;
 }
 
 .avatarEditSub:hover {
-    color: rgba(248, 113, 113, 0.95);
+    color: rgba(var(--danger-rgb), 0.95);
     text-decoration: underline;
 }
 
@@ -613,7 +613,7 @@
     padding: 10px 8px;
     border: none;
     background: transparent;
-    color: #f87171;
+    color: rgb(var(--danger-rgb));
     font-family: inherit;
     font-size: 14.5px;
     text-align: left;
@@ -623,7 +623,7 @@
 }
 
 .dangerRow:hover {
-    background: rgba(248, 113, 113, 0.08);
+    background: rgba(var(--danger-rgb), 0.08);
 }
 
 .row[data-disabled],
@@ -648,7 +648,7 @@
 }
 
 .panel::-webkit-scrollbar-thumb {
-    background: rgba(124, 58, 237, 0.35);
+    background: rgba(var(--accent-rgb), 0.35);
     border-radius: 3px;
 }
 
@@ -671,15 +671,15 @@
 }
 
 .saveStatusSaving {
-    color: rgba(148, 163, 184, 0.7);
+    color: rgba(var(--text-muted-rgb), 0.7);
 }
 
 .saveStatusSaved {
-    color: #4fb85c;
+    color: rgb(var(--success-rgb));
 }
 
 .saveStatusError {
-    color: #f87171;
+    color: rgb(var(--danger-rgb));
 }
 
 .saveStatusRow {
@@ -695,7 +695,7 @@
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: #f87171;
+    color: rgb(var(--danger-rgb));
     margin: 18px 4px 4px;
 }
 
@@ -712,18 +712,18 @@
     align-items: center;
     gap: 8px;
     padding: 14px 8px;
-    border: 1px solid rgba(124, 58, 237, 0.25);
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
     border-radius: 12px;
-    background: rgba(124, 58, 237, 0.06);
-    color: rgba(226, 232, 240, 0.85);
+    background: rgba(var(--accent-rgb), 0.06);
+    color: rgba(var(--text-rgb), 0.85);
     font-family: inherit;
     cursor: pointer;
     transition: background 0.15s, border-color 0.15s, transform 0.1s;
 }
 
 .chipButton:hover:not(:disabled) {
-    background: rgba(124, 58, 237, 0.12);
-    border-color: rgba(167, 139, 250, 0.4);
+    background: rgba(var(--accent-rgb), 0.12);
+    border-color: rgba(var(--accent-light-rgb), 0.4);
 }
 
 .chipButton:active:not(:disabled) {
@@ -736,8 +736,8 @@
 }
 
 .chipButtonActive {
-    border-color: rgba(167, 139, 250, 0.7);
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.22), rgba(79, 70, 229, 0.22));
+    border-color: rgba(var(--accent-light-rgb), 0.7);
+    background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.22), rgba(var(--accent2-rgb), 0.22));
 }
 
 .chipIcon {
@@ -747,20 +747,20 @@
     width: 34px;
     height: 34px;
     border-radius: 50%;
-    background: rgba(124, 58, 237, 0.1);
-    color: rgba(167, 139, 250, 0.75);
+    background: rgba(var(--accent-rgb), 0.1);
+    color: rgba(var(--accent-light-rgb), 0.75);
     transition: background 0.15s, color 0.15s;
 }
 
 .chipButtonActive .chipIcon {
-    background: linear-gradient(135deg, #7c3aed, #4f46e5);
-    color: #fff;
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
+    color: rgb(var(--white-rgb));
 }
 
 .chipLabel {
     font-size: 12.5px;
     font-weight: 600;
-    color: rgba(226, 232, 240, 0.9);
+    color: rgba(var(--text-rgb), 0.9);
     text-align: center;
     line-height: 1.2;
 }
@@ -775,7 +775,7 @@
     border: none;
     border-radius: 10px;
     background: transparent;
-    color: rgba(226, 232, 240, 0.95);
+    color: rgba(var(--text-rgb), 0.95);
     font-family: inherit;
     font-size: 14px;
     text-align: left;
@@ -784,7 +784,7 @@
 }
 
 .blockedEntryRow:hover {
-    background: rgba(124, 58, 237, 0.07);
+    background: rgba(var(--accent-rgb), 0.07);
 }
 
 .blockedList {
@@ -810,8 +810,8 @@
     justify-content: center;
     font-size: 14px;
     font-weight: 700;
-    color: #fff;
-    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    color: rgb(var(--white-rgb));
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
 }
 
 .blockedName {
@@ -827,9 +827,9 @@
     flex-shrink: 0;
     padding: 7px 12px;
     border-radius: 9px;
-    border: 1px solid rgba(124, 58, 237, 0.25);
-    background: rgba(124, 58, 237, 0.08);
-    color: rgba(226, 232, 240, 0.95);
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    background: rgba(var(--accent-rgb), 0.08);
+    color: rgba(var(--text-rgb), 0.95);
     font-family: inherit;
     font-size: 12.5px;
     font-weight: 600;
@@ -838,8 +838,8 @@
 }
 
 .unblockBtn:hover {
-    background: rgba(124, 58, 237, 0.15);
-    border-color: rgba(167, 139, 250, 0.4);
+    background: rgba(var(--accent-rgb), 0.15);
+    border-color: rgba(var(--accent-light-rgb), 0.4);
 }
 
 .profileBio {
@@ -847,7 +847,7 @@
     margin-bottom: 8px;
     font-size: 13px;
     line-height: 1.4;
-    color: rgba(148, 163, 184, 0.75);
+    color: rgba(var(--text-muted-rgb), 0.75);
     word-break: break-word;
     white-space: pre-wrap;
 }
