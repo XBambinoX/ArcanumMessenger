@@ -17,6 +17,12 @@ import { toBase64 } from "../crypto/encoding";
 import { useNavigate } from "react-router";
 import zxcvbn from "zxcvbn";
 import { downloadRecoveryPdf } from "../utils/recoveryPdf";
+import { useLanguage } from "../lib/language";
+import {
+    AUTH_COMMON,
+    REGISTER_TRANSLATIONS,
+    type AuthCommonTranslation,
+} from "../lib/authTranslations";
 
 type Step = 0 | 1 | 2 | 3 | 4;
 
@@ -26,6 +32,9 @@ const RESEND_COOLDOWN = 30; // seconds
 
 export default function RegisterPage() {
     const navigate = useNavigate();
+    const language = useLanguage();
+    const common = AUTH_COMMON[language];
+    const tr = REGISTER_TRANSLATIONS[language];
     const [step, setStep] = useState<Step>(0);
 
     // ── Form state ──
@@ -116,9 +125,7 @@ export default function RegisterPage() {
     // ── Step handlers (stubs – wire up to your API later) ──
     const handleUsernameSubmit = async () => {
         if (!isUsernameValid) {
-            setError(
-                "Username must be at least 3 characters – Latin letters, digits, and underscores only",
-            );
+            setError(tr.usernameInvalid);
             return;
         }
         setLoading(true);
@@ -128,15 +135,15 @@ export default function RegisterPage() {
             if (!success) {
                 setError(
                     reason === "invalid_format"
-                        ? "Username must be at least 3 characters – Latin letters, digits, and underscores only"
-                        : "Something went wrong, try again",
+                        ? tr.usernameInvalid
+                        : common.somethingWrongTryAgain,
                 );
                 return;
             }
             setSessionId(sessionId!);
             goNext();
         } catch {
-            setError("Something went wrong, try again");
+            setError(common.somethingWrongTryAgain);
         } finally {
             setLoading(false);
         }
@@ -144,7 +151,7 @@ export default function RegisterPage() {
 
     const handleEmailSubmit = async () => {
         if (!isEmailValid) {
-            setError("Enter a valid email address");
+            setError(common.invalidEmail);
             return;
         }
         setLoading(true);
@@ -160,21 +167,21 @@ export default function RegisterPage() {
                 // allow probing for existing accounts).
                 setError(
                     reason === "session_expired"
-                        ? "Session expired, please start over"
+                        ? common.sessionExpired
                         : reason === "email_send_failed"
-                          ? "Failed to send verification email, try again"
+                          ? tr.emailSendFailed
                           : reason === "invalid_step"
-                            ? "Something went wrong, please start over"
+                            ? common.somethingWrongStartOver
                             : reason === "invalid_email"
-                              ? "Enter a valid email address"
-                              : "Something went wrong, please start over",
+                              ? common.invalidEmail
+                              : common.somethingWrongStartOver,
                 );
                 return;
             }
             setResendCooldown(RESEND_COOLDOWN);
             goNext();
         } catch {
-            setError("Something went wrong, try again");
+            setError(common.somethingWrongTryAgain);
         } finally {
             setLoading(false);
         }
@@ -182,7 +189,7 @@ export default function RegisterPage() {
 
     const handleCodeSubmit = async () => {
         if (!isCodeComplete) {
-            setError("Enter the full 6-digit code");
+            setError(common.enterFullCode);
             return;
         }
         setLoading(true);
@@ -194,16 +201,16 @@ export default function RegisterPage() {
             if (!success) {
                 setError(
                     reason === "code_expired"
-                        ? "Code expired, request a new one"
+                        ? tr.codeExpired
                         : reason === "too_many_attempts"
-                          ? "Too many attempts, request a new code"
+                          ? tr.tooManyAttemptsRequestNewCode
                           : reason === "session_expired"
-                            ? "Session expired, please start over"
+                            ? common.sessionExpired
                             : reason === "invalid_step"
-                              ? "Something went wrong, please start over"
+                              ? common.somethingWrongStartOver
                               : reason === "invalid_code"
-                                ? "Invalid code"
-                                : "Something went wrong, try again",
+                                ? common.invalidCode
+                                : common.somethingWrongTryAgain,
                 );
                 setCode(Array(CODE_LENGTH).fill(""));
                 codeInputs.current[0]?.focus();
@@ -211,7 +218,7 @@ export default function RegisterPage() {
             }
             goNext();
         } catch {
-            setError("Something went wrong, try again");
+            setError(common.somethingWrongTryAgain);
         } finally {
             setLoading(false);
         }
@@ -219,13 +226,11 @@ export default function RegisterPage() {
 
     const handlePasswordSubmit = async () => {
         if (!isPasswordValid) {
-            setError(
-                "Password must be at least 8 characters and reasonably strong",
-            );
+            setError(common.weakPasswordError);
             return;
         }
         if (!doPasswordsMatch) {
-            setError("Passwords do not match");
+            setError(common.passwordsDoNotMatch);
             return;
         }
         setLoading(true);
@@ -252,14 +257,14 @@ export default function RegisterPage() {
             if (!success) {
                 setError(
                     reason === "session_expired"
-                        ? "Session expired, please start over"
-                        : "Something went wrong, please start over",
+                        ? common.sessionExpired
+                        : common.somethingWrongStartOver,
                 );
                 return;
             }
             goNext();
         } catch {
-            setError("Something went wrong, try again");
+            setError(common.somethingWrongTryAgain);
         } finally {
             setLoading(false);
         }
@@ -276,20 +281,20 @@ export default function RegisterPage() {
             } else {
                 setError(
                     reason === "resend_limit_reached"
-                        ? "Resend limit reached, please start over"
+                        ? tr.resendLimitReachedStartOver
                         : reason === "cooldown_active"
-                          ? "Please wait before requesting a new code"
+                          ? tr.waitBeforeRequestingNewCode
                           : reason === "email_send_failed"
-                            ? "Failed to send code, try again"
+                            ? tr.failedToSendCode
                             : reason === "session_expired"
-                              ? "Session expired, please start over"
+                              ? common.sessionExpired
                               : reason === "invalid_step"
-                                ? "Something went wrong, please start over"
-                                : "Failed to resend code",
+                                ? common.somethingWrongStartOver
+                                : tr.failedToResendCode,
                 );
             }
         } catch {
-            setError("Something went wrong, try again");
+            setError(common.somethingWrongTryAgain);
         } finally {
             setLoading(false);
         }
@@ -297,7 +302,7 @@ export default function RegisterPage() {
 
     const handleRecoverySubmit = async () => {
         if (!recoveryConfirmChecked) {
-            setError("Please confirm you've saved your recovery phrases");
+            setError(tr.pleaseConfirmSavedPhrases);
             return;
         }
         setLoading(true);
@@ -316,8 +321,8 @@ export default function RegisterPage() {
             if (!confirmRes.success) {
                 setError(
                     confirmRes.reason === "session_expired"
-                        ? "Session expired, please start over"
-                        : "Something went wrong, please start over",
+                        ? common.sessionExpired
+                        : common.somethingWrongStartOver,
                 );
                 return;
             }
@@ -326,17 +331,17 @@ export default function RegisterPage() {
             if (!success) {
                 setError(
                     reason === "email_taken"
-                        ? "This email is already registered – try signing in instead"
+                        ? tr.emailTaken
                         : reason === "session_expired"
-                          ? "Session expired, please start over"
-                          : "Something went wrong, please start over",
+                          ? common.sessionExpired
+                          : common.somethingWrongStartOver,
                 );
                 return;
             }
 
             navigate("/welcome");
         } catch {
-            setError("Something went wrong, try again");
+            setError(common.somethingWrongTryAgain);
         } finally {
             setLoading(false);
         }
@@ -363,34 +368,35 @@ export default function RegisterPage() {
 
     const stepTitles = [
         {
-            title: "Create your account",
-            subtitle: "Choose a username for Arcanum",
+            title: tr.step0Title,
+            subtitle: tr.step0Subtitle,
         },
         {
-            title: "Confirm your email",
+            title: tr.step1Title,
             subtitle: (
                 <>
-                    We'll send a verification code to{" "}
-                    <b>{email || "your email"}</b>
+                    {tr.sendCodePrefix}
+                    <b>{email || tr.sendCodeFallback}</b>
                 </>
             ),
         },
         {
-            title: "Enter verification code",
+            title: tr.step2Title,
             subtitle: (
                 <>
-                    Check <b>{email}</b> for a 6-digit code
+                    {tr.checkPrefix}
+                    <b>{email}</b>
+                    {tr.checkSuffix}
                 </>
             ),
         },
         {
-            title: "Set a password",
-            subtitle: "Make it strong – this protects your encrypted messages",
+            title: tr.step3Title,
+            subtitle: tr.step3Subtitle,
         },
         {
-            title: "Save your recovery phrases",
-            subtitle:
-                "Write these down – they're the only way to recover your account",
+            title: tr.step4Title,
+            subtitle: tr.step4Subtitle,
         },
     ];
 
@@ -406,7 +412,7 @@ export default function RegisterPage() {
                     <button
                         className={styles.backHome}
                         onClick={() => navigate("/welcome")}
-                        aria-label="Back to welcome"
+                        aria-label={common.backToWelcomeAria}
                         style={{
                             visibility: step === 0 ? "visible" : "hidden",
                         }}
@@ -483,11 +489,11 @@ export default function RegisterPage() {
                             </p>
 
                             <div className={styles.field}>
-                                <label className={styles.label}>Username</label>
+                                <label className={styles.label}>{tr.usernameLabel}</label>
                                 <input
                                     className={`${styles.input} ${error && step === 0 ? styles.error : ""}`}
                                     type="text"
-                                    placeholder="your_username"
+                                    placeholder={tr.usernamePlaceholder}
                                     value={username}
                                     onChange={(e) =>
                                         setUsername(e.target.value)
@@ -509,15 +515,15 @@ export default function RegisterPage() {
                                     onClick={handleUsernameSubmit}
                                     disabled={loading}
                                 >
-                                    {loading ? "Checking…" : "Continue"}
+                                    {loading ? common.checking : common.continueLabel}
                                 </button>
                             </div>
 
                             <p className={styles.footerNote}>
-                                Already have an account?{" "}
+                                {tr.alreadyHaveAccount}{" "}
                                 <button className={styles.footerLink}
                                     onClick={() => navigate("/login")}>
-                                    Sign in
+                                    {common.signIn}
                                 </button>
                             </p>
                         </div>
@@ -532,7 +538,7 @@ export default function RegisterPage() {
                             </p>
 
                             <div className={styles.field}>
-                                <label className={styles.label}>Email</label>
+                                <label className={styles.label}>{common.emailLabel}</label>
                                 <input
                                     className={`${styles.input} ${error && step === 1 ? styles.error : ""}`}
                                     type="email"
@@ -558,10 +564,7 @@ export default function RegisterPage() {
                                             )
                                         }
                                     />
-                                    <span>
-                                        Allow Arcanum to know my email so I can
-                                        show it on my profile later{" "}
-                                    </span>
+                                    <span>{tr.consentLabel}</span>
                                 </label>
                             </div>
 
@@ -569,7 +572,7 @@ export default function RegisterPage() {
                                 <button
                                     className={styles.btnBack}
                                     onClick={goBack}
-                                    aria-label="Back"
+                                    aria-label={common.backAria}
                                 >
                                     <svg
                                         width="18"
@@ -589,7 +592,7 @@ export default function RegisterPage() {
                                     onClick={handleEmailSubmit}
                                     disabled={loading}
                                 >
-                                    {loading ? "Sending code…" : "Send code"}
+                                    {loading ? tr.sendingCode : tr.sendCodeButton}
                                 </button>
                             </div>
                         </div>
@@ -636,19 +639,21 @@ export default function RegisterPage() {
 
                             <div className={styles.resendRow}>
                                 {resendCount >= RESEND_LIMIT ? (
-                                    <span>Resend limit reached</span>
+                                    <span>{tr.resendLimitReached}</span>
                                 ) : resendCooldown > 0 ? (
                                     <span>
-                                        Resend code in {resendCooldown}s
+                                        {tr.resendInPrefix}
+                                        {resendCooldown}
+                                        {tr.resendInSuffix}
                                     </span>
                                 ) : (
                                     <>
-                                        Didn't get it?{" "}
+                                        {tr.didntGetIt}{" "}
                                         <button
                                             className={styles.resendLink}
                                             onClick={handleResend}
                                         >
-                                            Resend code
+                                            {tr.resendCodeLink}
                                         </button>
                                     </>
                                 )}
@@ -658,7 +663,7 @@ export default function RegisterPage() {
                                 <button
                                     className={styles.btnBack}
                                     onClick={goBack}
-                                    aria-label="Back"
+                                    aria-label={common.backAria}
                                 >
                                     <svg
                                         width="18"
@@ -678,7 +683,7 @@ export default function RegisterPage() {
                                     onClick={handleCodeSubmit}
                                     disabled={loading}
                                 >
-                                    {loading ? "Verifying…" : "Verify"}
+                                    {loading ? common.verifying : common.verify}
                                 </button>
                             </div>
                         </div>
@@ -693,7 +698,7 @@ export default function RegisterPage() {
                             </p>
 
                             <div className={styles.field}>
-                                <label className={styles.label}>Password</label>
+                                <label className={styles.label}>{common.passwordLabel}</label>
                                 <input
                                     className={styles.input}
                                     type="password"
@@ -725,7 +730,7 @@ export default function RegisterPage() {
                                             ))}
                                         </div>
                                         <p className={styles.strengthLabel}>
-                                            {strengthLabel(passwordStrength)}
+                                            {strengthLabel(passwordStrength, common)}
                                         </p>
                                         {passwordFeedback?.warning && (
                                             <p
@@ -742,7 +747,7 @@ export default function RegisterPage() {
 
                             <div className={styles.field}>
                                 <label className={styles.label}>
-                                    Confirm password
+                                    {common.confirmPasswordLabel}
                                 </label>
                                 <input
                                     className={`${styles.input} ${confirmPassword && !doPasswordsMatch ? styles.error : ""}`}
@@ -759,7 +764,7 @@ export default function RegisterPage() {
                                 />
                                 {confirmPassword && !doPasswordsMatch && (
                                     <p className={styles.errorText}>
-                                        Passwords do not match
+                                        {common.passwordsDoNotMatch}
                                     </p>
                                 )}
                             </div>
@@ -779,7 +784,7 @@ export default function RegisterPage() {
                                     onClick={handlePasswordSubmit}
                                     disabled={loading}
                                 >
-                                    {loading ? "Checking…" : "Continue"}
+                                    {loading ? common.checking : common.continueLabel}
                                 </button>
                             </div>
                         </div>
@@ -795,13 +800,13 @@ export default function RegisterPage() {
 
                             {!recoveryLoaded ? (
                                 <p className={styles.stepSubtitle}>
-                                    Generating your recovery phrases…
+                                    {tr.generatingPhrases}
                                 </p>
                             ) : (
                                 <>
                                     <div className={styles.recoveryBlock}>
                                         <span className={styles.label}>
-                                            Recovery phrase 1
+                                            {tr.recoveryPhrase1Label}
                                         </span>
                                         <textarea
                                             className={styles.recoveryTextarea}
@@ -818,7 +823,7 @@ export default function RegisterPage() {
 
                                     <div className={styles.recoveryBlock}>
                                         <span className={styles.label}>
-                                            Recovery phrase 2
+                                            {tr.recoveryPhrase2Label}
                                         </span>
                                         <textarea
                                             className={styles.recoveryTextarea}
@@ -834,10 +839,7 @@ export default function RegisterPage() {
                                     </div>
 
                                     <p className={styles.recoveryWarning}>
-                                        Anyone with access to either phrase can
-                                        recover your account. Store them
-                                        somewhere safe and offline – we cannot
-                                        show them to you again.
+                                        {tr.recoveryWarning}
                                     </p>
 
                                     <button
@@ -865,7 +867,7 @@ export default function RegisterPage() {
                                             <path d="M7 10l5 5 5-5" />
                                             <path d="M12 15V3" />
                                         </svg>
-                                        Download recovery kit (PDF)
+                                        {tr.downloadRecoveryKit}
                                     </button>
 
                                     <label className={styles.consentRow}>
@@ -879,10 +881,7 @@ export default function RegisterPage() {
                                                 )
                                             }
                                         />
-                                        <span>
-                                            I've saved both recovery phrases
-                                            somewhere safe
-                                        </span>
+                                        <span>{tr.savedBothPhrases}</span>
                                     </label>
                                 </>
                             )}
@@ -903,8 +902,8 @@ export default function RegisterPage() {
                                     disabled={loading || !recoveryLoaded}
                                 >
                                     {loading
-                                        ? "Creating account…"
-                                        : "Create account"}
+                                        ? tr.creatingAccount
+                                        : tr.createAccountButton}
                                 </button>
                             </div>
                         </div>
@@ -915,21 +914,12 @@ export default function RegisterPage() {
                 <div className={styles.modalOverlay}>
                     <div className={styles.modal}>
                         <div className={styles.modalIcon}>🔒</div>
-                        <h3 className={styles.modalTitle}>About your email</h3>
-                        <p className={styles.modalText}>
-                            Your email is private and not even developers can
-                            read or recover it. Checking this box lets Arcanum
-                            keep this email in encrypted form, so it's already
-                            there if you choose to show it on your profile
-                            later.
-                        </p>
+                        <h3 className={styles.modalTitle}>{tr.modalTitle}</h3>
+                        <p className={styles.modalText}>{tr.modalText1}</p>
                         <p className={styles.modalText}>
                             <br />
                             <span className={styles.modalWarning}>
-                                Without this, your email stays hashed forever
-                                and this copy is never kept. You can still add
-                                an email to your profile later - you'll just
-                                need to type it in again at that point.
+                                {tr.modalWarning}
                             </span>
                         </p>
                         <button
@@ -938,8 +928,8 @@ export default function RegisterPage() {
                             disabled={emailInfoCountdown > 0}
                         >
                             {emailInfoCountdown > 0
-                                ? `I've read and understand (${emailInfoCountdown})`
-                                : "I've read and understand"}
+                                ? tr.modalAckWithCountdown(emailInfoCountdown)
+                                : tr.modalAck}
                         </button>
                     </div>
                 </div>
@@ -962,9 +952,12 @@ function strengthColor(score: number): string {
     return "linear-gradient(90deg, #a78bfa, #22d3ee)";
 }
 
-function strengthLabel(score: number): string {
-    if (score <= 1) return "Weak password";
-    if (score === 2) return "Fair password";
-    if (score === 3) return "Good password";
-    return "Strong password";
+function strengthLabel(
+    score: number,
+    common: AuthCommonTranslation,
+): string {
+    if (score <= 1) return common.strength.weak;
+    if (score === 2) return common.strength.fair;
+    if (score === 3) return common.strength.good;
+    return common.strength.strong;
 }

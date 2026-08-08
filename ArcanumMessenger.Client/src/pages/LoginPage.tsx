@@ -34,12 +34,17 @@ import {
 } from "../crypto/ecdh";
 import { toBase64, fromBase64 } from "../crypto/encoding";
 import * as sessionKeys from "../lib/sessionKeys";
+import { useLanguage } from "../lib/language";
+import { AUTH_COMMON, LOGIN_TRANSLATIONS } from "../lib/authTranslations";
 
 type Step = 0 | 1 | 2;
 const CODE_LENGTH = 6;
 
 export default function LoginPage() {
     const navigate = useNavigate();
+    const language = useLanguage();
+    const common = AUTH_COMMON[language];
+    const tr = LOGIN_TRANSLATIONS[language];
     const [step, setStep] = useState<Step>(0);
     const [stepCount, setStepCount] = useState<2 | 3>(2);
 
@@ -97,7 +102,7 @@ export default function LoginPage() {
 
     const handleEmailSubmit = async () => {
         if (!isEmailValid) {
-            setError("Enter a valid email address");
+            setError(common.invalidEmail);
             return;
         }
         setLoading(true);
@@ -107,10 +112,10 @@ export default function LoginPage() {
             if (!success || !sessionId || !kdfSalt) {
                 setError(
                     reason === "invalid_format"
-                        ? "Enter a valid email address"
+                        ? common.invalidEmail
                         : reason === "too_many_attempts"
-                          ? "Too many attempts, try again later"
-                          : "Something went wrong, try again",
+                          ? common.tooManyAttemptsLater
+                          : common.somethingWrongTryAgain,
                 );
                 return;
             }
@@ -119,7 +124,7 @@ export default function LoginPage() {
             setError("");
             setStep(1);
         } catch {
-            setError("Something went wrong, try again");
+            setError(common.somethingWrongTryAgain);
         } finally {
             setLoading(false);
         }
@@ -127,7 +132,7 @@ export default function LoginPage() {
 
     const handlePasswordSubmit = async () => {
         if (!password) {
-            setError("Enter your password");
+            setError(tr.enterPassword);
             return;
         }
         setLoading(true);
@@ -141,10 +146,10 @@ export default function LoginPage() {
             if (!success) {
                 setError(
                     reason === "session_expired"
-                        ? "Session expired, please start over"
+                        ? common.sessionExpired
                         : reason === "too_many_attempts"
-                          ? "Too many attempts, try again later"
-                          : "Incorrect email or password",
+                          ? common.tooManyAttemptsLater
+                          : tr.incorrectEmailOrPassword,
                 );
                 return;
             }
@@ -157,7 +162,7 @@ export default function LoginPage() {
 
             const completeRes = await completeLogin(sessionId!);
             if (!completeRes.success) {
-                setError("Something went wrong with login completion, try again");
+                setError(tr.completeLoginFailed);
                 return;
             }
 
@@ -165,7 +170,7 @@ export default function LoginPage() {
             setAuthenticated(true);
             navigate("/app");
         } catch {
-            setError("Something went wrong, try again");
+            setError(common.somethingWrongTryAgain);
         } finally {
             setLoading(false);
         }
@@ -173,7 +178,7 @@ export default function LoginPage() {
 
     const handleTotpSubmit = async () => {
         if (!isCodeComplete) {
-            setError("Enter the full 6-digit code");
+            setError(common.enterFullCode);
             return;
         }
         setLoading(true);
@@ -185,10 +190,10 @@ export default function LoginPage() {
             if (!success) {
                 setError(
                     reason === "session_expired"
-                        ? "Session expired, please start over"
+                        ? common.sessionExpired
                         : reason === "too_many_attempts"
-                          ? "Too many attempts, try again later"
-                          : "Invalid code",
+                          ? common.tooManyAttemptsLater
+                          : common.invalidCode,
                 );
                 setCode(Array(CODE_LENGTH).fill(""));
                 codeInputs.current[0]?.focus();
@@ -197,14 +202,14 @@ export default function LoginPage() {
 
             const completeRes = await completeLogin(sessionId!);
             if (!completeRes.success) {
-                setError("Something went wrong, try again");
+                setError(common.somethingWrongTryAgain);
                 return;
             }
             await establishIdentity(completeRes.ecdhPublicKey, completeRes.wrappedEcdhPrivateKey);
             setAuthenticated(true);
             navigate("/app");
         } catch {
-            setError("Something went wrong, try again");
+            setError(common.somethingWrongTryAgain);
         } finally {
             setLoading(false);
         }
@@ -230,18 +235,19 @@ export default function LoginPage() {
     };
 
     const stepTitles = [
-        { title: "Welcome back", subtitle: "Sign in with your email" },
+        { title: tr.step0Title, subtitle: tr.step0Subtitle },
         {
-            title: "Enter your password",
+            title: tr.step1Title,
             subtitle: (
                 <>
-                    Signing in as <b>{email}</b>
+                    {tr.signingInAsPrefix}
+                    <b>{email}</b>
                 </>
             ),
         },
         {
-            title: "Two-factor authentication",
-            subtitle: "Enter the 6-digit code from your authenticator app",
+            title: tr.step2Title,
+            subtitle: tr.step2Subtitle,
         },
     ];
 
@@ -256,7 +262,7 @@ export default function LoginPage() {
                     <button
                         className={styles.backHome}
                         onClick={() => navigate("/welcome")}
-                        aria-label="Back to welcome"
+                        aria-label={common.backToWelcomeAria}
                         style={{
                             visibility: step === 0 ? "visible" : "hidden",
                         }}
@@ -331,7 +337,7 @@ export default function LoginPage() {
                             </p>
 
                             <div className={styles.field}>
-                                <label className={styles.label}>Email</label>
+                                <label className={styles.label}>{common.emailLabel}</label>
                                 <input
                                     className={`${styles.input} ${error && step === 0 ? styles.error : ""}`}
                                     type="email"
@@ -354,17 +360,17 @@ export default function LoginPage() {
                                     onClick={handleEmailSubmit}
                                     disabled={loading}
                                 >
-                                    {loading ? "Checking…" : "Continue"}
+                                    {loading ? common.checking : common.continueLabel}
                                 </button>
                             </div>
 
                             <p className={styles.footerNote}>
-                                Don't have an account?{" "}
+                                {tr.dontHaveAccount}{" "}
                                 <button
                                     className={styles.footerLink}
                                     onClick={() => navigate("/register")}
                                 >
-                                    Create one
+                                    {tr.createOne}
                                 </button>
                             </p>
                         </div>
@@ -379,7 +385,7 @@ export default function LoginPage() {
                             </p>
 
                             <div className={styles.field}>
-                                <label className={styles.label}>Password</label>
+                                <label className={styles.label}>{common.passwordLabel}</label>
                                 <input
                                     className={`${styles.input} ${error && step === 1 ? styles.error : ""}`}
                                     type="password"
@@ -403,7 +409,7 @@ export default function LoginPage() {
                                 <button
                                     className={styles.btnBack}
                                     onClick={goBack}
-                                    aria-label="Back"
+                                    aria-label={common.backAria}
                                 >
                                     <svg
                                         width="18"
@@ -423,17 +429,17 @@ export default function LoginPage() {
                                     onClick={handlePasswordSubmit}
                                     disabled={loading}
                                 >
-                                    {loading ? "Signing in…" : "Sign in"}
+                                    {loading ? tr.signingIn : common.signIn}
                                 </button>
                             </div>
 
                             <p className={styles.footerNote}>
-                                Forgot your password?{" "}
+                                {tr.forgotPassword}{" "}
                                 <button
                                     className={styles.footerLink}
                                     onClick={() => navigate("/recovery")}
                                 >
-                                    Change it
+                                    {tr.changeIt}
                                 </button>
                             </p>
                         </div>
@@ -484,7 +490,7 @@ export default function LoginPage() {
                                     onClick={handleTotpSubmit}
                                     disabled={loading}
                                 >
-                                    {loading ? "Verifying…" : "Verify"}
+                                    {loading ? common.verifying : common.verify}
                                 </button>
                             </div>
                         </div>

@@ -7,12 +7,21 @@ import { generateIdentityKeyPair, exportPrivateKeyPkcs8, wrapPrivateKey } from "
 import { toBase64 } from "../crypto/encoding";
 import styles from "./RecoveryPage.module.css";
 import zxcvbn from "zxcvbn";
+import { useLanguage } from "../lib/language";
+import {
+    AUTH_COMMON,
+    RECOVERY_TRANSLATIONS,
+    type AuthCommonTranslation,
+} from "../lib/authTranslations";
 
 type Step = 0 | 1 | 2;
 const STEP_COUNT = 3;
 
 export default function RecoveryPage() {
     const navigate = useNavigate();
+    const language = useLanguage();
+    const common = AUTH_COMMON[language];
+    const tr = RECOVERY_TRANSLATIONS[language];
 
     const [sessionId, setSessionId] = useState<string | null>(null);
     
@@ -44,20 +53,20 @@ export default function RecoveryPage() {
 
     const handleEmailSubmit = async () => {
         if (!isEmailValid) {
-            setError("Enter a valid email address");
+            setError(common.invalidEmail);
             return;
         }
         setLoading(true);
         try {
             const { success, sessionId } = await startRecovery(email);
             if (!success) {
-                setError("Something went wrong, try again");
+                setError(common.somethingWrongTryAgain);
                 return;
             }
             setSessionId(sessionId!);
             goNext();
         } catch {
-            setError("Something went wrong, try again");
+            setError(common.somethingWrongTryAgain);
         } finally {
             setLoading(false);
         }
@@ -65,7 +74,7 @@ export default function RecoveryPage() {
 
     const handlePhraseSubmit = async () => {
         if (!isPhraseValid) {
-            setError("Enter your recovery phrase");
+            setError(tr.enterRecoveryPhrase);
             return;
         }
         setLoading(true);
@@ -73,15 +82,15 @@ export default function RecoveryPage() {
             const { success, reason } = await verifyRecovery(sessionId!, email, await hashPhrase(phrase));
             if (!success) {
                 setError(
-                    reason === "too_many_attempts" ? "Too many attempts, please start over" :
-                    reason === "session_expired" ? "Session expired, please start over" :
-                    "Email or recovery phrase is incorrect"
+                    reason === "too_many_attempts" ? tr.tooManyAttemptsStartOver :
+                    reason === "session_expired" ? common.sessionExpired :
+                    tr.emailOrPhraseIncorrect
                 );
                 return;
             }
             goNext();
         } catch {
-            setError("Something went wrong, try again");
+            setError(common.somethingWrongTryAgain);
         } finally {
             setLoading(false);
         }
@@ -89,11 +98,11 @@ export default function RecoveryPage() {
 
     const handlePasswordSubmit = async () => {
         if (!isPasswordValid) {
-            setError("Password must be at least 8 characters and reasonably strong");
+            setError(common.weakPasswordError);
             return;
         }
         if (!doPasswordsMatch) {
-            setError("Passwords do not match");
+            setError(common.passwordsDoNotMatch);
             return;
         }
         setLoading(true);
@@ -117,15 +126,15 @@ export default function RecoveryPage() {
             );
             if (!success) {
                 setError(
-                    reason === "session_expired" ? "Session expired, please start over" :
-                    reason === "invalid_step" ? "Something went wrong, please start over" :
-                    "Failed to reset password, try again"
+                    reason === "session_expired" ? common.sessionExpired :
+                    reason === "invalid_step" ? common.somethingWrongStartOver :
+                    tr.failedToResetPassword
                 );
                 return;
             }
             navigate("/login");
         } catch {
-            setError("Something went wrong, try again");
+            setError(common.somethingWrongTryAgain);
         } finally {
             setLoading(false);
         }
@@ -133,21 +142,21 @@ export default function RecoveryPage() {
 
     const stepTitles = [
         {
-            title: "Recover your account",
-            subtitle: "Enter the email address you registered with",
+            title: tr.step0Title,
+            subtitle: tr.step0Subtitle,
         },
         {
-            title: "Enter recovery phrase",
+            title: tr.step1Title,
             subtitle: (
                 <>
-                    Enter one of the recovery phrases you saved during
-                    registration for <b>{email}</b>
+                    {tr.phraseForPrefix}
+                    <b>{email}</b>
                 </>
             ),
         },
         {
-            title: "Set new password",
-            subtitle: "Choose a strong password for your account",
+            title: tr.step2Title,
+            subtitle: tr.step2Subtitle,
         },
     ];
 
@@ -163,7 +172,7 @@ export default function RecoveryPage() {
                     <button
                         className={styles.backHome}
                         onClick={() => navigate("/login")}
-                        aria-label="Back to login"
+                        aria-label={tr.backToLoginAria}
                         style={{ visibility: step === 0 ? "visible" : "hidden" }}
                     >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
@@ -212,7 +221,7 @@ export default function RecoveryPage() {
                             <p className={styles.stepSubtitle}>{stepTitles[0].subtitle}</p>
 
                             <div className={styles.field}>
-                                <label className={styles.label}>Email</label>
+                                <label className={styles.label}>{common.emailLabel}</label>
                                 <input
                                     className={`${styles.input} ${error && step === 0 ? styles.error : ""}`}
                                     type="email"
@@ -232,17 +241,17 @@ export default function RecoveryPage() {
                                     className={styles.btnPrimary}
                                     onClick={handleEmailSubmit}
                                 >
-                                    Continue
+                                    {common.continueLabel}
                                 </button>
                             </div>
 
                             <p className={styles.footerNote}>
-                                Remember your password?{" "}
+                                {tr.rememberPassword}{" "}
                                 <button
                                     className={styles.footerLink}
                                     onClick={() => navigate("/login")}
                                 >
-                                    Sign in
+                                    {common.signIn}
                                 </button>
                             </p>
                         </div>
@@ -258,14 +267,14 @@ export default function RecoveryPage() {
                                     <circle cx="12" cy="12" r="10" />
                                     <path d="M12 16v-4M12 8h.01" />
                                 </svg>
-                                <span>You saved two recovery phrases during registration. Either one works.</span>
+                                <span>{tr.infoBoxText}</span>
                             </div>
 
                             <div className={styles.field}>
-                                <label className={styles.label}>Recovery phrase</label>
+                                <label className={styles.label}>{tr.recoveryPhraseLabel}</label>
                                 <textarea
                                     className={`${styles.phraseTextarea} ${error && step === 1 ? styles.error : ""}`}
-                                    placeholder="word1-word2-word3-word4-word5-word6-…"
+                                    placeholder={tr.phrasePlaceholder}
                                     value={phrase}
                                     onChange={(e) => setPhrase(e.target.value)}
                                     rows={4}
@@ -280,7 +289,7 @@ export default function RecoveryPage() {
                             </div>
 
                             <div className={styles.actions}>
-                                <button className={styles.btnBack} onClick={goBack} aria-label="Back">
+                                <button className={styles.btnBack} onClick={goBack} aria-label={common.backAria}>
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
                                         stroke="currentColor" strokeWidth="2.2"
                                         strokeLinecap="round" strokeLinejoin="round">
@@ -292,7 +301,7 @@ export default function RecoveryPage() {
                                     onClick={handlePhraseSubmit}
                                     disabled={loading}
                                 >
-                                    {loading ? "Verifying…" : "Verify phrase"}
+                                    {loading ? common.verifying : tr.verifyPhraseButton}
                                 </button>
                             </div>
                         </div>
@@ -303,7 +312,7 @@ export default function RecoveryPage() {
                             <p className={styles.stepSubtitle}>{stepTitles[2].subtitle}</p>
 
                             <div className={styles.field}>
-                                <label className={styles.label}>New password</label>
+                                <label className={styles.label}>{tr.newPasswordLabel}</label>
                                 <input
                                     className={styles.input}
                                     type="password"
@@ -327,7 +336,7 @@ export default function RecoveryPage() {
                                                 />
                                             ))}
                                         </div>
-                                        <p className={styles.strengthLabel}>{strengthLabel(passwordStrength)}</p>
+                                        <p className={styles.strengthLabel}>{strengthLabel(passwordStrength, common)}</p>
                                         {passwordFeedback?.warning && (
                                             <p className={styles.strengthWarning}>{passwordFeedback.warning}</p>
                                         )}
@@ -336,7 +345,7 @@ export default function RecoveryPage() {
                             </div>
 
                             <div className={styles.field}>
-                                <label className={styles.label}>Confirm password</label>
+                                <label className={styles.label}>{common.confirmPasswordLabel}</label>
                                 <input
                                     className={`${styles.input} ${confirmPassword && !doPasswordsMatch ? styles.error : ""}`}
                                     type="password"
@@ -346,7 +355,7 @@ export default function RecoveryPage() {
                                     onKeyDown={(e) => e.key === "Enter" && handlePasswordSubmit()}
                                 />
                                 {confirmPassword && !doPasswordsMatch && (
-                                    <p className={styles.errorText}>Passwords do not match</p>
+                                    <p className={styles.errorText}>{common.passwordsDoNotMatch}</p>
                                 )}
                             </div>
 
@@ -360,7 +369,7 @@ export default function RecoveryPage() {
                                     onClick={handlePasswordSubmit}
                                     disabled={loading}
                                 >
-                                    {loading ? "Saving…" : "Set new password"}
+                                    {loading ? tr.savingButton : tr.setNewPasswordButton}
                                 </button>
                             </div>
                         </div>
@@ -371,10 +380,6 @@ export default function RecoveryPage() {
     );
 }
 
-function fakeDelay(ms = 700) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 function strengthColor(score: number): string {
     if (score <= 1) return "linear-gradient(90deg, #f87171, #f87171)";
     if (score === 2) return "linear-gradient(90deg, #fbbf24, #fbbf24)";
@@ -382,9 +387,12 @@ function strengthColor(score: number): string {
     return "linear-gradient(90deg, #a78bfa, #22d3ee)";
 }
 
-function strengthLabel(score: number): string {
-    if (score <= 1) return "Weak password";
-    if (score === 2) return "Fair password";
-    if (score === 3) return "Good password";
-    return "Strong password";
+function strengthLabel(
+    score: number,
+    common: AuthCommonTranslation,
+): string {
+    if (score <= 1) return common.strength.weak;
+    if (score === 2) return common.strength.fair;
+    if (score === 3) return common.strength.good;
+    return common.strength.strong;
 }
