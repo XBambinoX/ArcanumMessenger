@@ -4,6 +4,8 @@ import { getChats } from "../api/chats";
 import { getUserAvatarUrl } from "../api/users";
 import AvatarImage from "./AvatarImage";
 import styles from "./ForwardPanel.module.css";
+import { useLanguage } from "../lib/language";
+import { FORWARD_PANEL_TRANSLATIONS } from "../lib/chatWindowTranslations";
 
 interface ForwardPanelProps {
     onClose: () => void;
@@ -16,6 +18,7 @@ interface ForwardPanelProps {
 // unlike the gif picker (repeat-use, anchored near its button), a centered
 // modal with a dim backdrop is the right call here.
 export default function ForwardPanel({ onClose, onPick }: ForwardPanelProps) {
+    const tr = FORWARD_PANEL_TRANSLATIONS[useLanguage()];
     const [chats, setChats] = useState<ChatSummary[]>([]);
     const [loaded, setLoaded] = useState(false);
 
@@ -30,8 +33,8 @@ export default function ForwardPanel({ onClose, onPick }: ForwardPanelProps) {
         <div className={styles.overlay} onClick={onClose}>
             <aside className={styles.panel} onClick={(e) => e.stopPropagation()}>
                 <header className={styles.header}>
-                    <h2 className={styles.title}>Forward to…</h2>
-                    <button className={styles.closeBtn} onClick={onClose} aria-label="Close">
+                    <h2 className={styles.title}>{tr.title}</h2>
+                    <button className={styles.closeBtn} onClick={onClose} aria-label={tr.closeAria}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
                             <path d="M18 6L6 18M6 6l12 12" />
                         </svg>
@@ -39,7 +42,7 @@ export default function ForwardPanel({ onClose, onPick }: ForwardPanelProps) {
                 </header>
 
                 {loaded && chats.length === 0 && (
-                    <p className={styles.note}>No chats to forward to yet</p>
+                    <p className={styles.note}>{tr.noChatsYet}</p>
                 )}
 
                 <div className={styles.list}>

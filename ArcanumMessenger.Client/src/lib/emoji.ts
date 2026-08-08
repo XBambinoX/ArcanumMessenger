@@ -1,10 +1,12 @@
 export interface EmojiCategory {
+    id: string;
     label: string;
     emojis: string[];
 }
 
 export const emojiCategories: EmojiCategory[] = [
     {
+        id: "smileys",
         label: "Smileys",
         emojis: [
             "😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "🙃", "😉", "😊", "😇", "🥰", "😍", "🤩",
@@ -16,6 +18,7 @@ export const emojiCategories: EmojiCategory[] = [
         ],
     },
     {
+        id: "gestures",
         label: "Gestures & People",
         emojis: [
             "👋", "🤚", "🖐️", "✋", "🖖", "👌", "🤌", "🤏", "✌️", "🤞", "🤟", "🤘", "🤙", "👈", "👉", "👆",
@@ -25,6 +28,7 @@ export const emojiCategories: EmojiCategory[] = [
         ],
     },
     {
+        id: "animals",
         label: "Animals & Nature",
         emojis: [
             "🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🙈",
@@ -37,6 +41,7 @@ export const emojiCategories: EmojiCategory[] = [
         ],
     },
     {
+        id: "food",
         label: "Food & Drink",
         emojis: [
             "🍏", "🍎", "🍐", "🍊", "🍋", "🍌", "🍉", "🍇", "🍓", "🫐", "🍈", "🍒", "🍑", "🥭", "🍍", "🥥",
@@ -48,6 +53,7 @@ export const emojiCategories: EmojiCategory[] = [
         ],
     },
     {
+        id: "activities",
         label: "Activities",
         emojis: [
             "⚽", "🏀", "🏈", "⚾", "🥎", "🎾", "🏐", "🏉", "🥏", "🎱", "🪀", "🏓", "🏸", "🏒", "🏑", "🥍",
@@ -58,6 +64,7 @@ export const emojiCategories: EmojiCategory[] = [
         ],
     },
     {
+        id: "travel",
         label: "Travel & Places",
         emojis: [
             "🚗", "🚕", "🚙", "🚌", "🏎️", "🚓", "🚑", "🚒", "🚐", "🛻", "🚚", "🚛", "🚜", "🛵", "🏍️", "🛺",
@@ -69,6 +76,7 @@ export const emojiCategories: EmojiCategory[] = [
         ],
     },
     {
+        id: "objects",
         label: "Objects",
         emojis: [
             "⌚", "📱", "💻", "⌨️", "🖥️", "🖨️", "🖱️", "🕹️", "💽", "💾", "💿", "📀", "📷", "📸", "📹", "🎥",
@@ -79,6 +87,7 @@ export const emojiCategories: EmojiCategory[] = [
         ],
     },
     {
+        id: "symbols",
         label: "Symbols",
         emojis: [
             "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "❣️", "💕", "💞", "💓", "💗", "💖",

@@ -14,6 +14,9 @@ import { getBlockedUsers, unblockUser } from "../api/contacts";
 import { getMyAvatarUrl, getUserAvatarUrl, uploadMyAvatar, deleteMyAvatar } from "../api/users";
 import AvatarImage from "./AvatarImage";
 import DeleteAccountModal from "./DeleteAccountModal";
+import { useLanguage, setLanguage, type Language } from "../lib/language";
+import { APP_COMMON } from "../lib/appTranslations";
+import { PROFILE_PANEL_TRANSLATIONS } from "../lib/profileTranslations";
 
 interface ProfilePanelProps {
     profile: User;
@@ -182,65 +185,61 @@ const TrashIcon = () => (
     </svg>
 );
 
-const menuItems: {
-    icon: (p: IconProps) => ReactElement;
-    color: string;
-    label: string;
-    value?: string;
-    section?: Section;
-}[] = [
-    { icon: AccountIcon, color: "#54a9eb", label: "My Account", section: "account" },
-    { icon: BellIcon, color: "#f2703c", label: "Notifications and Sounds", section: "notifications" },
-    { icon: LockIcon, color: "#4fb85c", label: "Privacy and Security", section: "privacy" },
-    { icon: ChatIcon, color: "#4ec4dc", label: "Chat Settings", section: "chats" },
-    { icon: LanguageIcon, color: "#3fbfae", label: "Language", section: "language" },
-];
-
-const themeOptions: { id: SettingsState["theme"]; label: string; icon: () => ReactElement }[] = [
-    { id: "system", label: "System", icon: ThemeSystemIcon },
-    { id: "dark", label: "Dark", icon: ThemeDarkIcon },
-    { id: "light", label: "Light", icon: ThemeLightIcon },
-];
-
 const languageOptions: { id: SettingsState["language"]; label: string }[] = [
     { id: "en", label: "English" },
     { id: "uk", label: "Українська" },
     { id: "de", label: "Deutsch" },
 ];
 
-// Shared by phone/bio/avatar visibility - all three are the same three-way choice.
-const visibilityOptions: { id: SettingsState["showPhoneNumber"]; label: string; icon: () => ReactElement }[] = [
-    { id: "everyone", label: "Everyone", icon: EveryoneIcon },
-    { id: "contacts", label: "My Contacts", icon: ContactsIcon },
-    { id: "nobody", label: "Nobody", icon: NobodyIcon },
-];
-
-const notificationSoundOptions: { id: string; label: string; file: string; icon: () => ReactElement }[] = [
-    { id: "bubble", label: "Bubble", file: "/sounds/notification_bubble.mp3", icon: SoundWaveIcon },
-    { id: "chime", label: "Chime", file: "/sounds/notification_chime.mp3", icon: SoundWaveIcon },
-    { id: "bell", label: "Bell", file: "/sounds/notification_bell.mp3", icon: SoundWaveIcon },
-];
-
-const addMeOptions: { id: SettingsState["whoCanAddMe"]; label: string; icon: () => ReactElement }[] = [
-    { id: "everyone", label: "Everyone", icon: EveryoneIcon },
-    { id: "contacts", label: "My Contacts", icon: ContactsIcon },
-];
-
-const sectionTitles: Record<Section, string> = {
-    main: "Profile",
-    account: "My Account",
-    notifications: "Notifications and Sounds" ,
-    privacy: "Privacy and Security",
-    chats: "Chat Settings",
-    language: "Language",
-    blocked: "Blocked Users",
-};
-
 const MAX_PHONE_DIGITS = 15;
 const ANIMATION_MS = 250;
 
 export default function ProfilePanel({ profile, onClose, onLogout, onUsernameChange, onNotificationSettingsChange, onAvatarChange }: ProfilePanelProps) {
     const navigate = useNavigate();
+    const language = useLanguage();
+    const common = APP_COMMON[language];
+    const tr = PROFILE_PANEL_TRANSLATIONS[language];
+
+    const menuItems: {
+        icon: (p: IconProps) => ReactElement;
+        color: string;
+        label: string;
+        value?: string;
+        section?: Section;
+    }[] = [
+        { icon: AccountIcon, color: "#54a9eb", label: tr.sectionTitles.account, section: "account" },
+        { icon: BellIcon, color: "#f2703c", label: tr.sectionTitles.notifications, section: "notifications" },
+        { icon: LockIcon, color: "#4fb85c", label: tr.sectionTitles.privacy, section: "privacy" },
+        { icon: ChatIcon, color: "#4ec4dc", label: tr.sectionTitles.chats, section: "chats" },
+        { icon: LanguageIcon, color: "#3fbfae", label: tr.sectionTitles.language, section: "language" },
+    ];
+
+    const themeOptions: { id: SettingsState["theme"]; label: string; icon: () => ReactElement }[] = [
+        { id: "system", label: tr.themeSystem, icon: ThemeSystemIcon },
+        { id: "dark", label: tr.themeDark, icon: ThemeDarkIcon },
+        { id: "light", label: tr.themeLight, icon: ThemeLightIcon },
+    ];
+
+    // Shared by phone/bio/avatar visibility - all three are the same three-way choice.
+    const visibilityOptions: { id: SettingsState["showPhoneNumber"]; label: string; icon: () => ReactElement }[] = [
+        { id: "everyone", label: tr.everyoneOption, icon: EveryoneIcon },
+        { id: "contacts", label: tr.myContactsOption, icon: ContactsIcon },
+        { id: "nobody", label: tr.nobodyOption, icon: NobodyIcon },
+    ];
+
+    const notificationSoundOptions: { id: string; label: string; file: string; icon: () => ReactElement }[] = [
+        { id: "bubble", label: tr.soundBubble, file: "/sounds/notification_bubble.mp3", icon: SoundWaveIcon },
+        { id: "chime", label: tr.soundChime, file: "/sounds/notification_chime.mp3", icon: SoundWaveIcon },
+        { id: "bell", label: tr.soundBell, file: "/sounds/notification_bell.mp3", icon: SoundWaveIcon },
+    ];
+
+    const addMeOptions: { id: SettingsState["whoCanAddMe"]; label: string; icon: () => ReactElement }[] = [
+        { id: "everyone", label: tr.everyoneOption, icon: EveryoneIcon },
+        { id: "contacts", label: tr.myContactsOption, icon: ContactsIcon },
+    ];
+
+    const sectionTitles: Record<Section, string> = tr.sectionTitles;
+
     const [copied, setCopied] = useState(false);
     const [settings, setSettings] = useState<SettingsState>(defaultSettings);
     const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -452,6 +451,9 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
 
         try {
             await updateChatSettings({ [chatsApiFieldMap[field]]: value });
+            if (field === "language") {
+                setLanguage(value as Language);
+            }
             setChatsSaveStatus("saved");
             window.setTimeout(() => setChatsSaveStatus((s) => (s === "saved" ? "idle" : s)), 1500);
         } catch {
@@ -614,7 +616,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                             {settingsLoaded && settings.bio && (
                                 <span className={styles.profileBio}>{settings.bio}</span>
                             )}
-                            <button className={styles.idRow} onClick={handleCopyId} title="Copy ID">
+                            <button className={styles.idRow} onClick={handleCopyId} title={tr.copyIdTitle}>
                                 <span className={styles.idValue}>{profile.publicId}</span>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <rect x="9" y="9" width="13" height="13" rx="2" />
@@ -653,7 +655,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                                     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
                                     <path d="M16 17l5-5-5-5M21 12H9" />
                                 </svg>
-                                Log out
+                                {tr.logOut}
                             </button>
                         </div>
                     </>
@@ -677,67 +679,67 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                                 </span>
                             </div>
                             <div className={styles.avatarEditHint}>
-                                <span className={styles.avatarEditTitle}>Set New Photo</span>
+                                <span className={styles.avatarEditTitle}>{tr.setNewPhoto}</span>
                                 <button className={styles.avatarEditSub} onClick={handleRemoveAvatar}>
-                                    Remove photo
+                                    {tr.removePhotoButton}
                                 </button>
                             </div>
 
                             <div className={styles.saveStatus}>
-                                {saveStatus === "saving" && <span className={styles.saveStatusSaving}>Saving...</span>}
-                                {saveStatus === "saved" && <span className={styles.saveStatusSaved}>Saved</span>}
-                                {saveStatus === "error" && <span className={styles.saveStatusError}>Failed to save</span>}
+                                {saveStatus === "saving" && <span className={styles.saveStatusSaving}>{common.saving}</span>}
+                                {saveStatus === "saved" && <span className={styles.saveStatusSaved}>{common.saved}</span>}
+                                {saveStatus === "error" && <span className={styles.saveStatusError}>{common.failedToSave}</span>}
                             </div>
                         </div>
 
-                        <label className={styles.fieldLabel}>Username</label>
-                        <input                    
+                        <label className={styles.fieldLabel}>{tr.usernameLabel}</label>
+                        <input
                             className={styles.textInput}
                             type="text"
-                            placeholder={settingsLoaded ? "Your username" : "Loading..."}
+                            placeholder={settingsLoaded ? tr.usernamePlaceholder : common.loading}
                             value={settings.username}
                             onChange={(e) => handleUsernameChange(e.target.value)}
                             maxLength={32}
                             disabled={!settingsLoaded}
                         />
 
-                        <label className={styles.fieldLabel}>Bio</label>
+                        <label className={styles.fieldLabel}>{tr.bioLabel}</label>
                         <textarea
                             className={styles.textArea}
-                            placeholder={settingsLoaded ? "Tell something about yourself" : "Loading..."}
+                            placeholder={settingsLoaded ? tr.bioPlaceholder : common.loading}
                             value={settings.bio}
                             onChange={(e) => handleBioChange(e.target.value)}
                             rows={3}
                             maxLength={70}
                             disabled={!settingsLoaded}
                         />
-                        <p className={styles.fieldHint}>{70 - settings.bio.length} characters left</p>
+                        <p className={styles.fieldHint}>{tr.charactersLeft(70 - settings.bio.length)}</p>
 
-                        <label className={styles.fieldLabel}>Phone number</label>
+                        <label className={styles.fieldLabel}>{tr.phoneLabel}</label>
                         <input
                             className={styles.textInput}
                             type="tel"
                             inputMode="numeric"
-                            placeholder={settingsLoaded ? "+1..." : "Loading..."}
+                            placeholder={settingsLoaded ? tr.phonePlaceholder : common.loading}
                             value={settings.phone}
                             onChange={(e) => handlePhoneChange(e.target.value)}
                             disabled={!settingsLoaded}
                         />
 
-                        <label className={styles.fieldLabel}>Email</label>
+                        <label className={styles.fieldLabel}>{tr.emailLabel}</label>
                         <input
                             className={styles.textInput}
                             type="email"
-                            placeholder={settingsLoaded ? "you@example.com" : "Loading..."}
+                            placeholder={settingsLoaded ? "you@example.com" : common.loading}
                             value={settings.email}
                             onChange={(e) => handleEmailChange(e.target.value)}
                             disabled={!settingsLoaded}
                         />
 
-                        <span className={styles.dangerTitle}>Danger Zone</span>
+                        <span className={styles.dangerTitle}>{tr.dangerZone}</span>
                         <button className={styles.dangerRow} onClick={handleOpenDeleteModal}>
                             <TrashIcon />
-                            <span>Delete My Account</span>
+                            <span>{tr.deleteMyAccount}</span>
                         </button>
                     </div>
                 );
@@ -746,14 +748,14 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                 return (
                     <div className={styles.subPage}>
                         <div className={styles.saveStatusRow}>
-                            {notifSaveStatus === "saving" && <span className={styles.saveStatusSaving}>Saving...</span>}
-                            {notifSaveStatus === "saved" && <span className={styles.saveStatusSaved}>Saved</span>}
-                            {notifSaveStatus === "error" && <span className={styles.saveStatusError}>Failed to save</span>}
+                            {notifSaveStatus === "saving" && <span className={styles.saveStatusSaving}>{common.saving}</span>}
+                            {notifSaveStatus === "saved" && <span className={styles.saveStatusSaved}>{common.saved}</span>}
+                            {notifSaveStatus === "error" && <span className={styles.saveStatusError}>{common.failedToSave}</span>}
                         </div>
 
-                        <span className={styles.subGroupTitle}>Message Notifications</span>
+                        <span className={styles.subGroupTitle}>{tr.messageNotificationsHeading}</span>
                         <label className={styles.row}>
-                            <span>Enable notifications</span>
+                            <span>{tr.enableNotifications}</span>
                             <input
                                 className={styles.switch}
                                 type="checkbox"
@@ -763,7 +765,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                             />
                         </label>
                         <label className={styles.row}>
-                            <span>Group chat notifications</span>
+                            <span>{tr.groupChatNotifications}</span>
                             <input
                                 className={styles.switch}
                                 type="checkbox"
@@ -773,7 +775,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                             />
                         </label>
 
-                        <span className={styles.subGroupTitle}>Sound</span>
+                        <span className={styles.subGroupTitle}>{tr.soundHeading}</span>
                         <div className={styles.chipGroup}>
                             {notificationSoundOptions.map((opt) => (
                                 <button
@@ -796,13 +798,13 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                 return (
                     <div className={styles.subPage}>
                         <div className={styles.saveStatusRow}>
-                            {privacySaveStatus === "saving" && <span className={styles.saveStatusSaving}>Saving...</span>}
-                            {privacySaveStatus === "saved" && <span className={styles.saveStatusSaved}>Saved</span>}
-                            {privacySaveStatus === "error" && <span className={styles.saveStatusError}>Failed to save</span>}
+                            {privacySaveStatus === "saving" && <span className={styles.saveStatusSaving}>{common.saving}</span>}
+                            {privacySaveStatus === "saved" && <span className={styles.saveStatusSaved}>{common.saved}</span>}
+                            {privacySaveStatus === "error" && <span className={styles.saveStatusError}>{common.failedToSave}</span>}
                         </div>
 
                         <label className={styles.row}>
-                            <span>Enable TOTP</span>
+                            <span>{tr.enableTotp}</span>
                             <input
                                 className={styles.switch}
                                 type="checkbox"
@@ -811,10 +813,10 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                                 onChange={(e) => handleToggleTotp(e.target.checked)}
                             />
                         </label>
-                        
-                        <span className={styles.subGroupTitle}>Presence</span>
+
+                        <span className={styles.subGroupTitle}>{tr.presenceHeading}</span>
                         <label className={styles.row}>
-                            <span>Show last seen</span>
+                            <span>{tr.showLastSeen}</span>
                             <input
                                 className={styles.switch}
                                 type="checkbox"
@@ -824,7 +826,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                             />
                         </label>
                         <label className={styles.row}>
-                            <span>Show online status</span>
+                            <span>{tr.showOnlineStatus}</span>
                             <input
                                 className={styles.switch}
                                 type="checkbox"
@@ -834,7 +836,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                             />
                         </label>
                         <label className={styles.row}>
-                            <span>Send read receipts</span>
+                            <span>{tr.sendReadReceipts}</span>
                             <input
                                 className={styles.switch}
                                 type="checkbox"
@@ -844,7 +846,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                             />
                         </label>
 
-                        <span className={styles.subGroupTitle}>Who can see my phone number</span>
+                        <span className={styles.subGroupTitle}>{tr.whoCanSeePhoneHeading}</span>
                         <div className={styles.chipGroup}>
                             {visibilityOptions.map((opt) => (
                                 <button
@@ -861,7 +863,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                             ))}
                         </div>
 
-                        <span className={styles.subGroupTitle}>Who can see my bio</span>
+                        <span className={styles.subGroupTitle}>{tr.whoCanSeeBioHeading}</span>
                         <div className={styles.chipGroup}>
                             {visibilityOptions.map((opt) => (
                                 <button
@@ -878,7 +880,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                             ))}
                         </div>
 
-                        <span className={styles.subGroupTitle}>Who can see my profile photo</span>
+                        <span className={styles.subGroupTitle}>{tr.whoCanSeePhotoHeading}</span>
                         <div className={styles.chipGroup}>
                             {visibilityOptions.map((opt) => (
                                 <button
@@ -895,7 +897,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                             ))}
                         </div>
 
-                        <span className={styles.subGroupTitle}>Who can see my email</span>
+                        <span className={styles.subGroupTitle}>{tr.whoCanSeeEmailHeading}</span>
                         <div className={styles.chipGroup}>
                             {visibilityOptions.map((opt) => (
                                 <button
@@ -912,7 +914,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                             ))}
                         </div>
 
-                        <span className={styles.subGroupTitle}>Who can add me to chats</span>
+                        <span className={styles.subGroupTitle}>{tr.whoCanAddMeHeading}</span>
                         <div className={styles.chipGroup}>
                             {addMeOptions.map((opt) => (
                                 <button
@@ -929,9 +931,9 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                             ))}
                         </div>
 
-                        <span className={styles.subGroupTitle}>Blocked Users</span>
+                        <span className={styles.subGroupTitle}>{tr.sectionTitles.blocked}</span>
                         <button className={styles.blockedEntryRow} onClick={() => navigateTo("blocked")}>
-                            <span>Blocked users</span>
+                            <span>{tr.blockedUsersRowLabel}</span>
                             <span className={styles.menuValue}>{blockedUsers.length}</span>
                         </button>
                     </div>
@@ -941,7 +943,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                 return (
                     <div className={styles.subPage}>
                         {blockedUsers.length === 0 ? (
-                            <p className={styles.fieldHint}>No blocked users.</p>
+                            <p className={styles.fieldHint}>{tr.noBlockedUsers}</p>
                         ) : (
                             <ul className={styles.blockedList}>
                                 {blockedUsers.map((u) => (
@@ -954,7 +956,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                                             className={styles.unblockBtn}
                                             onClick={() => handleUnblock(u.id)}
                                         >
-                                            Unblock
+                                            {common.unblock}
                                         </button>
                                     </li>
                                 ))}
@@ -967,12 +969,12 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                 return (
                     <div className={styles.subPage}>
                         <div className={styles.saveStatusRow}>
-                            {chatsSaveStatus === "saving" && <span className={styles.saveStatusSaving}>Saving...</span>}
-                            {chatsSaveStatus === "saved" && <span className={styles.saveStatusSaved}>Saved</span>}
-                            {chatsSaveStatus === "error" && <span className={styles.saveStatusError}>Failed to save</span>}
+                            {chatsSaveStatus === "saving" && <span className={styles.saveStatusSaving}>{common.saving}</span>}
+                            {chatsSaveStatus === "saved" && <span className={styles.saveStatusSaved}>{common.saved}</span>}
+                            {chatsSaveStatus === "error" && <span className={styles.saveStatusError}>{common.failedToSave}</span>}
                         </div>
 
-                        <span className={styles.subGroupTitle}>Theme</span>
+                        <span className={styles.subGroupTitle}>{tr.themeHeading}</span>
                         <div className={styles.chipGroup}>
                             {themeOptions.map((opt) => (
                                 <button
@@ -989,13 +991,13 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                             ))}
                         </div>
 
-                        <span className={styles.subGroupTitle}>Appearance</span>
+                        <span className={styles.subGroupTitle}>{tr.appearanceHeading}</span>
                         <div className={styles.row}>
-                            <span>Chat wallpaper</span>
+                            <span>{tr.chatWallpaper}</span>
                             <span className={styles.menuValue}>{settings.wallpaper}</span>
                         </div>
                         <label className={styles.row}>
-                            <span>Show link previews</span>
+                            <span>{tr.showLinkPreviews}</span>
                             <input
                                 className={styles.switch}
                                 type="checkbox"
@@ -1005,9 +1007,9 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                             />
                         </label>
 
-                        <span className={styles.subGroupTitle}>Data Usage</span>
+                        <span className={styles.subGroupTitle}>{tr.dataUsageHeading}</span>
                         <label className={styles.row}>
-                            <span>Auto-download media</span>
+                            <span>{tr.autoDownloadMediaLabel}</span>
                             <input
                                 className={styles.switch}
                                 type="checkbox"
@@ -1023,9 +1025,9 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                 return (
                     <div className={styles.subPage}>
                         <div className={styles.saveStatusRow}>
-                            {chatsSaveStatus === "saving" && <span className={styles.saveStatusSaving}>Saving...</span>}
-                            {chatsSaveStatus === "saved" && <span className={styles.saveStatusSaved}>Saved</span>}
-                            {chatsSaveStatus === "error" && <span className={styles.saveStatusError}>Failed to save</span>}
+                            {chatsSaveStatus === "saving" && <span className={styles.saveStatusSaving}>{common.saving}</span>}
+                            {chatsSaveStatus === "saved" && <span className={styles.saveStatusSaved}>{common.saved}</span>}
+                            {chatsSaveStatus === "error" && <span className={styles.saveStatusError}>{common.failedToSave}</span>}
                         </div>
 
                         <div className={styles.chipGroup}>
@@ -1059,7 +1061,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                             <span>{sectionTitles[section]}</span>
                         </button>
                     )}
-                    <button className={styles.closeBtn} onClick={onClose} aria-label="Close profile">
+                    <button className={styles.closeBtn} onClick={onClose} aria-label={tr.closeProfileAria}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
                             <path d="M18 6L6 18M6 6l12 12" />
                         </svg>

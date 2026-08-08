@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { deleteAccount } from "../api/userSettings";
 import styles from "./DeleteAccountModal.module.css";
+import { useLanguage } from "../lib/language";
+import { DELETE_ACCOUNT_TRANSLATIONS } from "../lib/profileTranslations";
 
 interface DeleteAccountModalProps {
     onClose: () => void;
@@ -14,6 +16,7 @@ const MAX_ATTEMPTS = 5;
 type Step = "warning" | "password";
 
 export default function DeleteAccountModal({ onClose, onConfirmed, kdfSalt }: DeleteAccountModalProps) {
+    const tr = DELETE_ACCOUNT_TRANSLATIONS[useLanguage()];
     const [step, setStep] = useState<Step>("warning");
     const [cooldown, setCooldown] = useState(COOLDOWN_SECONDS);
     const [password, setPassword] = useState("");
@@ -34,7 +37,7 @@ export default function DeleteAccountModal({ onClose, onConfirmed, kdfSalt }: De
 
     const handleSubmit = async () => {
         if (attempts >= MAX_ATTEMPTS) {
-            setError("Too many attempts. Try again later.");
+            setError(tr.tooManyAttempts);
             return;
         }
 
@@ -45,7 +48,7 @@ export default function DeleteAccountModal({ onClose, onConfirmed, kdfSalt }: De
 
         if (!result.ok) {
             setAttempts((a) => a + 1);
-            setError(result.reason === "invalid_password" ? "Incorrect password" : "Something went wrong");
+            setError(result.reason === "invalid_password" ? tr.incorrectPassword : tr.somethingWrong);
             setSubmitting(false);
             return;
         }
@@ -58,21 +61,20 @@ export default function DeleteAccountModal({ onClose, onConfirmed, kdfSalt }: De
             <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
                 {step === "warning" && (
                     <div className={styles.step}>
-                        <h3 className={styles.title}>Delete Account</h3>
+                        <h3 className={styles.title}>{tr.warningTitle}</h3>
                         <p className={styles.text}>
-                            This will permanently delete your account, messages, and all
-                            associated data. This action cannot be undone.
+                            {tr.warningText}
                         </p>
                         <div className={styles.actions}>
                             <button className={styles.cancelBtn} onClick={onClose}>
-                                Cancel
+                                {tr.cancel}
                             </button>
                             <button
                                 className={styles.dangerBtn}
                                 onClick={handleContinue}
                                 disabled={cooldown > 0}
                             >
-                                {cooldown > 0 ? `Continue (${cooldown})` : "Continue"}
+                                {cooldown > 0 ? tr.continueWithCountdown(cooldown) : tr.continueLabel}
                             </button>
                         </div>
                     </div>
@@ -80,14 +82,14 @@ export default function DeleteAccountModal({ onClose, onConfirmed, kdfSalt }: De
 
                 {step === "password" && (
                     <div className={styles.step}>
-                        <h3 className={styles.title}>Confirm Your Password</h3>
+                        <h3 className={styles.title}>{tr.confirmPasswordTitle}</h3>
                         <p className={styles.text}>
-                            Enter your password to permanently delete your account.
+                            {tr.confirmPasswordText}
                         </p>
                         <input
                             className={styles.passwordInput}
                             type="password"
-                            placeholder="Password"
+                            placeholder={tr.passwordPlaceholder}
                             value={password}
                             onChange={(e) => {
                                 setPassword(e.target.value);
@@ -98,14 +100,14 @@ export default function DeleteAccountModal({ onClose, onConfirmed, kdfSalt }: De
                         {error && <p className={styles.error}>{error}</p>}
                         <div className={styles.actions}>
                             <button className={styles.cancelBtn} onClick={onClose}>
-                                Cancel
+                                {tr.cancel}
                             </button>
                             <button
                                 className={styles.dangerBtn}
                                 onClick={handleSubmit}
                                 disabled={submitting || password.length === 0}
                             >
-                                {submitting ? "Deleting..." : "Delete Account"}
+                                {submitting ? tr.deleting : tr.deleteAccountButton}
                             </button>
                         </div>
                     </div>

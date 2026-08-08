@@ -7,6 +7,8 @@ import type { ChatSummary, User, UserSearchResult } from "../types/messenger";
 import UserInfoPanel from "./UserInfoPanel";
 import AvatarImage from "./AvatarImage";
 import styles from "./NewChatPanel.module.css";
+import { useLanguage } from "../lib/language";
+import { NEW_CHAT_TRANSLATIONS } from "../lib/chatManagementTranslations";
 
 const MIN_SEARCH_LENGTH = 4;
 const SEARCH_DEBOUNCE_MS = 350;
@@ -19,6 +21,7 @@ interface NewChatPanelProps {
 type Mode = "browse" | "group-members" | "group-details";
 
 export default function NewChatPanel({ onClose, onStartChat }: NewChatPanelProps) {
+    const tr = NEW_CHAT_TRANSLATIONS[useLanguage()];
     const [mode, setMode] = useState<Mode>("browse");
     const [search, setSearch] = useState("");
     const [results, setResults] = useState<UserSearchResult[]>([]);
@@ -86,8 +89,8 @@ export default function NewChatPanel({ onClose, onStartChat }: NewChatPanelProps
             } else {
                 setGroupError(
                     reason === "restricted_members"
-                        ? "Someone in this group only accepts chats from their contacts."
-                        : "Couldn't create this group.",
+                        ? tr.restrictedGroupMembersError
+                        : tr.couldntCreateGroup,
                 );
             }
         } finally {
@@ -112,7 +115,7 @@ export default function NewChatPanel({ onClose, onStartChat }: NewChatPanelProps
                                 onClick={() =>
                                     setMode(mode === "group-details" ? "group-members" : "browse")
                                 }
-                                aria-label="Back"
+                                aria-label={tr.backAria}
                             >
                                 <svg
                                     width="16"
@@ -130,16 +133,16 @@ export default function NewChatPanel({ onClose, onStartChat }: NewChatPanelProps
                         )}
                         <h2 className={styles.title}>
                             {mode === "browse"
-                                ? "New chat"
+                                ? tr.titleNewChat
                                 : mode === "group-members"
-                                    ? "Add members"
-                                    : "New group"}
+                                    ? tr.titleAddMembers
+                                    : tr.titleNewGroup}
                         </h2>
                     </div>
                     <button
                         className={styles.closeBtn}
                         onClick={onClose}
-                        aria-label="Close"
+                        aria-label={tr.closeAria}
                     >
                         <svg
                             width="16"
@@ -160,20 +163,20 @@ export default function NewChatPanel({ onClose, onStartChat }: NewChatPanelProps
                         <input
                             className={styles.search}
                             type="text"
-                            placeholder="Group name"
+                            placeholder={tr.groupNamePlaceholder}
                             value={groupTitle}
                             onChange={(e) => setGroupTitle(e.target.value)}
                             autoFocus
                         />
                         <textarea
                             className={styles.descriptionInput}
-                            placeholder="Description (optional)"
+                            placeholder={tr.descriptionPlaceholder}
                             value={groupDescription}
                             onChange={(e) => setGroupDescription(e.target.value)}
                             rows={3}
                         />
                         <p className={styles.note}>
-                            {groupMembers.size} member{groupMembers.size === 1 ? "" : "s"} selected
+                            {tr.membersSelected(groupMembers.size)}
                         </p>
                         {groupError && <p className={styles.errorNote}>{groupError}</p>}
                         <button
@@ -181,7 +184,7 @@ export default function NewChatPanel({ onClose, onStartChat }: NewChatPanelProps
                             onClick={handleCreateGroup}
                             disabled={!groupTitle.trim() || groupMembers.size === 0 || creatingGroup}
                         >
-                            {creatingGroup ? "Creating…" : "Create group"}
+                            {creatingGroup ? tr.creatingGroup : tr.createGroupButton}
                         </button>
                     </div>
                 ) : (
@@ -189,7 +192,7 @@ export default function NewChatPanel({ onClose, onStartChat }: NewChatPanelProps
                         <input
                             className={styles.search}
                             type="text"
-                            placeholder="Find a user by ID"
+                            placeholder={tr.findUserPlaceholder}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
@@ -216,7 +219,7 @@ export default function NewChatPanel({ onClose, onStartChat }: NewChatPanelProps
                                         <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                                     </svg>
                                 </span>
-                                Create a group
+                                {tr.createAGroupButton}
                             </button>
                         )}
 
@@ -228,7 +231,7 @@ export default function NewChatPanel({ onClose, onStartChat }: NewChatPanelProps
                                         <button
                                             className={styles.chipRemove}
                                             onClick={() => toggleGroupMember(member)}
-                                            aria-label={`Remove ${member.name}`}
+                                            aria-label={tr.removeChipAria(member.name)}
                                         >
                                             ×
                                         </button>
@@ -238,18 +241,17 @@ export default function NewChatPanel({ onClose, onStartChat }: NewChatPanelProps
                         )}
 
                         <h3 className={styles.sectionTitle}>
-                            {query.length > 0 ? "Search results" : "Contacts"}
+                            {query.length > 0 ? tr.searchResultsHeading : tr.contactsHeading}
                         </h3>
                         {query.length > 0 && query.length < MIN_SEARCH_LENGTH ? (
                             <p className={styles.note}>
-                                Type at least {MIN_SEARCH_LENGTH} characters
-                                of the ID.
+                                {tr.typeAtLeast(MIN_SEARCH_LENGTH)}
                             </p>
                         ) : list.length === 0 ? (
                             <p className={styles.note}>
                                 {query.length > 0
-                                    ? "No matches."
-                                    : "No contacts yet – find someone by ID above."}
+                                    ? tr.noMatches
+                                    : tr.noContactsYet}
                             </p>
                         ) : (
                             <ul className={styles.contactList}>
@@ -289,7 +291,7 @@ export default function NewChatPanel({ onClose, onStartChat }: NewChatPanelProps
                                 onClick={() => setMode("group-details")}
                                 disabled={groupMembers.size === 0}
                             >
-                                Next
+                                {tr.nextButton}
                             </button>
                         )}
                     </>

@@ -7,6 +7,9 @@ import { getUserAvatarUrl } from "../api/users";
 import { formatChatTime } from "../lib/time";
 import AvatarImage from "./AvatarImage";
 import styles from "./UserInfoPanel.module.css";
+import { useLanguage } from "../lib/language";
+import { APP_COMMON } from "../lib/appTranslations";
+import { USER_INFO_TRANSLATIONS } from "../lib/chatManagementTranslations";
 
 interface UserInfoPanelProps {
     userId: string;
@@ -23,6 +26,9 @@ export default function UserInfoPanel({
     onStartChat,
     presence
 }: UserInfoPanelProps) {
+    const language = useLanguage();
+    const common = APP_COMMON[language];
+    const tr = USER_INFO_TRANSLATIONS[language];
     const [isContact, setIsContact] = useState(user.isContact);
     const [isBlocked, setIsBlocked] = useState(user.isBlocked);
     const [writeError, setWriteError] = useState<string | null>(null);
@@ -38,8 +44,8 @@ export default function UserInfoPanel({
         } else {
             setWriteError(
                 reason === "add_restricted"
-                    ? `${user.name} only accepts messages from their contacts.`
-                    : "Couldn't start this chat.",
+                    ? `${user.name}${tr.onlyAcceptsMessagesSuffix}`
+                    : tr.couldntStartChat,
             );
         }
     };
@@ -68,7 +74,7 @@ export default function UserInfoPanel({
                 <button
                     className={styles.closeBtn}
                     onClick={onClose}
-                    aria-label="Close"
+                    aria-label={tr.closeAria}
                 >
                     <svg
                         width="16"
@@ -92,12 +98,12 @@ export default function UserInfoPanel({
                         className={`${styles.lastSeen} ${presence?.isOnline ? styles.lastSeenOnline : ""}`}
                     >
                         {presence?.isOnline
-                            ? "online"
+                            ? common.online
                             : presence?.lastSeen
-                                ? `Last seen ${formatChatTime(presence.lastSeen)}`
+                                ? `${tr.lastSeenPrefix}${formatChatTime(presence.lastSeen)}`
                                 : user.lastSeen
-                                    ? `Last seen ${formatChatTime(user.lastSeen)}`
-                                    : "Last seen a while ago"}
+                                    ? `${tr.lastSeenPrefix}${formatChatTime(user.lastSeen)}`
+                                    : tr.lastSeenAWhileAgo}
                     </span>
                 </div>
 
@@ -118,7 +124,7 @@ export default function UserInfoPanel({
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                             <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z" />
                         </svg>
-                        Message
+                        {tr.messageButton}
                     </button>
                     <button
                         className={styles.actionBtn}
@@ -143,7 +149,7 @@ export default function UserInfoPanel({
                                 <path d="M20 8v6M23 11h-6" />
                             )}
                         </svg>
-                        {isContact ? "Remove from contacts" : "Add to contacts"}
+                        {isContact ? tr.removeFromContacts : tr.addToContacts}
                     </button>
                 </div>
 
@@ -164,38 +170,38 @@ export default function UserInfoPanel({
                         <circle cx="12" cy="12" r="9" />
                         <path d="M6.5 6.5l11 11" />
                     </svg>
-                    {isBlocked ? "Unblock" : "Block"}
+                    {isBlocked ? common.unblock : common.block}
                 </button>
 
                 {(isBlocked || user.isBlockedByOther) && (
                     <p className={styles.blockNote}>
                         {isBlocked
-                            ? "You've blocked this user."
-                            : "This user has blocked you."}
+                            ? tr.youBlockedUser
+                            : tr.userBlockedYou}
                     </p>
                 )}
 
                 <section className={styles.infoSection}>
                     {user.bio && (
                         <div className={styles.infoRow}>
-                            <span className={styles.infoLabel}>Bio</span>
+                            <span className={styles.infoLabel}>{tr.bioLabel}</span>
                             <span className={styles.infoValue}>{user.bio}</span>
                         </div>
                     )}
                     {user.email && (
                         <div className={styles.infoRow}>
-                            <span className={styles.infoLabel}>Email</span>
+                            <span className={styles.infoLabel}>{tr.emailLabel}</span>
                             <span className={styles.infoValue}>{user.email}</span>
                         </div>
                     )}
                     {user.phone && (
                         <div className={styles.infoRow}>
-                            <span className={styles.infoLabel}>Phone</span>
+                            <span className={styles.infoLabel}>{tr.phoneLabel}</span>
                             <span className={styles.infoValue}>{user.phone}</span>
                         </div>
                     )}
                     <div className={styles.infoRow}>
-                        <span className={styles.infoLabel}>ID</span>
+                        <span className={styles.infoLabel}>{tr.idLabel}</span>
                         <span className={styles.infoValue}>{user.publicId}</span>
                     </div>
                 </section>
