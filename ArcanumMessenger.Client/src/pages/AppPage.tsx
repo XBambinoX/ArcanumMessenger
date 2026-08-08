@@ -18,6 +18,7 @@ import AvatarImage from "../components/AvatarImage";
 import type { ChatFolder, ChatMessage, ChatSummary, MessageType, User } from "../types/messenger";
 import styles from "./AppPage.module.css";
 import { useLanguage, getLanguage, setLanguage, type Language } from "../lib/language";
+import { getTheme, setTheme, type Theme } from "../lib/theme";
 import { APP_CHROME, APP_COMMON } from "../lib/appTranslations";
 
 interface PresenceInfo {
@@ -153,6 +154,13 @@ export default function AppPage() {
             const accountLanguage = settings.language as Language;
             if (accountLanguage && accountLanguage !== getLanguage()) {
                 setLanguage(accountLanguage);
+            }
+
+            // Same reasoning as language above - the account's saved theme
+            // is the source of truth on login.
+            const accountTheme = settings.theme as Theme;
+            if (accountTheme && accountTheme !== getTheme()) {
+                setTheme(accountTheme);
             }
         });
 

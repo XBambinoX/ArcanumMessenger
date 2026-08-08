@@ -15,6 +15,7 @@ import { getMyAvatarUrl, getUserAvatarUrl, uploadMyAvatar, deleteMyAvatar } from
 import AvatarImage from "./AvatarImage";
 import DeleteAccountModal from "./DeleteAccountModal";
 import { useLanguage, setLanguage, type Language } from "../lib/language";
+import { setTheme, type Theme } from "../lib/theme";
 import { APP_COMMON } from "../lib/appTranslations";
 import { PROFILE_PANEL_TRANSLATIONS } from "../lib/profileTranslations";
 
@@ -453,6 +454,9 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
             await updateChatSettings({ [chatsApiFieldMap[field]]: value });
             if (field === "language") {
                 setLanguage(value as Language);
+            }
+            if (field === "theme") {
+                setTheme(value as Theme);
             }
             setChatsSaveStatus("saved");
             window.setTimeout(() => setChatsSaveStatus((s) => (s === "saved" ? "idle" : s)), 1500);

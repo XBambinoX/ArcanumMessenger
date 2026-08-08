@@ -2,7 +2,7 @@
     position: fixed;
     inset: 0;
     z-index: 10;
-    background: rgba(6, 4, 16, 0.55);
+    background: rgba(var(--overlay-rgb), 0.55);
     backdrop-filter: blur(2px);
     display: flex;
     align-items: center;
@@ -17,10 +17,10 @@
     max-width: 100%;
     display: flex;
     flex-direction: column;
-    background: #12102a;
-    border: 1px solid rgba(124, 58, 237, 0.2);
+    background: rgb(var(--bg-elevated-rgb));
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
     border-radius: 16px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 20px 60px rgba(var(--black-rgb), 0.45);
     padding: 18px;
     animation: panelPop 0.16s ease-out;
 }
@@ -43,9 +43,9 @@
     width: 30px;
     height: 30px;
     border-radius: 9px;
-    border: 1px solid rgba(124, 58, 237, 0.25);
-    background: rgba(124, 58, 237, 0.05);
-    color: rgba(167, 139, 250, 0.8);
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    background: rgba(var(--accent-rgb), 0.05);
+    color: rgba(var(--accent-light-rgb), 0.8);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -54,8 +54,8 @@
 }
 
 .closeBtn:hover {
-    background: rgba(124, 58, 237, 0.12);
-    border-color: rgba(167, 139, 250, 0.4);
+    background: rgba(var(--accent-rgb), 0.12);
+    border-color: rgba(var(--accent-light-rgb), 0.4);
 }
 
 .profileHeader {
@@ -75,21 +75,21 @@
     justify-content: center;
     font-size: 24px;
     font-weight: 700;
-    color: #fff;
-    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    color: rgb(var(--white-rgb));
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
     margin-bottom: 10px;
 }
 
 .profileName {
     font-size: 16px;
     font-weight: 700;
-    color: rgba(226, 232, 240, 0.95);
+    color: rgba(var(--text-rgb), 0.95);
     margin-bottom: 6px;
 }
 
 .lastSeen {
     font-size: 12.5px;
-    color: rgba(148, 163, 184, 0.6);
+    color: rgba(var(--text-muted-rgb), 0.6);
 }
 
 .actionRow {
@@ -106,9 +106,9 @@
     gap: 7px;
     padding: 9px;
     border-radius: 10px;
-    border: 1px solid rgba(124, 58, 237, 0.25);
-    background: rgba(124, 58, 237, 0.08);
-    color: rgba(226, 232, 240, 0.95);
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    background: rgba(var(--accent-rgb), 0.08);
+    color: rgba(var(--text-rgb), 0.95);
     font-family: inherit;
     font-size: 13px;
     font-weight: 600;
@@ -117,8 +117,8 @@
 }
 
 .actionBtn:hover {
-    background: rgba(124, 58, 237, 0.15);
-    border-color: rgba(167, 139, 250, 0.4);
+    background: rgba(var(--accent-rgb), 0.15);
+    border-color: rgba(var(--accent-light-rgb), 0.4);
 }
 
 .actionBtn:disabled {
@@ -129,36 +129,36 @@
 .blockBtn {
     width: 100%;
     margin-bottom: 14px;
-    color: #f87171;
-    border-color: rgba(248, 113, 113, 0.3);
-    background: rgba(248, 113, 113, 0.08);
+    color: rgb(var(--danger-rgb));
+    border-color: rgba(var(--danger-rgb), 0.3);
+    background: rgba(var(--danger-rgb), 0.08);
 }
 
 .blockBtn:hover {
-    background: rgba(248, 113, 113, 0.15);
-    border-color: rgba(248, 113, 113, 0.5);
+    background: rgba(var(--danger-rgb), 0.15);
+    border-color: rgba(var(--danger-rgb), 0.5);
 }
 
 .blockBtnActive {
-    color: rgba(226, 232, 240, 0.95);
-    border-color: rgba(124, 58, 237, 0.25);
-    background: rgba(124, 58, 237, 0.08);
+    color: rgba(var(--text-rgb), 0.95);
+    border-color: rgba(var(--accent-rgb), 0.25);
+    background: rgba(var(--accent-rgb), 0.08);
 }
 
 .blockBtnActive:hover {
-    background: rgba(124, 58, 237, 0.15);
-    border-color: rgba(167, 139, 250, 0.4);
+    background: rgba(var(--accent-rgb), 0.15);
+    border-color: rgba(var(--accent-light-rgb), 0.4);
 }
 
 .blockNote {
     margin: -6px 0 14px;
     font-size: 12.5px;
-    color: #f87171;
+    color: rgb(var(--danger-rgb));
     text-align: center;
 }
 
 .infoSection {
-    border-top: 1px solid rgba(124, 58, 237, 0.12);
+    border-top: 1px solid rgba(var(--accent-rgb), 0.12);
     padding-top: 14px;
 }
 
@@ -174,15 +174,15 @@
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: rgba(167, 139, 250, 0.6);
+    color: rgba(var(--accent-light-rgb), 0.6);
 }
 
 .infoValue {
     font-size: 14px;
-    color: rgba(226, 232, 240, 0.9);
+    color: rgba(var(--text-rgb), 0.9);
     word-break: break-word;
 }
 
 .lastSeenOnline {
-    color: var(--color-online, #4caf50);
+    color: rgb(var(--success-rgb));
 }

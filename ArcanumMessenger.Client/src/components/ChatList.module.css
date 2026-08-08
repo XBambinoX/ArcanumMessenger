@@ -11,7 +11,7 @@
     margin: 40px 16px;
     text-align: center;
     font-size: 14px;
-    color: rgba(148, 163, 184, 0.5);
+    color: rgba(var(--text-muted-rgb), 0.5);
 }
 
 .item {
@@ -31,14 +31,14 @@
 }
 
 .item:hover {
-    background: rgba(124, 58, 237, 0.08);
+    background: rgba(var(--accent-rgb), 0.08);
 }
 
 .item.selected {
     background: linear-gradient(
         135deg,
-        rgba(124, 58, 237, 0.22),
-        rgba(79, 70, 229, 0.14)
+        rgba(var(--accent-rgb), 0.22),
+        rgba(var(--accent2-rgb), 0.14)
     );
 }
 
@@ -53,16 +53,16 @@
     justify-content: center;
     font-size: 18px;
     font-weight: 700;
-    color: #fff;
-    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    color: rgb(var(--white-rgb));
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
 }
 
 .avatarGroup {
-    background: linear-gradient(135deg, #0891b2, #4f46e5);
+    background: linear-gradient(135deg, rgb(var(--accent-cyan3-rgb)), rgb(var(--accent2-rgb)));
 }
 
 .avatarSaved {
-    background: linear-gradient(135deg, #38bdf8, #2563eb);
+    background: linear-gradient(135deg, rgb(var(--accent-blue-rgb)), rgb(var(--accent-blue2-rgb)));
 }
 
 .body {
@@ -91,13 +91,13 @@
 
 .muteIcon {
     flex-shrink: 0;
-    color: rgba(148, 163, 184, 0.55);
+    color: rgba(var(--text-muted-rgb), 0.55);
 }
 
 .time {
     flex-shrink: 0;
     font-size: 11.5px;
-    color: rgba(148, 163, 184, 0.6);
+    color: rgba(var(--text-muted-rgb), 0.6);
 }
 
 /* A span with role="button" - a real button can't be nested inside
@@ -110,8 +110,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: rgba(167, 139, 250, 0.85);
-    background: rgba(124, 58, 237, 0.12);
+    color: rgba(var(--accent-light-rgb), 0.85);
+    background: rgba(var(--accent-rgb), 0.12);
     opacity: 0;
     cursor: pointer;
     transition:
@@ -125,7 +125,7 @@
 }
 
 .archiveBtn:hover {
-    background: rgba(124, 58, 237, 0.25);
+    background: rgba(var(--accent-rgb), 0.25);
 }
 
 .bottomRow {
@@ -141,7 +141,7 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     font-size: 13px;
-    color: rgba(148, 163, 184, 0.75);
+    color: rgba(var(--text-muted-rgb), 0.75);
 }
 
 .badge {
@@ -155,12 +155,12 @@
     justify-content: center;
     font-size: 11.5px;
     font-weight: 600;
-    color: #fff;
-    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    color: rgb(var(--white-rgb));
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
 }
 
 .badgeMuted {
-    background: rgba(148, 163, 184, 0.35);
+    background: rgba(var(--text-muted-rgb), 0.35);
 }
 
 .onlineDot {
@@ -170,7 +170,7 @@
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: #4fb85c;
-    border: 2.5px solid #0f0c1e;
+    background: rgb(var(--success-rgb));
+    border: 2.5px solid rgb(var(--bg-page-rgb));
     box-sizing: border-box;
 }

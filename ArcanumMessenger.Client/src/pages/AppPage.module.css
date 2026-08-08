@@ -1,8 +1,8 @@
 .root {
     display: flex;
     height: 100vh;
-    background: #0d0b1e;
-    color: rgba(226, 232, 240, 0.95);
+    background: rgb(var(--bg-rgb));
+    color: rgba(var(--text-rgb), 0.95);
     font-family:
         "Inter",
         -apple-system,
@@ -17,8 +17,8 @@
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
-    border-right: 1px solid rgba(124, 58, 237, 0.15);
-    background: rgba(15, 12, 30, 0.6);
+    border-right: 1px solid rgba(var(--accent-rgb), 0.15);
+    background: rgba(var(--bg-page-rgb), 0.6);
 }
 
 .resizeHandle {
@@ -34,12 +34,12 @@
 
 .resizeHandle:hover,
 .resizeHandle:active {
-    background: rgba(124, 58, 237, 0.35);
+    background: rgba(var(--accent-rgb), 0.35);
 }
 
 .sidebarHeader {
     padding: 14px 14px 10px;
-    border-bottom: 1px solid rgba(124, 58, 237, 0.12);
+    border-bottom: 1px solid rgba(var(--accent-rgb), 0.12);
 }
 
 .brandRow {
@@ -65,7 +65,7 @@
 }
 
 .profileBtn:hover {
-    background: rgba(124, 58, 237, 0.08);
+    background: rgba(var(--accent-rgb), 0.08);
 }
 
 .avatarBtn {
@@ -78,8 +78,8 @@
     flex-shrink: 0;
     font-size: 14px;
     font-weight: 700;
-    color: #fff;
-    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    color: rgb(var(--white-rgb));
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
 }
 
 .profileName {
@@ -90,7 +90,7 @@
     white-space: nowrap;
     font-size: 14px;
     font-weight: 600;
-    color: rgba(226, 232, 240, 0.9);
+    color: rgba(var(--text-rgb), 0.9);
     text-align: left;
 }
 
@@ -98,9 +98,9 @@
     width: 34px;
     height: 34px;
     border-radius: 10px;
-    border: 1px solid rgba(124, 58, 237, 0.25);
-    background: rgba(124, 58, 237, 0.05);
-    color: rgba(167, 139, 250, 0.8);
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    background: rgba(var(--accent-rgb), 0.05);
+    color: rgba(var(--accent-light-rgb), 0.8);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -110,8 +110,8 @@
 }
 
 .iconBtn:hover {
-    background: rgba(124, 58, 237, 0.12);
-    border-color: rgba(167, 139, 250, 0.4);
+    background: rgba(var(--accent-rgb), 0.12);
+    border-color: rgba(var(--accent-light-rgb), 0.4);
 }
 
 .search {
@@ -119,9 +119,9 @@
     width: 100%;
     padding: 9px 14px;
     border-radius: 10px;
-    border: 1px solid rgba(124, 58, 237, 0.2);
-    background: rgba(124, 58, 237, 0.05);
-    color: rgba(226, 232, 240, 0.95);
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
+    background: rgba(var(--accent-rgb), 0.05);
+    color: rgba(var(--text-rgb), 0.95);
     font-family: inherit;
     font-size: 14px;
     outline: none;
@@ -131,12 +131,12 @@
 }
 
 .search::placeholder {
-    color: rgba(148, 163, 184, 0.5);
+    color: rgba(var(--text-muted-rgb), 0.5);
 }
 
 .search:focus {
-    border-color: rgba(167, 139, 250, 0.5);
-    background: rgba(124, 58, 237, 0.09);
+    border-color: rgba(var(--accent-light-rgb), 0.5);
+    background: rgba(var(--accent-rgb), 0.09);
 }
 
 .folders {
@@ -153,7 +153,7 @@
     border-radius: 9px;
     border: 1px solid transparent;
     background: transparent;
-    color: rgba(148, 163, 184, 0.75);
+    color: rgba(var(--text-muted-rgb), 0.75);
     font-family: inherit;
     font-size: 13px;
     font-weight: 600;
@@ -162,18 +162,18 @@
 }
 
 .folderTab:hover {
-    background: rgba(124, 58, 237, 0.08);
-    color: rgba(226, 232, 240, 0.9);
+    background: rgba(var(--accent-rgb), 0.08);
+    color: rgba(var(--text-rgb), 0.9);
 }
 
 .folderActive {
     background: linear-gradient(
         135deg,
-        rgba(124, 58, 237, 0.22),
-        rgba(79, 70, 229, 0.14)
+        rgba(var(--accent-rgb), 0.22),
+        rgba(var(--accent2-rgb), 0.14)
     );
-    border-color: rgba(124, 58, 237, 0.3);
-    color: rgba(226, 232, 240, 0.95);
+    border-color: rgba(var(--accent-rgb), 0.3);
+    color: rgba(var(--text-rgb), 0.95);
 }
 
 .folderCount {
@@ -185,8 +185,8 @@
     align-items: center;
     justify-content: center;
     font-size: 11px;
-    color: #fff;
-    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    color: rgb(var(--white-rgb));
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
 }
 
 .chatListArea {
@@ -203,12 +203,12 @@
     background:
         radial-gradient(
             circle at 20% 0%,
-            rgba(124, 58, 237, 0.07) 0%,
+            rgba(var(--accent-rgb), 0.07) 0%,
             transparent 50%
         ),
         radial-gradient(
             circle at 90% 100%,
-            rgba(6, 182, 212, 0.05) 0%,
+            rgba(var(--accent-cyan2-rgb), 0.05) 0%,
             transparent 50%
         );
 }
@@ -224,6 +224,6 @@
 
 .emptyText {
     font-size: 14px;
-    color: rgba(148, 163, 184, 0.6);
+    color: rgba(var(--text-muted-rgb), 0.6);
     margin: 0;
 }
