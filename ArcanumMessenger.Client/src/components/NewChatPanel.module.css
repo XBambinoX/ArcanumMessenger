@@ -194,7 +194,7 @@
    block instead of it blending straight into the search bar / group
    button above it. */
 .listCard {
-    background: rgba(var(--white-rgb), 0.02);
+    background: rgba(var(--tint-rgb), 0.02);
     border: 1px solid rgba(var(--accent-rgb), 0.1);
     border-radius: 14px;
     padding: 12px 10px;

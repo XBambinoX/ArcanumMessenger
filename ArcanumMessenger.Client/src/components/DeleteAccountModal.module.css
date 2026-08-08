@@ -26,6 +26,11 @@
     to { opacity: 1; transform: scale(1); }
 }
 
+.stepViewport {
+    overflow: hidden;
+    transition: height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 .step {
     display: flex;
     flex-direction: column;
@@ -36,6 +41,12 @@
 @keyframes stepFade {
     from { opacity: 0; transform: translateY(4px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .stepViewport {
+        transition: none;
+    }
 }
 
 .title {

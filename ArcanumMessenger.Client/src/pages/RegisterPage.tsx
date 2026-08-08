@@ -534,8 +534,8 @@ export default function RegisterPage() {
                                     y2="44"
                                     gradientUnits="userSpaceOnUse"
                                 >
-                                    <stop stopColor="#a78bfa" />
-                                    <stop offset="1" stopColor="#22d3ee" />
+                                    <stop stopColor="rgb(var(--accent-light-rgb))" />
+                                    <stop offset="1" stopColor="rgb(var(--accent-cyan-rgb))" />
                                 </linearGradient>
                             </defs>
                         </svg>

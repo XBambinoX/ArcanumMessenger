@@ -190,7 +190,7 @@ export default function RecoveryPage() {
                             />
                             <defs>
                                 <linearGradient id="rcg" x1="6" y1="4" x2="42" y2="44" gradientUnits="userSpaceOnUse">
-                                    <stop stopColor="#a78bfa" /><stop offset="1" stopColor="#22d3ee" />
+                                    <stop stopColor="rgb(var(--accent-light-rgb))" /><stop offset="1" stopColor="rgb(var(--accent-cyan-rgb))" />
                                 </linearGradient>
                             </defs>
                         </svg>

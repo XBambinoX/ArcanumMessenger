@@ -8,7 +8,7 @@
     gap: 4px;
     padding: 4px;
     border-radius: 999px;
-    background: rgba(15, 15, 25, 0.55);
+    background: rgba(var(--bg-elevated-rgb), 0.55);
     border: 1px solid rgba(var(--accent-rgb), 0.25);
     backdrop-filter: blur(8px);
 }

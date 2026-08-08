@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { deleteAccount } from "../api/userSettings";
 import styles from "./DeleteAccountModal.module.css";
 import { useLanguage } from "../lib/language";
@@ -23,6 +23,21 @@ export default function DeleteAccountModal({ onClose, onConfirmed, kdfSalt }: De
     const [error, setError] = useState<string | null>(null);
     const [attempts, setAttempts] = useState(0);
     const [submitting, setSubmitting] = useState(false);
+
+    // Steps are always different widths of the same fixed-width modal, only
+    // the height changes - the content itself already fades in via .step's
+    // own animation, this just keeps the box's resize between steps smooth
+    // instead of an instant jump.
+    const stepRef = useRef<HTMLDivElement | null>(null);
+    const [stepHeight, setStepHeight] = useState<number | undefined>(undefined);
+
+    useEffect(() => {
+        const el = stepRef.current;
+        if (!el) return;
+        const ro = new ResizeObserver(() => setStepHeight(el.offsetHeight));
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, [step]);
 
     useEffect(() => {
         if (step !== "warning" || cooldown <= 0) return;
@@ -59,59 +74,61 @@ export default function DeleteAccountModal({ onClose, onConfirmed, kdfSalt }: De
     return (
         <div className={styles.overlay} onClick={onClose}>
             <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-                {step === "warning" && (
-                    <div className={styles.step}>
-                        <h3 className={styles.title}>{tr.warningTitle}</h3>
-                        <p className={styles.text}>
-                            {tr.warningText}
-                        </p>
-                        <div className={styles.actions}>
-                            <button className={styles.cancelBtn} onClick={onClose}>
-                                {tr.cancel}
-                            </button>
-                            <button
-                                className={styles.dangerBtn}
-                                onClick={handleContinue}
-                                disabled={cooldown > 0}
-                            >
-                                {cooldown > 0 ? tr.continueWithCountdown(cooldown) : tr.continueLabel}
-                            </button>
+                <div className={styles.stepViewport} style={{ height: stepHeight }}>
+                    {step === "warning" && (
+                        <div className={styles.step} ref={stepRef}>
+                            <h3 className={styles.title}>{tr.warningTitle}</h3>
+                            <p className={styles.text}>
+                                {tr.warningText}
+                            </p>
+                            <div className={styles.actions}>
+                                <button className={styles.cancelBtn} onClick={onClose}>
+                                    {tr.cancel}
+                                </button>
+                                <button
+                                    className={styles.dangerBtn}
+                                    onClick={handleContinue}
+                                    disabled={cooldown > 0}
+                                >
+                                    {cooldown > 0 ? tr.continueWithCountdown(cooldown) : tr.continueLabel}
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
 
-                {step === "password" && (
-                    <div className={styles.step}>
-                        <h3 className={styles.title}>{tr.confirmPasswordTitle}</h3>
-                        <p className={styles.text}>
-                            {tr.confirmPasswordText}
-                        </p>
-                        <input
-                            className={styles.passwordInput}
-                            type="password"
-                            placeholder={tr.passwordPlaceholder}
-                            value={password}
-                            onChange={(e) => {
-                                setPassword(e.target.value);
-                                setError(null);
-                            }}
-                            autoFocus
-                        />
-                        {error && <p className={styles.error}>{error}</p>}
-                        <div className={styles.actions}>
-                            <button className={styles.cancelBtn} onClick={onClose}>
-                                {tr.cancel}
-                            </button>
-                            <button
-                                className={styles.dangerBtn}
-                                onClick={handleSubmit}
-                                disabled={submitting || password.length === 0}
-                            >
-                                {submitting ? tr.deleting : tr.deleteAccountButton}
-                            </button>
+                    {step === "password" && (
+                        <div className={styles.step} ref={stepRef}>
+                            <h3 className={styles.title}>{tr.confirmPasswordTitle}</h3>
+                            <p className={styles.text}>
+                                {tr.confirmPasswordText}
+                            </p>
+                            <input
+                                className={styles.passwordInput}
+                                type="password"
+                                placeholder={tr.passwordPlaceholder}
+                                value={password}
+                                onChange={(e) => {
+                                    setPassword(e.target.value);
+                                    setError(null);
+                                }}
+                                autoFocus
+                            />
+                            {error && <p className={styles.error}>{error}</p>}
+                            <div className={styles.actions}>
+                                <button className={styles.cancelBtn} onClick={onClose}>
+                                    {tr.cancel}
+                                </button>
+                                <button
+                                    className={styles.dangerBtn}
+                                    onClick={handleSubmit}
+                                    disabled={submitting || password.length === 0}
+                                >
+                                    {submitting ? tr.deleting : tr.deleteAccountButton}
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
         </div>
     );

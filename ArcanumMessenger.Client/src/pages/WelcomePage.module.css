@@ -104,8 +104,8 @@
 }
 
 .topSignIn {
-    background: rgba(var(--white-rgb), .04);
-    border: 1px solid rgba(var(--white-rgb), .12);
+    background: rgba(var(--tint-rgb), .04);
+    border: 1px solid rgba(var(--tint-rgb), .12);
     color: rgba(var(--text-rgb), .85);
     font-size: 0.82rem;
     font-weight: 600;
@@ -114,7 +114,7 @@
     cursor: pointer;
     transition: background .2s, border-color .2s;
 }
-.topSignIn:hover { background: rgba(var(--white-rgb), .08); border-color: rgba(var(--accent-light-rgb), .32); }
+.topSignIn:hover { background: rgba(var(--tint-rgb), .08); border-color: rgba(var(--accent-light-rgb), .32); }
 
 .topCreate {
     background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent-deep-rgb)));
@@ -341,8 +341,8 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    background: rgba(var(--white-rgb), .04);
-    border: 1px solid rgba(var(--white-rgb), .12);
+    background: rgba(var(--tint-rgb), .04);
+    border: 1px solid rgba(var(--tint-rgb), .12);
     color: rgba(var(--text-rgb), .8);
     font-size: 0.9rem;
     font-weight: 600;
@@ -351,7 +351,7 @@
     cursor: pointer;
     transition: background .2s, border-color .2s, transform .15s;
 }
-.btnSecondary:hover { background: rgba(var(--white-rgb), .08); border-color: rgba(var(--accent-light-rgb), .32); transform: translateY(-1px); }
+.btnSecondary:hover { background: rgba(var(--tint-rgb), .08); border-color: rgba(var(--accent-light-rgb), .32); transform: translateY(-1px); }
 
 .wcHint {
     font-size: 0.72rem;
@@ -463,7 +463,7 @@
 .chatFrame {
     width: min(360px, 100%);
     height: min(460px, 100%);
-    background: #0a0819;
+    background: rgb(var(--bg-rgb));
     border: 1px solid rgba(var(--accent-rgb), .25);
     border-radius: 20px;
     overflow: hidden;
@@ -567,10 +567,10 @@
     border-bottom-right-radius: 4px;
 }
 .bubbleOther {
-    background: rgba(var(--white-rgb), .07);
+    background: rgba(var(--tint-rgb), .07);
     color: rgba(var(--text-rgb), .88);
     border-bottom-left-radius: 4px;
-    border: 1px solid rgba(var(--white-rgb), .06);
+    border: 1px solid rgba(var(--tint-rgb), .06);
 }
 .bubbleTyping {
     display: flex; align-items: center; gap: 0.3rem;
@@ -593,13 +593,13 @@
 .chatFoot {
     display: flex; align-items: center; gap: 0.5rem;
     padding: 0.6rem 0.9rem;
-    border-top: 1px solid rgba(var(--white-rgb), .06);
+    border-top: 1px solid rgba(var(--tint-rgb), .06);
     flex-shrink: 0;
 }
 .chatInput {
     flex: 1;
-    background: rgba(var(--white-rgb), .04);
-    border: 1px solid rgba(var(--white-rgb), .07);
+    background: rgba(var(--tint-rgb), .04);
+    border: 1px solid rgba(var(--tint-rgb), .07);
     border-radius: 20px;
     padding: 0.38rem 0.8rem;
     font-size: 0.72rem;
@@ -627,8 +627,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: rgba(var(--white-rgb), .03);
-    border: 1px solid rgba(var(--white-rgb), .06);
+    background: rgba(var(--tint-rgb), .03);
+    border: 1px solid rgba(var(--tint-rgb), .06);
     border-radius: 9px;
     padding: 0.55rem 1rem;
 }
@@ -645,7 +645,7 @@
 .speedTrack {
     width: 100%; height: 7px;
     border-radius: 4px;
-    background: rgba(var(--white-rgb), .07);
+    background: rgba(var(--tint-rgb), .07);
     overflow: hidden;
 }
 .speedFill {
