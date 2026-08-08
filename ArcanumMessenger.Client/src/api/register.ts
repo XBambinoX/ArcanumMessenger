@@ -92,7 +92,12 @@ export async function confirmRecovery(
 export async function finalizeRegistration(
     sessionId: string,
     language?: string,
-): Promise<{ success: boolean; reason?: string }> {
+): Promise<{
+    success: boolean;
+    reason?: string;
+    ecdhPublicKey?: string | null;
+    wrappedEcdhPrivateKey?: string | null;
+}> {
     const res = await apiFetch("/api/register/finalize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

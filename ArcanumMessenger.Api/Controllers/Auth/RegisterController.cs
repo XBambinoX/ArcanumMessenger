@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Text.RegularExpressions;
 using ArcanumMessenger.Services.AuthServices;
 using ArcanumMessenger.Services.AuthServices.RegisterServices;
+using ArcanumMessenger.Services.AuthServices.LoginServices;
 using ArcanumMessenger.Entities;
 using ArcanumMessenger.Controllers.Messenger;
 using System.Security.Cryptography;
@@ -19,7 +20,8 @@ public class RegisterController(
     EncryptionService encryption,
     EmailHasher emailHasher,
     PublicIdHasher publicIdHasher,
-    AuthService authService) : ControllerBase
+    AuthService authService,
+    TokenIssuanceService tokenIssuance) : ControllerBase
 {
     private static readonly Regex UsernameRegex = new("^[a-zA-Z0-9_]{3,32}$", RegexOptions.Compiled);
     private static readonly Regex PhraseAuthRegex = new("^[0-9a-f]{64}$", RegexOptions.Compiled);
@@ -347,6 +349,19 @@ public class RegisterController(
 
         await registrationSession.DeleteAsync(request.SessionId, ct);
 
-        return Ok(new FinalizeRegistrationResponse(Success: true));
+        // A freshly created account is logged in immediately - no separate
+        // sign-in step needed right after registering.
+        var deviceName = Request.Headers.UserAgent.ToString();
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+
+        var (accessToken, refreshToken) = await tokenIssuance.IssueAsync(
+            userId, deviceName, deviceType: null, ipAddress, ct);
+
+        Response.SetAuthCookies(accessToken, refreshToken);
+
+        return Ok(new FinalizeRegistrationResponse(
+            Success: true,
+            EcdhPublicKey: session.EcdhPublicKey,
+            WrappedEcdhPrivateKey: session.WrappedEcdhPrivateKey));
     }
 }

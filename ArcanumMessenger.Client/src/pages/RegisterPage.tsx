@@ -11,12 +11,20 @@ import {
 } from "../api/register";
 import { deriveKeys, generateKdfSalt } from "../crypto/kdf";
 import { generateRecoveryPhrase, hashPhrase } from "../crypto/phrases";
-import { generateIdentityKeyPair, exportPrivateKeyPkcs8, wrapPrivateKey } from "../crypto/ecdh";
-import { toBase64 } from "../crypto/encoding";
+import {
+    generateIdentityKeyPair,
+    exportPrivateKeyPkcs8,
+    importPrivateKeyPkcs8,
+    unwrapPrivateKey,
+    wrapPrivateKey,
+} from "../crypto/ecdh";
+import { toBase64, fromBase64 } from "../crypto/encoding";
+import * as sessionKeys from "../lib/sessionKeys";
 
 import { useNavigate } from "react-router";
 import zxcvbn from "zxcvbn";
 import { downloadRecoveryPdf } from "../utils/recoveryPdf";
+import { useAuth } from "../context/AuthContext";
 import {
     useLanguage,
     getLanguage,
@@ -43,10 +51,16 @@ const RESEND_COOLDOWN = 30; // seconds
 
 export default function RegisterPage() {
     const navigate = useNavigate();
+    const { setAuthenticated } = useAuth();
     const language = useLanguage();
     const common = AUTH_COMMON[language];
     const tr = REGISTER_TRANSLATIONS[language];
     const [step, setStep] = useState<Step>(0);
+    // Derived alongside authKey at the password step and needed again once
+    // registration finalizes to unwrap this device's identity private key -
+    // kept in a ref rather than state since it's sensitive and never needs
+    // to trigger a re-render.
+    const encKeyRef = useRef<Uint8Array | null>(null);
 
     // ── Form state ──
     const [username, setUsername] = useState("");
@@ -253,6 +267,7 @@ export default function RegisterPage() {
             // from it (Argon2id, ~0.5s) and send only the key + its salt.
             const kdfSalt = generateKdfSalt();
             const { authKey, encKey } = await deriveKeys(password, kdfSalt);
+            encKeyRef.current = encKey;
 
             // This account's E2EE identity keypair: the public half is sent
             // as-is, the private half only ever leaves the browser wrapped
@@ -349,13 +364,26 @@ export default function RegisterPage() {
         }
     };
 
+    // Unwraps this device's identity private key with the encKey derived at
+    // the password step, so this tab can use it right away instead of
+    // asking the user to sign in again just to fetch what it already has.
+    const establishIdentity = async (
+        ecdhPublicKey: string | null | undefined,
+        wrappedEcdhPrivateKey: string | null | undefined,
+    ) => {
+        const encKey = encKeyRef.current;
+        if (!encKey || !ecdhPublicKey || !wrappedEcdhPrivateKey) return;
+
+        const privateKeyPkcs8 = await unwrapPrivateKey(encKey, wrappedEcdhPrivateKey);
+        const privateKey = await importPrivateKeyPkcs8(privateKeyPkcs8);
+        sessionKeys.setIdentity(privateKeyPkcs8, fromBase64(ecdhPublicKey), privateKey);
+    };
+
     const handleFinalizeSubmit = async () => {
         setLoading(true);
         try {
-            const { success, reason } = await finalizeRegistration(
-                sessionId!,
-                interfaceLanguage,
-            );
+            const { success, reason, ecdhPublicKey, wrappedEcdhPrivateKey } =
+                await finalizeRegistration(sessionId!, interfaceLanguage);
             if (!success) {
                 setError(
                     reason === "email_taken"
@@ -368,7 +396,9 @@ export default function RegisterPage() {
             }
 
             setLanguage(interfaceLanguage);
-            navigate("/welcome");
+            await establishIdentity(ecdhPublicKey, wrappedEcdhPrivateKey);
+            setAuthenticated(true);
+            navigate("/app");
         } catch {
             setError(common.somethingWrongTryAgain);
         } finally {
