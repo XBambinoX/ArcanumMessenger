@@ -4,7 +4,8 @@ import type { ChatMessage, ChatReadState, ChatSummary, MediaAsset, User } from "
 import { getMessageHistory, sendMessage, deleteMessage, editMessage, forwardMessages, type ForwardItem } from "../api/messages";
 import { getUser, getUserAvatarUrl } from "../api/users";
 import { getChatAvatarUrl } from "../api/chats";
-import { uploadMedia, deleteMedia, getMediaUrl, getMediaThumbnailUrl, getSavedGifs, saveGif, unsaveGif } from "../api/media";
+import { uploadMedia, deleteMedia, getMediaThumbnailUrl, getSavedGifs, saveGif, unsaveGif } from "../api/media";
+import { EncryptedImage, EncryptedGifVideo, EncryptedVideoPlayer, downloadMediaToDisk } from "./EncryptedMedia";
 import { uploadMediaChunked, abortChunkedUpload, clearChunkedUploadResumeState, CHUNK_THRESHOLD } from "../api/chunkedUpload";
 import { formatMessageTime, formatChatTime } from "../lib/time";
 import { encryptOutgoing, decryptIncoming, decryptIncomingList, getChatKey } from "../lib/chatCrypto";
@@ -498,12 +499,7 @@ export default function ChatWindow({
     };
 
     const handleSaveAs = (media: MediaAsset) => {
-        const link = document.createElement("a");
-        link.href = getMediaUrl(media.id);
-        link.download = media.fileName;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
+        downloadMediaToDisk({ id: chat.id, wrappedChatKey: chat.wrappedChatKey }, media);
     };
 
     const handleContextMenu = (e: React.MouseEvent, message: ChatMessage) => {
@@ -801,13 +797,12 @@ export default function ChatWindow({
                                     )}
                                     {message.type === "image" && message.media && (
                                         <div className={mediaWrapClass}>
-                                            <img
+                                            <EncryptedImage
+                                                chat={{ id: chat.id, wrappedChatKey: chat.wrappedChatKey }}
+                                                media={message.media}
                                                 className={styles.mediaImage}
-                                                src={message.media.hasThumbnail
-                                                    ? getMediaThumbnailUrl(message.media.id)
-                                                    : getMediaUrl(message.media.id)}
                                                 alt={message.media.fileName}
-                                                onClick={() => window.open(getMediaUrl(message.media!.id), "_blank")}
+                                                onClick={(url) => window.open(url, "_blank")}
                                             />
                                             {bareMedia && (
                                                 <span className={styles.mediaTime}>
@@ -822,25 +817,22 @@ export default function ChatWindow({
                                     {message.type === "gif" && message.media && (
                                         <div className={mediaWrapClass}>
                                             {isVideoMime(message.media.mimeType) ? (
-                                                <video
+                                                <EncryptedGifVideo
+                                                    chat={{ id: chat.id, wrappedChatKey: chat.wrappedChatKey }}
+                                                    media={message.media}
                                                     className={styles.mediaImage}
-                                                    src={getMediaUrl(message.media.id)}
-                                                    autoPlay
-                                                    loop
-                                                    muted
-                                                    playsInline
-                                                    onClick={() => window.open(getMediaUrl(message.media!.id), "_blank")}
+                                                    onClick={(url) => window.open(url, "_blank")}
                                                 />
                                             ) : (
-                                                // A real animated GIF file - the thumbnail is a single static
-                                                // frame, so it has to be skipped here or the gif would just sit
-                                                // there frozen. The full file is small enough to always load, and
-                                                // the browser loops it forever on its own, no attributes needed.
-                                                <img
+                                                // A real animated GIF file - always decrypted and loaded in full
+                                                // (no thumbnail exists for these), and the browser loops it
+                                                // forever on its own once it's a real <img>, no attributes needed.
+                                                <EncryptedImage
+                                                    chat={{ id: chat.id, wrappedChatKey: chat.wrappedChatKey }}
+                                                    media={message.media}
                                                     className={styles.mediaImage}
-                                                    src={getMediaUrl(message.media.id)}
                                                     alt={message.media.fileName}
-                                                    onClick={() => window.open(getMediaUrl(message.media!.id), "_blank")}
+                                                    onClick={(url) => window.open(url, "_blank")}
                                                 />
                                             )}
                                             {bareMedia && (
@@ -855,10 +847,11 @@ export default function ChatWindow({
                                     )}
                                     {message.type === "video" && message.media && (
                                         <div className={mediaWrapClass}>
-                                            <video
+                                            <EncryptedVideoPlayer
+                                                chat={{ id: chat.id, wrappedChatKey: chat.wrappedChatKey }}
+                                                media={message.media}
                                                 className={styles.mediaVideo}
-                                                src={getMediaUrl(message.media.id)}
-                                                controls
+                                                placeholderClassName={styles.videoPlaceholder}
                                             />
                                             {bareMedia && (
                                                 <span className={styles.mediaTime}>
@@ -871,12 +864,13 @@ export default function ChatWindow({
                                         </div>
                                     )}
                                     {message.type === "file" && message.media && (
-                                        <a
+                                        <button
+                                            type="button"
                                             className={styles.fileCard}
-                                            href={getMediaUrl(message.media.id)}
-                                            download={message.media.fileName}
-                                            target="_blank"
-                                            rel="noreferrer"
+                                            onClick={() => downloadMediaToDisk(
+                                                { id: chat.id, wrappedChatKey: chat.wrappedChatKey },
+                                                message.media!,
+                                            )}
                                         >
                                             <span className={styles.fileIcon}>
                                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -888,7 +882,7 @@ export default function ChatWindow({
                                                 <span className={styles.fileName}>{message.media.fileName}</span>
                                                 <span className={styles.fileSize}>{formatFileSize(message.media.sizeBytes)}</span>
                                             </span>
-                                        </a>
+                                        </button>
                                     )}
                                     {message.type !== "text" && message.content && (
                                         <span className={`${styles.content} ${styles.mediaCaption}`}>

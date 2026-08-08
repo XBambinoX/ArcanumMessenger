@@ -1,6 +1,6 @@
 import { apiFetch } from "../lib/apiFetch";
 import type { MediaAsset } from "../types/messenger";
-import { encryptChunk, CHUNK_SIZE, chunkCiphertextLayout } from "../crypto/chunkedMedia";
+import { encryptChunk, CHUNK_SIZE, ciphertextSizeFor } from "../crypto/chunkedMedia";
 import { readMediaMetadata } from "../lib/mediaMetadata";
 
 export const CHUNK_THRESHOLD = 50 * 1024 * 1024; // files under this keep using the simple uploadMedia
@@ -105,8 +105,7 @@ export async function uploadMediaChunked(
     let sessionId = localStorage.getItem(key);
     let uploadedParts = new Set<number>();
 
-    const layout = chunkCiphertextLayout(file.size);
-    const encryptedTotalSize = layout.reduce((sum, c) => sum + c.length, 0);
+    const encryptedTotalSize = ciphertextSizeFor(file.size);
 
     if (sessionId) {
         const parts = await getUploadedParts(sessionId, signal);

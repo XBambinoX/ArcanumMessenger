@@ -89,22 +89,39 @@ export async function* encryptChunked(
     }
 }
 
-// How many plaintext chunks a file of `plaintextSize` bytes was split into,
-// and the byte offset/length of each chunk in the resulting *ciphertext*
-// (each full chunk is exactly NONCE_SIZE + 16-byte tag = 28 bytes larger
-// encrypted; only the last, possibly-partial chunk differs) - lets a
-// downloader compute exact Range requests without any extra server-side
-// metadata.
-export function chunkCiphertextLayout(plaintextSize: number): { index: number; start: number; length: number }[] {
-    const overhead = NONCE_SIZE + 16;
+// Every chunk is exactly NONCE_SIZE + 16-byte tag = 28 bytes bigger encrypted
+// than it was in plaintext.
+const CHUNK_OVERHEAD = NONCE_SIZE + 16;
+
+// Total encrypted size for a plaintext of `plaintextSize` bytes, before any
+// of it has actually been encrypted yet - lets the chunked upload report an
+// accurate total to the server when starting a session.
+export function ciphertextSizeFor(plaintextSize: number): number {
     const totalChunks = Math.max(1, Math.ceil(plaintextSize / CHUNK_SIZE));
-    const layout: { index: number; start: number; length: number }[] = [];
+    return plaintextSize + totalChunks * CHUNK_OVERHEAD;
+}
+
+export interface ChunkRange {
+    index: number;
+    start: number;
+    length: number;
+}
+
+// The inverse direction: given the total *ciphertext* size an already-
+// uploaded object was stored as (MediaAsset.sizeBytes), the exact byte
+// range of each chunk within it - lets a downloader issue Range requests
+// and decrypt each chunk independently, without any extra server-side
+// metadata beyond the one size it already returns.
+export function ciphertextChunkRanges(ciphertextTotalSize: number): ChunkRange[] {
+    const fullChunkSize = CHUNK_SIZE + CHUNK_OVERHEAD;
+    const ranges: ChunkRange[] = [];
     let offset = 0;
-    for (let i = 0; i < totalChunks; i++) {
-        const plainChunkSize = Math.min(CHUNK_SIZE, plaintextSize - i * CHUNK_SIZE);
-        const length = plainChunkSize + overhead;
-        layout.push({ index: i, start: offset, length });
+    let index = 0;
+    while (offset < ciphertextTotalSize) {
+        const length = Math.min(fullChunkSize, ciphertextTotalSize - offset);
+        ranges.push({ index, start: offset, length });
         offset += length;
+        index++;
     }
-    return layout;
+    return ranges;
 }
