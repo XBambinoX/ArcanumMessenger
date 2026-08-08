@@ -1,13 +1,19 @@
 /*
  * Theme tokens. "system" (the default, no [data-theme] override needed) is
  * today's existing palette, unchanged - every value below is extracted
- * as-is from what was previously hardcoded per-component. "dark" is a new,
+ * as-is from what was previously hardcoded per-component. "dark" is a
  * visually distinct second theme (cooler graphite backgrounds, blue/teal
- * accent instead of violet) - see src/lib/theme.ts for how the attribute
- * gets set. Status colors (danger/success/warning) and per-feature identity
- * gradients (group/saved-chat avatars, error page icon) intentionally stay
- * constant across themes - they're semantic/branding colors, not surface
- * chrome, so they don't get a [data-theme="dark"] override.
+ * accent instead of violet); "light" inverts text/background entirely - see
+ * src/lib/theme.ts for how the attribute gets set. Status colors
+ * (danger/success/warning) and per-feature identity gradients (group/saved-
+ * chat avatars, error page icon) intentionally stay constant across
+ * themes - they're semantic/branding colors, not surface chrome.
+ *
+ * --accent-light-rgb and --accent-cyan-rgb double as translucent TEXT
+ * colors in a lot of components (not just borders/fills) - their System/
+ * Dark values are pale tints tuned for dark backgrounds, so "light" gives
+ * them separately darkened values to stay legible on a light background,
+ * even though nothing else in the accent family needs that treatment.
  */
 :root {
   --accent-rgb: 124, 58, 237;
@@ -35,8 +41,18 @@
   --bg-elevated-rgb: 18, 16, 42;
   --overlay-rgb: 6, 4, 16;
 
+  --error-accent3-rgb: 251, 146, 60;
+
   --white-rgb: 255, 255, 255;
   --black-rgb: 0, 0, 0;
+  /* A "lighten the surface below it" tint - white on the dark System/Dark
+     backgrounds, flipped to black so the same low-alpha overlay still reads
+     as a subtle *contrast* accent (not an invisible no-op) on Light's white
+     backgrounds. Used for glass-card highlights/borders/grid textures, never
+     for literal white text or icons - those stay on --white-rgb. */
+  --tint-rgb: 255, 255, 255;
+
+  --color-scheme: dark;
 
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
   --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
@@ -44,7 +60,7 @@
 
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;
-  color-scheme: dark;
+  color-scheme: var(--color-scheme);
   color: rgb(var(--text-rgb));
   background: rgb(var(--bg-rgb));
   font-synthesis: none;
@@ -67,6 +83,22 @@
   --bg-page-rgb: 13, 15, 19;
   --bg-elevated-rgb: 19, 23, 32;
   --overlay-rgb: 4, 6, 10;
+}
+
+[data-theme="light"] {
+  --accent-light-rgb: 109, 40, 217;
+  --accent-cyan-rgb: 14, 116, 144;
+
+  --text-rgb: 24, 20, 41;
+  --text-muted-rgb: 107, 99, 117;
+
+  --bg-rgb: 248, 247, 252;
+  --bg-page-rgb: 250, 249, 253;
+  --bg-elevated-rgb: 255, 255, 255;
+
+  --tint-rgb: 0, 0, 0;
+
+  --color-scheme: light;
 }
 
 #root {

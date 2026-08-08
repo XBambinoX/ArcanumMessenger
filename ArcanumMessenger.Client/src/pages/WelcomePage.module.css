@@ -162,7 +162,7 @@
     width: 100%;
     height: 100%;
     border-radius: 26px;
-    background: rgba(16,12,36,.88);
+    background: rgba(var(--bg-elevated-rgb), .88);
     border: 1px solid rgba(var(--accent-rgb), .22);
     box-shadow: 0 16px 56px rgba(var(--black-rgb), .5);
     backdrop-filter: blur(8px);
@@ -179,7 +179,7 @@
 .slideOverlay {
     position: absolute;
     inset: 0;
-    background: rgba(10,8,28,.45);
+    background: rgba(var(--overlay-rgb), .45);
     border-radius: 26px;
     z-index: 5;
 }
@@ -192,7 +192,7 @@
     top: 50%;
     transform: translateY(-50%);
     z-index: 20;
-    background: rgba(16,12,36,.8);
+    background: rgba(var(--bg-elevated-rgb), .8);
     border: 1px solid rgba(var(--accent-rgb), .3);
     color: rgb(var(--accent-light-rgb));
     width: 46px; height: 46px;
@@ -269,7 +269,7 @@
     font-weight: 800;
     letter-spacing: -0.03em;
     line-height: 1;
-    background: linear-gradient(135deg, rgb(var(--white-rgb)) 25%, rgb(var(--accent-light-rgb)) 55%, rgb(var(--accent-cyan-rgb)) 100%);
+    background: linear-gradient(135deg, rgb(var(--text-rgb)) 25%, rgb(var(--accent-light-rgb)) 55%, rgb(var(--accent-cyan-rgb)) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
