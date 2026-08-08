@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import styles from "./LoginPage.module.css";
 import { deriveKeys } from "../crypto/kdf";
@@ -74,6 +74,23 @@ export default function LoginPage() {
         setError("");
         setStep((s) => Math.max(s - 1, 0) as Step);
     };
+
+    // The carousel track lays every step out side by side, so its viewport
+    // has to be told each step's real height explicitly - a flex row
+    // otherwise stretches every slide to match the tallest one, leaving the
+    // shorter steps sitting in a needlessly tall card. Re-observing on every
+    // step change (rather than once) also keeps this correct if a step's own
+    // height changes later, e.g. an inline error appearing.
+    const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const [carouselHeight, setCarouselHeight] = useState<number | undefined>(undefined);
+
+    useEffect(() => {
+        const el = slideRefs.current[step];
+        if (!el) return;
+        const ro = new ResizeObserver(() => setCarouselHeight(el.offsetHeight));
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, [step]);
 
     // Unwraps this device's identity private key with the encKey derived at
     // the password step, or - for accounts that predate E2EE and have none
@@ -322,13 +339,13 @@ export default function LoginPage() {
                     ))}
                 </div>
 
-                <div className={styles.viewport}>
+                <div className={styles.viewport} style={{ height: carouselHeight }}>
                     <div
                         className={styles.track}
                         style={{ transform: `translateX(-${step * 100}%)` }}
                     >
                         {/* ── STEP 0: Email ── */}
-                        <div className={styles.slide}>
+                        <div className={styles.slide} ref={(el) => { slideRefs.current[0] = el; }}>
                             <h2 className={styles.stepTitle}>
                                 {stepTitles[0].title}
                             </h2>
@@ -376,7 +393,7 @@ export default function LoginPage() {
                         </div>
 
                         {/* ── STEP 1: Password ── */}
-                        <div className={styles.slide}>
+                        <div className={styles.slide} ref={(el) => { slideRefs.current[1] = el; }}>
                             <h2 className={styles.stepTitle}>
                                 {stepTitles[1].title}
                             </h2>
@@ -445,7 +462,7 @@ export default function LoginPage() {
                         </div>
 
                         {/* ── STEP 2: TOTP (only if enabled in settings) ── */}
-                        <div className={styles.slide}>
+                        <div className={styles.slide} ref={(el) => { slideRefs.current[2] = el; }}>
                             <h2 className={styles.stepTitle}>
                                 {stepTitles[2].title}
                             </h2>

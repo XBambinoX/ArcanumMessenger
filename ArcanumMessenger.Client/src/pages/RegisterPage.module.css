@@ -120,11 +120,19 @@
 .viewport {
     position: relative;
     overflow: hidden;
+    transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .track {
     display: flex;
+    align-items: flex-start;
     transition: transform 0.4s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .viewport {
+        transition: none;
+    }
 }
 
 .slide {

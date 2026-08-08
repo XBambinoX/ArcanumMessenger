@@ -137,6 +137,23 @@ export default function RegisterPage() {
         setStep((s) => Math.max(s - 1, 0) as Step);
     };
 
+    // The carousel track lays every step out side by side, so its viewport
+    // has to be told each step's real height explicitly - a flex row
+    // otherwise stretches every slide to match the tallest one, leaving the
+    // shorter steps sitting in a needlessly tall card. Re-observing on every
+    // step change (rather than once) also keeps this correct if a step's own
+    // height changes later, e.g. an inline error appearing.
+    const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const [carouselHeight, setCarouselHeight] = useState<number | undefined>(undefined);
+
+    useEffect(() => {
+        const el = slideRefs.current[step];
+        if (!el) return;
+        const ro = new ResizeObserver(() => setCarouselHeight(el.offsetHeight));
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, [step]);
+
     // ── Validation helpers ──
     const isUsernameValid =
         username.trim().length >= 3 &&
@@ -537,13 +554,13 @@ export default function RegisterPage() {
                 </div>
 
                 {/* Carousel viewport */}
-                <div className={styles.viewport}>
+                <div className={styles.viewport} style={{ height: carouselHeight }}>
                     <div
                         className={styles.track}
                         style={{ transform: `translateX(-${step * 100}%)` }}
                     >
                         {/* ── STEP 0: Username ── */}
-                        <div className={styles.slide}>
+                        <div className={styles.slide} ref={(el) => { slideRefs.current[0] = el; }}>
                             <h2 className={styles.stepTitle}>
                                 {stepTitles[0].title}
                             </h2>
@@ -592,7 +609,7 @@ export default function RegisterPage() {
                         </div>
 
                         {/* ── STEP 1: Email ── */}
-                        <div className={styles.slide}>
+                        <div className={styles.slide} ref={(el) => { slideRefs.current[1] = el; }}>
                             <h2 className={styles.stepTitle}>
                                 {stepTitles[1].title}
                             </h2>
@@ -661,7 +678,7 @@ export default function RegisterPage() {
                         </div>
 
                         {/* ── STEP 2: Email code ── */}
-                        <div className={styles.slide}>
+                        <div className={styles.slide} ref={(el) => { slideRefs.current[2] = el; }}>
                             <h2 className={styles.stepTitle}>
                                 {stepTitles[2].title}
                             </h2>
@@ -752,7 +769,7 @@ export default function RegisterPage() {
                         </div>
 
                         {/* ── STEP 3: Password ── */}
-                        <div className={styles.slide}>
+                        <div className={styles.slide} ref={(el) => { slideRefs.current[3] = el; }}>
                             <h2 className={styles.stepTitle}>
                                 {stepTitles[3].title}
                             </h2>
@@ -853,7 +870,7 @@ export default function RegisterPage() {
                         </div>
 
                         {/* ── STEP 4: Recovery phrases ── */}
-                        <div className={styles.slide}>
+                        <div className={styles.slide} ref={(el) => { slideRefs.current[4] = el; }}>
                             <h2 className={styles.stepTitle}>
                                 {stepTitles[4].title}
                             </h2>
@@ -972,7 +989,7 @@ export default function RegisterPage() {
                         </div>
 
                         {/* ── STEP 5: Interface language ── */}
-                        <div className={styles.slide}>
+                        <div className={styles.slide} ref={(el) => { slideRefs.current[5] = el; }}>
                             <h2 className={styles.stepTitle}>
                                 {stepTitles[5].title}
                             </h2>
