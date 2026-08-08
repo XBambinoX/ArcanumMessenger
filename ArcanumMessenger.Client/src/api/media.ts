@@ -1,6 +1,6 @@
 import { apiFetch } from "../lib/apiFetch";
 import type { MediaAsset } from "../types/messenger";
-import { encryptChunked } from "../crypto/chunkedMedia";
+import { encryptChunked, encryptChunk } from "../crypto/chunkedMedia";
 import { readMediaMetadata } from "../lib/mediaMetadata";
 
 export function getMediaUrl(mediaId: string): string {
@@ -38,6 +38,31 @@ export async function uploadMedia(
     });
     const data = await res.json();
     return data.success ? data.media : null;
+}
+
+// Attaches an encrypted first-frame thumbnail to an already-uploaded video
+// (see lib/mediaMetadata.ts's extractVideoFirstFrame) - a single chunk is
+// plenty for a small JPEG, so this reuses the same per-chunk primitive
+// directly instead of the multi-chunk generator uploadMedia uses.
+export async function uploadMediaThumbnail(
+    mediaId: string,
+    frame: Blob,
+    chatKey: Uint8Array,
+    chatId: string,
+): Promise<boolean> {
+    const plainBytes = new Uint8Array(await frame.arrayBuffer());
+    const encrypted = await encryptChunk(chatKey, chatId, 0, plainBytes);
+
+    const formData = new FormData();
+    formData.append("file", new Blob([encrypted as BlobPart]), "thumb.bin");
+
+    const res = await apiFetch(`/api/media/${mediaId}/thumbnail`, {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+    });
+    const data = await res.json();
+    return data.success === true;
 }
 
 // Only succeeds for an upload nobody has sent/used yet (see MediaService.DeleteUnusedAsync) -

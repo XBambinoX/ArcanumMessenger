@@ -1,5 +1,5 @@
 import { apiFetch } from "./apiFetch";
-import { getMediaUrl } from "../api/media";
+import { getMediaUrl, getMediaThumbnailUrl } from "../api/media";
 import { decryptChunk, ciphertextChunkRanges } from "../crypto/chunkedMedia";
 
 const RETRY_ATTEMPTS = 3;
@@ -57,4 +57,21 @@ export async function downloadAndDecryptMedia(
     }
 
     return new Blob(plainChunks as BlobPart[], { type: media.mimeType });
+}
+
+// A video thumbnail is always a single small chunk (see
+// api/media.ts's uploadMediaThumbnail) - no Range/multi-chunk logic needed,
+// just one fetch and one decrypt. Returns null if there's no thumbnail
+// stored (404) rather than throwing, since "no thumbnail yet" is routine.
+export async function downloadAndDecryptThumbnail(
+    chatKey: Uint8Array,
+    chatId: string,
+    mediaId: string,
+): Promise<Blob | null> {
+    const res = await apiFetch(getMediaThumbnailUrl(mediaId), { credentials: "include" });
+    if (!res.ok) return null;
+
+    const encrypted = new Uint8Array(await res.arrayBuffer());
+    const plain = await decryptChunk(chatKey, chatId, 0, encrypted);
+    return new Blob([plain as BlobPart], { type: "image/jpeg" });
 }

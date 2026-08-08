@@ -76,6 +76,35 @@ public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config, 
         return (asset, null);
     }
 
+    // A video's thumbnail is a first frame the client grabbed from the
+    // original file before encrypting it (see chatMediaCrypto.ts) - the
+    // server can't generate one itself anymore, so this just accepts an
+    // already-encrypted small blob and attaches it to the asset it belongs
+    // to. Single-chunk, same wire format as everything else this service
+    // stores now - no separate handling needed at read time.
+    public async Task<(bool Success, string? Reason)> UploadThumbnailAsync(
+        Guid mediaId, Guid callerId, Stream content, CancellationToken ct)
+    {
+        var asset = await db.MediaAssets.FirstOrDefaultAsync(m => m.Id == mediaId, ct);
+        if (asset is null)
+            return (false, "not_found");
+        if (asset.UploaderId != callerId)
+            return (false, "forbidden");
+
+        var thumbnailKey = $"{asset.StorageKey}-thumb";
+        await s3.PutObjectAsync(new PutObjectRequest
+        {
+            BucketName = Bucket,
+            Key = thumbnailKey,
+            InputStream = content,
+        }, ct);
+
+        asset.ThumbnailStorageKey = thumbnailKey;
+        await db.SaveChangesAsync(ct);
+
+        return (true, null);
+    }
+
     public async Task<(bool Success, string? Reason)> DeleteUnusedAsync(Guid mediaId, Guid callerId, CancellationToken ct)
     {
         var asset = await db.MediaAssets.FirstOrDefaultAsync(m => m.Id == mediaId, ct);

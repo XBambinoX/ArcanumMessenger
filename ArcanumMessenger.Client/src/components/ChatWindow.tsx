@@ -4,10 +4,11 @@ import type { ChatMessage, ChatReadState, ChatSummary, MediaAsset, User } from "
 import { getMessageHistory, sendMessage, deleteMessage, editMessage, forwardMessages, type ForwardItem } from "../api/messages";
 import { getUser, getUserAvatarUrl } from "../api/users";
 import { getChatAvatarUrl } from "../api/chats";
-import { uploadMedia, deleteMedia, getMediaThumbnailUrl, getSavedGifs, saveGif, unsaveGif } from "../api/media";
+import { uploadMedia, uploadMediaThumbnail, deleteMedia, getMediaThumbnailUrl, getSavedGifs, saveGif, unsaveGif } from "../api/media";
 import { EncryptedImage, EncryptedGifVideo, EncryptedVideoPlayer, downloadMediaToDisk } from "./EncryptedMedia";
 import { uploadMediaChunked, abortChunkedUpload, clearChunkedUploadResumeState, CHUNK_THRESHOLD } from "../api/chunkedUpload";
 import { formatMessageTime, formatChatTime } from "../lib/time";
+import { extractVideoFirstFrame } from "../lib/mediaMetadata";
 import { encryptOutgoing, decryptIncoming, decryptIncomingList, getChatKey } from "../lib/chatCrypto";
 import { selfHealChatKeys } from "../lib/chatKeySelfHeal";
 import UserInfoPanel from "./UserInfoPanel";
@@ -441,7 +442,17 @@ export default function ChatWindow({
                 media = await uploadMedia(file, chatKey, chat.id, controller.signal);
             }
 
-            if (media) setPendingMedia(media);
+            if (media) {
+                setPendingMedia(media);
+
+                if (file.type.startsWith("video/")) {
+                    const frame = await extractVideoFirstFrame(file);
+                    if (frame) {
+                        const ok = await uploadMediaThumbnail(media.id, frame, chatKey, chat.id);
+                        if (ok) setPendingMedia({ ...media, hasThumbnail: true });
+                    }
+                }
+            }
             setSendAsGif(false);
         } catch (err) {
             // A deliberate cancel (handleCancelUpload) - already cleaned up there.
@@ -852,6 +863,7 @@ export default function ChatWindow({
                                                 media={message.media}
                                                 className={styles.mediaVideo}
                                                 placeholderClassName={styles.videoPlaceholder}
+                                                playIconClassName={styles.videoPlayIcon}
                                             />
                                             {bareMedia && (
                                                 <span className={styles.mediaTime}>

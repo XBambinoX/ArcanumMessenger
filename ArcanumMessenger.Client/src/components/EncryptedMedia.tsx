@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { getChatKey } from "../lib/chatCrypto";
-import { downloadAndDecryptMedia } from "../lib/mediaDownload";
+import { downloadAndDecryptMedia, downloadAndDecryptThumbnail } from "../lib/mediaDownload";
 
 export interface KeyedChat {
     id: string;
@@ -62,6 +62,37 @@ function useDecryptedMediaUrl(chat: KeyedChat, media: DownloadableMedia, auto: b
     return { url, status, start };
 }
 
+// Same shape as useDecryptedMediaUrl but for the (always small, always
+// single-chunk) video thumbnail, which lives at its own endpoint rather
+// than being part of the main asset's byte range.
+function useDecryptedThumbnailUrl(chat: KeyedChat, mediaId: string, hasThumbnail: boolean) {
+    const [url, setUrl] = useState<string | null>(null);
+    const urlRef = useRef<string | null>(null);
+
+    useEffect(() => {
+        if (!hasThumbnail) return;
+        let cancelled = false;
+
+        (async () => {
+            const chatKey = await getChatKey({ id: chat.id, wrappedChatKey: chat.wrappedChatKey });
+            if (!chatKey || cancelled) return;
+            const blob = await downloadAndDecryptThumbnail(chatKey, chat.id, mediaId);
+            if (!blob || cancelled) return;
+            const objectUrl = URL.createObjectURL(blob);
+            urlRef.current = objectUrl;
+            setUrl(objectUrl);
+        })();
+
+        return () => {
+            cancelled = true;
+            if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [mediaId, hasThumbnail]);
+
+    return url;
+}
+
 interface EncryptedImageProps {
     chat: KeyedChat;
     media: DownloadableMedia;
@@ -98,27 +129,38 @@ export function EncryptedGifVideo({ chat, media, className, onClick }: Encrypted
 
 interface EncryptedVideoPlayerProps {
     chat: KeyedChat;
-    media: DownloadableMedia;
+    media: DownloadableMedia & { hasThumbnail: boolean };
     className?: string;
     placeholderClassName?: string;
+    playIconClassName?: string;
 }
 
 // Never auto-decrypts - a full video can be large, so nothing downloads
-// until someone explicitly asks to watch it. Until then this just shows a
-// click-to-play placeholder (a real first-frame thumbnail is added
-// separately); after a click it downloads+decrypts fully, then hands off
-// to a normal <video controls> - seeking from there on is local, no
-// further network/decryption involved.
-export function EncryptedVideoPlayer({ chat, media, className, placeholderClassName }: EncryptedVideoPlayerProps) {
+// until someone explicitly asks to watch it. Until then this shows the
+// first-frame thumbnail the client grabbed at upload time (if any) as a
+// static preview with a play icon on top; after a click it downloads+
+// decrypts the real video fully, then hands off to a normal
+// <video controls> - seeking from there on is local, no further
+// network/decryption involved.
+export function EncryptedVideoPlayer({
+    chat, media, className, placeholderClassName, playIconClassName,
+}: EncryptedVideoPlayerProps) {
     const { url, status, start } = useDecryptedMediaUrl(chat, media, false);
+    const thumbnailUrl = useDecryptedThumbnailUrl(chat, media.id, media.hasThumbnail);
 
     if (status === "ready" && url) {
         return <video className={className} src={url} controls autoPlay />;
     }
 
     return (
-        <div className={placeholderClassName} onClick={start}>
-            {status === "loading" ? "Loading…" : status === "error" ? "Failed to load - tap to retry" : "▶"}
+        <div
+            className={placeholderClassName}
+            style={thumbnailUrl ? { backgroundImage: `url(${thumbnailUrl})` } : undefined}
+            onClick={start}
+        >
+            <span className={playIconClassName}>
+                {status === "loading" ? "…" : status === "error" ? "!" : "▶"}
+            </span>
         </div>
     );
 }

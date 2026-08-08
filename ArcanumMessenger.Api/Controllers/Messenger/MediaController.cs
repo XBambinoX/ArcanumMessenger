@@ -105,6 +105,26 @@ public class MediaController(AppDbContext db, MediaService media, MediaAccessSer
         return result is null ? NotFound() : File(result.Content, result.ContentType);
     }
 
+    // Only the uploader can attach a thumbnail - it has to be posted right
+    // after the main upload, before anyone else could plausibly have a
+    // reason to call this.
+    [HttpPost("{id:guid}/thumbnail")]
+    [RequestSizeLimit(2_000_000)]
+    public async Task<ActionResult<ChunkedUploadActionResponse>> UploadThumbnail(Guid id, IFormFile? file, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        if (file is null || file.Length == 0)
+            return BadRequest(new ChunkedUploadActionResponse(false, "empty_file"));
+
+        await using var stream = file.OpenReadStream();
+        var (success, reason) = await media.UploadThumbnailAsync(id, userId, stream, ct);
+        return success
+            ? Ok(new ChunkedUploadActionResponse(true))
+            : BadRequest(new ChunkedUploadActionResponse(false, reason));
+    }
+
     [HttpGet("saved-gifs")]
     public async Task<ActionResult<SavedGifsResponse>> ListSavedGifs(CancellationToken ct)
     {
