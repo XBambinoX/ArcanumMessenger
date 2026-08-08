@@ -42,6 +42,14 @@ export interface MediaAsset {
     hasThumbnail: boolean;
 }
 
+// A saved GIF is its own MediaAsset (re-encrypted under the Saved Messages
+// chat's key), plus which in-chat media it was originally saved from - see
+// SavedGif.cs for why the two ids differ.
+export interface SavedGifEntry {
+    media: MediaAsset;
+    sourceMediaId: string;
+}
+
 export interface ChatReadState {
     userId: string;
     lastReadAt: string; // ISO timestamp

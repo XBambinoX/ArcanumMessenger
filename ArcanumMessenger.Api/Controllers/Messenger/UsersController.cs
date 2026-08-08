@@ -327,9 +327,18 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
         if (file is null || file.Length == 0)
             return BadRequest(new UploadAvatarResponse(false, "empty_file"));
 
+        var wrappedDek = await db.Users.AsNoTracking()
+            .Where(u => u.Id == userId)
+            .Select(u => u.WrappedDek)
+            .FirstOrDefaultAsync(ct);
+        if (wrappedDek is null)
+            return Unauthorized();
+
+        var dek = encryption.UnwrapDek(wrappedDek);
+
         await using var stream = file.OpenReadStream();
         var (success, reason) = await avatars.UploadAvatarAsync(
-            userId, stream, file.Length, file.ContentType ?? "application/octet-stream", ct);
+            userId, stream, file.Length, file.ContentType ?? "application/octet-stream", dek, ct);
 
         return success ? Ok(new UploadAvatarResponse(true)) : BadRequest(new UploadAvatarResponse(false, reason));
     }
@@ -362,15 +371,16 @@ public class UsersController(AppDbContext db, EncryptionService encryption, Publ
         if (!TryGetUserId(out var callerId))
             return Unauthorized();
 
-        var showAvatar = await db.Users.AsNoTracking()
+        var owner = await db.Users.AsNoTracking()
             .Where(u => u.Id == id && !u.IsDeleted)
-            .Select(u => (PhoneVisibility?)u.UserSettings.ShowAvatar)
+            .Select(u => new { u.WrappedDek, ShowAvatar = (PhoneVisibility?)u.UserSettings.ShowAvatar })
             .FirstOrDefaultAsync(ct);
 
-        if (showAvatar is null || !await IsVisibleToAsync(showAvatar.Value, id, callerId, ct))
+        if (owner?.ShowAvatar is null || !await IsVisibleToAsync(owner.ShowAvatar.Value, id, callerId, ct))
             return NotFound();
 
-        var result = await avatars.OpenAvatarStreamAsync(id, ct);
+        var dek = encryption.UnwrapDek(owner.WrappedDek);
+        var result = await avatars.OpenAvatarStreamAsync(id, dek, ct);
         if (result is null)
             return NotFound();
 

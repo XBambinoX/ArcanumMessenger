@@ -15,10 +15,19 @@ public class MediaController(AppDbContext db, MediaService media, MediaAccessSer
     // RequestSizeLimit alone isn't enough for a multipart upload - the form
     // parser has its own, separate default of 128MB
     // (FormOptions.MultipartBodyLengthLimit) that silently applied instead.
+    // mimeType is a separate explicit field, not file.ContentType - the
+    // uploaded bytes are E2E-encrypted ciphertext by the time they get here
+    // (see chatMediaCrypto.ts on the client), so the browser's own
+    // content-type guess for the multipart part is meaningless; the client
+    // tells us what the *plaintext* actually is. Same reasoning for
+    // width/height/durationSeconds - the server can no longer decode the
+    // bytes itself to derive them.
     [HttpPost]
     [RequestSizeLimit(MaxUploadBytes)]
     [RequestFormLimits(MultipartBodyLengthLimit = MaxUploadBytes)]
-    public async Task<ActionResult<UploadMediaResponse>> Upload(IFormFile? file, CancellationToken ct)
+    public async Task<ActionResult<UploadMediaResponse>> Upload(
+        IFormFile? file, [FromForm] string? mimeType, [FromForm] int? width, [FromForm] int? height,
+        [FromForm] double? durationSeconds, CancellationToken ct)
     {
         if (!TryGetUserId(out var userId))
             return Unauthorized();
@@ -28,7 +37,8 @@ public class MediaController(AppDbContext db, MediaService media, MediaAccessSer
 
         await using var stream = file.OpenReadStream();
         var (asset, reason) = await media.UploadAsync(
-            stream, file.Length, file.FileName, file.ContentType ?? "application/octet-stream", userId, ct);
+            stream, file.Length, file.FileName, mimeType ?? file.ContentType ?? "application/octet-stream",
+            userId, width, height, durationSeconds, ct);
 
         return asset is null
             ? BadRequest(new UploadMediaResponse(false, null, reason))
@@ -95,6 +105,26 @@ public class MediaController(AppDbContext db, MediaService media, MediaAccessSer
         return result is null ? NotFound() : File(result.Content, result.ContentType);
     }
 
+    // Only the uploader can attach a thumbnail - it has to be posted right
+    // after the main upload, before anyone else could plausibly have a
+    // reason to call this.
+    [HttpPost("{id:guid}/thumbnail")]
+    [RequestSizeLimit(2_000_000)]
+    public async Task<ActionResult<ChunkedUploadActionResponse>> UploadThumbnail(Guid id, IFormFile? file, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        if (file is null || file.Length == 0)
+            return BadRequest(new ChunkedUploadActionResponse(false, "empty_file"));
+
+        await using var stream = file.OpenReadStream();
+        var (success, reason) = await media.UploadThumbnailAsync(id, userId, stream, ct);
+        return success
+            ? Ok(new ChunkedUploadActionResponse(true))
+            : BadRequest(new ChunkedUploadActionResponse(false, reason));
+    }
+
     [HttpGet("saved-gifs")]
     public async Task<ActionResult<SavedGifsResponse>> ListSavedGifs(CancellationToken ct)
     {
@@ -104,45 +134,63 @@ public class MediaController(AppDbContext db, MediaService media, MediaAccessSer
         var gifs = await db.SavedGifs.AsNoTracking()
             .Where(s => s.UserId == userId)
             .OrderByDescending(s => s.SavedAt)
-            .Select(s => s.Media)
+            .Select(s => new { s.Media, s.SourceMediaId })
             .ToListAsync(ct);
 
-        return Ok(new SavedGifsResponse(true, gifs.Select(MediaAssetDto.FromEntity).ToList()));
+        return Ok(new SavedGifsResponse(true,
+            gifs.Select(g => new SavedGifDto(MediaAssetDto.FromEntity(g.Media), g.SourceMediaId)).ToList()));
     }
 
+    // id is the SOURCE gif - whatever chat it's currently visible in - not
+    // the saved copy. The saved copy (request.NewMediaId) is a separate
+    // MediaAsset the client already uploaded, re-encrypted under its own
+    // Saved Messages chat key; it can't be the same object as the source
+    // once media is encrypted per-chat.
     [HttpPost("{id:guid}/save")]
-    public async Task<ActionResult<SaveGifResponse>> SaveGif(Guid id, CancellationToken ct)
+    public async Task<ActionResult<SaveGifResponse>> SaveGif(Guid id, [FromBody] SaveGifRequest request, CancellationToken ct)
     {
         if (!TryGetUserId(out var userId))
             return Unauthorized();
 
-        var asset = await access.GetAccessibleAsync(id, userId, ct);
-        if (asset is null)
+        var sourceAsset = await access.GetAccessibleAsync(id, userId, ct);
+        if (sourceAsset is null)
             return NotFound(new SaveGifResponse(false, "not_found"));
-        if (asset.Kind != "gif")
+        if (sourceAsset.Kind != "gif")
             return BadRequest(new SaveGifResponse(false, "not_a_gif"));
 
-        var exists = await db.SavedGifs.AnyAsync(s => s.UserId == userId && s.MediaId == id, ct);
-        if (!exists)
-        {
-            db.SavedGifs.Add(new SavedGif { UserId = userId, MediaId = id });
-            await db.SaveChangesAsync(ct);
-        }
+        var newAsset = await db.MediaAssets.FirstOrDefaultAsync(m => m.Id == request.NewMediaId, ct);
+        if (newAsset is null || newAsset.UploaderId != userId)
+            return BadRequest(new SaveGifResponse(false, "invalid_media"));
 
+        // A video sent "as a gif" only carries that reclassification on the
+        // original message's asset - the fresh re-upload derives its kind
+        // from mime type alone and would otherwise come back as "video".
+        if (newAsset.Kind != "gif")
+            newAsset.Kind = "gif";
+
+        var exists = await db.SavedGifs.AnyAsync(s => s.UserId == userId && s.SourceMediaId == id, ct);
+        if (!exists)
+            db.SavedGifs.Add(new SavedGif { UserId = userId, MediaId = newAsset.Id, SourceMediaId = id });
+
+        await db.SaveChangesAsync(ct);
         return Ok(new SaveGifResponse(true));
     }
 
+    // id is the SOURCE gif again, same as SaveGif - the client only ever
+    // deals in source ids, never needs to know the saved copy's own id.
     [HttpDelete("{id:guid}/save")]
     public async Task<ActionResult<SaveGifResponse>> UnsaveGif(Guid id, CancellationToken ct)
     {
         if (!TryGetUserId(out var userId))
             return Unauthorized();
 
-        var existing = await db.SavedGifs.FirstOrDefaultAsync(s => s.UserId == userId && s.MediaId == id, ct);
+        var existing = await db.SavedGifs.FirstOrDefaultAsync(s => s.UserId == userId && s.SourceMediaId == id, ct);
         if (existing is not null)
         {
             db.SavedGifs.Remove(existing);
             await db.SaveChangesAsync(ct);
+            // Best-effort - the saved copy is now unreferenced storage.
+            await media.DeleteUnusedAsync(existing.MediaId, userId, ct);
         }
 
         return Ok(new SaveGifResponse(true));
@@ -156,7 +204,8 @@ public class MediaController(AppDbContext db, MediaService media, MediaAccessSer
             return Unauthorized();
 
         var (sessionId, reason) = await media.InitiateChunkedUploadAsync(
-            request.FileName, request.MimeType, request.TotalSize, userId, ct);
+            request.FileName, request.MimeType, request.TotalSize, userId,
+            request.Width, request.Height, request.DurationSeconds, ct);
 
         return sessionId is null
             ? BadRequest(new StartChunkedUploadResponse(false, null, reason))

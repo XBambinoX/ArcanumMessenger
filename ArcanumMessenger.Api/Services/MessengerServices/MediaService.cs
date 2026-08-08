@@ -5,7 +5,6 @@ using ArcanumMessenger.Contracts.Messenger.Media;
 using ArcanumMessenger.Data;
 using ArcanumMessenger.Entities;
 using Microsoft.EntityFrameworkCore;
-using SkiaSharp;
 
 namespace ArcanumMessenger.Services.MessengerServices;
 
@@ -13,12 +12,19 @@ public record MediaByteRange(long Start, long? End);
 
 public record MediaStream(Stream Content, string ContentType, long TotalLength, MediaByteRange? ServedRange);
 
+// Chat media (photo/video/gif/file) is end-to-end encrypted client-side
+// with the chat's own key before it ever reaches this service - everything
+// here just stores and streams back whatever ciphertext bytes it's handed,
+// with no awareness of what kind of content is actually inside. Dimensions,
+// duration, and (for video) a thumbnail all have to come from the client
+// now, since the server can no longer decode the bytes itself to derive
+// them (see AvatarService for the different, still server-decryptable
+// model used for avatars).
 public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config, MediaUploadSessionService uploadSessions)
 {
-    private const long MaxImageOrGifBytes = 25L * 1024 * 1024;
+    private const long MaxImageOrGifBytes = 50L * 1024 * 1024;
     private const long MaxOtherBytes = 200L * 1024 * 1024;
     private const long MaxChunkedTotalBytes = 5L * 1024 * 1024 * 1024; // 5 GB ceiling for the chunked path
-    private const int ThumbnailMaxEdge = 320;
 
     private string Bucket => config["Media:Bucket"]!;
 
@@ -33,7 +39,8 @@ public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config, 
     private static long MaxBytesFor(string kind) => kind is "image" or "gif" ? MaxImageOrGifBytes : MaxOtherBytes;
 
     public async Task<(MediaAsset? Asset, string? Reason)> UploadAsync(
-        Stream content, long length, string fileName, string mimeType, Guid uploaderId, CancellationToken ct)
+        Stream content, long length, string fileName, string mimeType, Guid uploaderId,
+        int? width, int? height, double? durationSeconds, CancellationToken ct)
     {
         if (length <= 0)
             return (null, "empty_file");
@@ -43,69 +50,13 @@ public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config, 
             return (null, "too_large");
 
         var storageKey = $"{uploaderId}/{Guid.NewGuid()}";
-        int? width = null, height = null;
-        string? thumbnailKey = null;
-
-        if (kind is "image" or "gif")
+        await s3.PutObjectAsync(new PutObjectRequest
         {
-            // The bytes get read twice (decode + re-upload). Decoding from a
-            // byte[] rather than a Stream avoids SkiaSharp taking ownership
-            // of (and disposing) whatever stream it's handed.
-            using var buffer = new MemoryStream();
-            await content.CopyToAsync(buffer, ct);
-            var bytes = buffer.ToArray();
-
-            using (var original = SKBitmap.Decode(bytes))
-            {
-                if (original is not null)
-                {
-                    width = original.Width;
-                    height = original.Height;
-
-                    var scale = Math.Min(1.0, (double)ThumbnailMaxEdge / Math.Max(original.Width, original.Height));
-                    var thumbWidth = Math.Max(1, (int)Math.Round(original.Width * scale));
-                    var thumbHeight = Math.Max(1, (int)Math.Round(original.Height * scale));
-
-                    using var resized = original.Resize(new SKImageInfo(thumbWidth, thumbHeight), SKSamplingOptions.Default);
-                    using var image = SKImage.FromBitmap(resized is not null ? resized : original);
-                    using var encoded = image.Encode(SKEncodedImageFormat.Jpeg, 80);
-
-                    using var thumbStream = new MemoryStream();
-                    encoded.SaveTo(thumbStream);
-                    thumbStream.Position = 0;
-
-                    thumbnailKey = $"{storageKey}-thumb";
-                    await s3.PutObjectAsync(new PutObjectRequest
-                    {
-                        BucketName = Bucket,
-                        Key = thumbnailKey,
-                        InputStream = thumbStream,
-                        ContentType = "image/jpeg",
-                    }, ct);
-                }
-                // else: claimed an image/gif mime type but isn't decodable as
-                // one - still store the file, just without a thumbnail/dimensions.
-            }
-
-            using var uploadStream = new MemoryStream(bytes);
-            await s3.PutObjectAsync(new PutObjectRequest
-            {
-                BucketName = Bucket,
-                Key = storageKey,
-                InputStream = uploadStream,
-                ContentType = mimeType,
-            }, ct);
-        }
-        else
-        {
-            await s3.PutObjectAsync(new PutObjectRequest
-            {
-                BucketName = Bucket,
-                Key = storageKey,
-                InputStream = content,
-                ContentType = mimeType,
-            }, ct);
-        }
+            BucketName = Bucket,
+            Key = storageKey,
+            InputStream = content,
+            ContentType = mimeType,
+        }, ct);
 
         var asset = new MediaAsset
         {
@@ -115,14 +66,43 @@ public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config, 
             FileName = fileName,
             SizeBytes = length,
             StorageKey = storageKey,
-            ThumbnailStorageKey = thumbnailKey,
             Width = width,
             Height = height,
+            DurationSeconds = durationSeconds,
         };
         db.MediaAssets.Add(asset);
         await db.SaveChangesAsync(ct);
 
         return (asset, null);
+    }
+
+    // A video's thumbnail is a first frame the client grabbed from the
+    // original file before encrypting it (see chatMediaCrypto.ts) - the
+    // server can't generate one itself anymore, so this just accepts an
+    // already-encrypted small blob and attaches it to the asset it belongs
+    // to. Single-chunk, same wire format as everything else this service
+    // stores now - no separate handling needed at read time.
+    public async Task<(bool Success, string? Reason)> UploadThumbnailAsync(
+        Guid mediaId, Guid callerId, Stream content, CancellationToken ct)
+    {
+        var asset = await db.MediaAssets.FirstOrDefaultAsync(m => m.Id == mediaId, ct);
+        if (asset is null)
+            return (false, "not_found");
+        if (asset.UploaderId != callerId)
+            return (false, "forbidden");
+
+        var thumbnailKey = $"{asset.StorageKey}-thumb";
+        await s3.PutObjectAsync(new PutObjectRequest
+        {
+            BucketName = Bucket,
+            Key = thumbnailKey,
+            InputStream = content,
+        }, ct);
+
+        asset.ThumbnailStorageKey = thumbnailKey;
+        await db.SaveChangesAsync(ct);
+
+        return (true, null);
     }
 
     public async Task<(bool Success, string? Reason)> DeleteUnusedAsync(Guid mediaId, Guid callerId, CancellationToken ct)
@@ -247,7 +227,8 @@ public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config, 
     // file. These four methods mirror Initiate/UploadPart/Complete/Abort.
 
     public async Task<(string? SessionId, string? Reason)> InitiateChunkedUploadAsync(
-        string fileName, string mimeType, long totalSize, Guid uploaderId, CancellationToken ct)
+        string fileName, string mimeType, long totalSize, Guid uploaderId,
+        int? width, int? height, double? durationSeconds, CancellationToken ct)
     {
         if (totalSize <= 0)
             return (null, "empty_file");
@@ -269,6 +250,9 @@ public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config, 
             FileName = fileName,
             MimeType = mimeType,
             TotalSize = totalSize,
+            Width = width,
+            Height = height,
+            DurationSeconds = durationSeconds,
             StorageKey = storageKey,
             S3UploadId = initiateResponse.UploadId,
         };
@@ -347,6 +331,9 @@ public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config, 
             FileName = session.FileName,
             SizeBytes = session.TotalSize,
             StorageKey = session.StorageKey,
+            Width = session.Width,
+            Height = session.Height,
+            DurationSeconds = session.DurationSeconds,
         };
         db.MediaAssets.Add(asset);
         await db.SaveChangesAsync(ct);

@@ -293,6 +293,33 @@
     border-radius: 12px;
 }
 
+.videoPlaceholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 260px;
+    height: 180px;
+    border-radius: 12px;
+    background-color: rgba(0, 0, 0, 0.35);
+    background-size: cover;
+    background-position: center;
+    color: #fff;
+    cursor: pointer;
+    user-select: none;
+}
+
+.videoPlayIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.45);
+    font-size: 18px;
+    line-height: 1;
+}
+
 .mediaWrap {
     position: relative;
     display: block;
@@ -337,6 +364,9 @@
     color: rgba(226, 232, 240, 0.95);
     text-decoration: none;
     min-width: 180px;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
 }
 
 .fileIcon {

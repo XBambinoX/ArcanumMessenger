@@ -95,9 +95,12 @@ public class MessageService(
 
         // Anyone who can already see this media (uploaded it themselves, or
         // received it in a chat they're in) can attach it to a new message -
-        // that's how forwarding/resending a saved gif works. The same media
-        // can end up referenced by more than one message; nothing about
-        // storage or access control assumes it's used only once.
+        // that's how the "send as gif" reclassification below reuses a
+        // caller's own just-uploaded video. Chat media is encrypted with
+        // that chat's own key though, so this only works within the SAME
+        // chat the media was uploaded/received in - moving it to a
+        // different chat (forwarding, saved GIFs) requires the client to
+        // re-encrypt and re-upload it first, not just pass the old id here.
         MediaAsset? media = null;
         if (mediaId is { } mid)
         {
@@ -296,6 +299,24 @@ public class MessageService(
         // DESTINATION chat's key by the client - the server never sees the
         // source chat's key, so it couldn't have re-encrypted this itself.
         var contentById = items.ToDictionary(i => i.SourceMessageId, i => i.EncryptedContent);
+        var newMediaIdBySource = items.ToDictionary(i => i.SourceMessageId, i => i.NewMediaId);
+
+        // A source message with media requires a real replacement asset the
+        // caller already uploaded, encrypted under the destination chat's
+        // key - media can't be transcoded across chats by reference the way
+        // EncryptedContent above can, it needs a real re-upload client-side.
+        var newMediaIds = newMediaIdBySource.Values.Where(id => id.HasValue).Select(id => id!.Value).Distinct().ToList();
+        var newMediaById = await db.MediaAssets.AsNoTracking()
+            .Where(m => newMediaIds.Contains(m.Id))
+            .ToDictionaryAsync(m => m.Id, ct);
+        foreach (var id in messageIds)
+        {
+            if (sourceById[id].MediaId is null) continue;
+            if (newMediaIdBySource[id] is not { } newMediaId ||
+                !newMediaById.TryGetValue(newMediaId, out var newAsset) ||
+                newAsset.UploaderId != targetMembership.UserId)
+                return (null, "invalid_media");
+        }
 
         // messageIds carries the order the caller selected them in (chronological,
         // since that's the order they appear in the chat) - preserve it here too.
@@ -309,7 +330,7 @@ public class MessageService(
                 SenderId = targetMembership.UserId,
                 Type = src.Type,
                 Content = string.IsNullOrEmpty(content) ? null : content,
-                MediaId = src.MediaId,
+                MediaId = newMediaIdBySource[id],
                 ForwardedFromSenderId = src.SenderId,
                 ForwardedFromSenderName = senderNames.GetValueOrDefault(src.SenderId, "Unknown user"),
             };

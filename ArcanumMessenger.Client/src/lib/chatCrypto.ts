@@ -21,7 +21,10 @@ interface KeyedChat {
 // doesn't retry the unwrap on every single message.
 const keyCache = new Map<string, Uint8Array | null>();
 
-async function getChatKey(chat: KeyedChat): Promise<Uint8Array | null> {
+// Exported for the media upload/download flow (chatMediaCrypto.ts) - media
+// bytes are encrypted with the same chat key as text, they just don't go
+// through encryptOutgoing/decryptText since they aren't a single string.
+export async function getChatKey(chat: KeyedChat): Promise<Uint8Array | null> {
     if (keyCache.has(chat.id)) return keyCache.get(chat.id)!;
     const key = chat.wrappedChatKey ? await unwrapOwnChatKey(chat.wrappedChatKey) : null;
     keyCache.set(chat.id, key);
