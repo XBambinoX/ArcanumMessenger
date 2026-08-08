@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { HubConnection } from "@microsoft/signalr";
-import type { ChatMessage, ChatReadState, ChatSummary, MediaAsset, User } from "../types/messenger";
+import type { ChatMessage, ChatReadState, ChatSummary, MediaAsset, SavedGifEntry, User } from "../types/messenger";
 import { getMessageHistory, sendMessage, deleteMessage, editMessage, forwardMessages, type ForwardItem } from "../api/messages";
 import { getUser, getUserAvatarUrl } from "../api/users";
-import { getChatAvatarUrl } from "../api/chats";
+import { getChats, getChatAvatarUrl } from "../api/chats";
 import { uploadMedia, uploadMediaThumbnail, deleteMedia, getMediaThumbnailUrl, getSavedGifs, saveGif, unsaveGif } from "../api/media";
 import { EncryptedImage, EncryptedGifVideo, EncryptedVideoPlayer, downloadMediaToDisk } from "./EncryptedMedia";
 import { uploadMediaChunked, abortChunkedUpload, clearChunkedUploadResumeState, CHUNK_THRESHOLD } from "../api/chunkedUpload";
@@ -205,7 +205,19 @@ export default function ChatWindow({
     }, []);
 
     useEffect(() => {
-        getSavedGifs().then((gifs) => setSavedGifIds(new Set(gifs.map((g) => g.id))));
+        getSavedGifs().then((gifs) => setSavedGifIds(new Set(gifs.map((g) => g.sourceMediaId))));
+    }, []);
+
+    // Saved GIFs live in the user's own Saved Messages chat, encrypted with
+    // its key like anything else there - fetched once so saving/sending a
+    // saved gif has somewhere to re-encrypt to/from (see lib/mediaReencrypt.ts).
+    const [savedChat, setSavedChat] = useState<ChatSummary | null>(null);
+    useEffect(() => {
+        getChats().then((chats) => {
+            const saved = chats.find((c) => c.type === "saved") ?? null;
+            setSavedChat(saved);
+            if (saved) selfHealChatKeys(saved.id, saved.wrappedChatKey);
+        });
     }, []);
 
     const pendingMediaRef = useRef<MediaAsset | null>(null);
@@ -482,27 +494,49 @@ export default function ChatWindow({
         if (media) deleteMedia(media.id);
     };
 
-    const handleSendGif = async (gif: MediaAsset) => {
+    const handleSendGif = async (entry: SavedGifEntry) => {
+        if (!savedChat) return;
         const replyToId = replyTarget?.id ?? null;
         setReplyTarget(null);
-        const sent = await sendMessage(chat.id, "", gif.id, false, replyToId);
+
+        // A saved gif is encrypted under the Saved Messages chat's key -
+        // has to be re-encrypted under this chat's key before it can be
+        // sent here, same as forwarding.
+        const reencrypted = await reencryptMediaAcrossChats(
+            savedChat, { id: chat.id, wrappedChatKey: chat.wrappedChatKey }, entry.media,
+        );
+        if (!reencrypted) return;
+
+        const sent = await sendMessage(chat.id, "", reencrypted.id, false, replyToId);
         if (sent) {
             setMessages((prev) => appendUnique(prev, [sent]));
             markAnimated(sent.id);
         }
     };
 
-    const handleToggleSaveGif = async (mediaId: string) => {
-        const isSaved = savedGifIds.has(mediaId);
-        const ok = isSaved ? await unsaveGif(mediaId) : await saveGif(mediaId);
-        if (!ok) return;
+    const handleToggleSaveGif = async (media: MediaAsset) => {
+        const isSaved = savedGifIds.has(media.id);
 
-        setSavedGifIds((prev) => {
-            const next = new Set(prev);
-            if (isSaved) next.delete(mediaId);
-            else next.add(mediaId);
-            return next;
-        });
+        if (isSaved) {
+            const ok = await unsaveGif(media.id);
+            if (!ok) return;
+            setSavedGifIds((prev) => {
+                const next = new Set(prev);
+                next.delete(media.id);
+                return next;
+            });
+            return;
+        }
+
+        if (!savedChat) return;
+        const reencrypted = await reencryptMediaAcrossChats(
+            { id: chat.id, wrappedChatKey: chat.wrappedChatKey }, savedChat, media,
+        );
+        if (!reencrypted) return;
+
+        const ok = await saveGif(media.id, reencrypted.id);
+        if (!ok) return;
+        setSavedGifIds((prev) => new Set(prev).add(media.id));
     };
 
     const handleDeleteMessage = async (messageId: string) => {
@@ -624,7 +658,7 @@ export default function ChatWindow({
             const isSaved = savedGifIds.has(media.id);
             items.push({
                 label: isSaved ? "Remove from GIFs" : "Save to GIFs",
-                onClick: () => handleToggleSaveGif(media.id),
+                onClick: () => handleToggleSaveGif(media),
             });
         }
 
@@ -1125,8 +1159,9 @@ export default function ChatWindow({
                                                 <path d="M7 9v6M11 9v6M11 12h2M16 9v6M16 9h3M16 12h2" />
                                             </svg>
                                         </button>
-                                        {gifPickerOpen && (
+                                        {gifPickerOpen && savedChat && (
                                             <GifPicker
+                                                savedChat={savedChat}
                                                 onClose={() => setGifPickerOpen(false)}
                                                 onSelect={handleSendGif}
                                             />

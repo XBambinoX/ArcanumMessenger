@@ -1,5 +1,5 @@
 import { apiFetch } from "../lib/apiFetch";
-import type { MediaAsset } from "../types/messenger";
+import type { MediaAsset, SavedGifEntry } from "../types/messenger";
 import { encryptChunked, encryptChunk } from "../crypto/chunkedMedia";
 import { readMediaMetadata } from "../lib/mediaMetadata";
 
@@ -76,23 +76,28 @@ export async function deleteMedia(mediaId: string): Promise<boolean> {
     return data.success === true;
 }
 
-export async function getSavedGifs(): Promise<MediaAsset[]> {
+export async function getSavedGifs(): Promise<SavedGifEntry[]> {
     const res = await apiFetch("/api/media/saved-gifs", { credentials: "include" });
     const data = await res.json();
     return data.success ? (data.gifs ?? []) : [];
 }
 
-export async function saveGif(mediaId: string): Promise<boolean> {
-    const res = await apiFetch(`/api/media/${mediaId}/save`, {
+// sourceMediaId is the gif as it's currently visible (whatever chat it's
+// in); newMediaId is the already-uploaded, re-encrypted-under-Saved-
+// Messages-key copy (see lib/mediaReencrypt.ts) that becomes the actual
+// saved item.
+export async function saveGif(sourceMediaId: string, newMediaId: string): Promise<boolean> {
+    const res = await apiFetch(`/api/media/${sourceMediaId}/save`, {
         method: "POST",
         credentials: "include",
+        body: JSON.stringify({ newMediaId }),
     });
     const data = await res.json();
     return data.success === true;
 }
 
-export async function unsaveGif(mediaId: string): Promise<boolean> {
-    const res = await apiFetch(`/api/media/${mediaId}/save`, {
+export async function unsaveGif(sourceMediaId: string): Promise<boolean> {
+    const res = await apiFetch(`/api/media/${sourceMediaId}/save`, {
         method: "DELETE",
         credentials: "include",
     });

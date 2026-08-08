@@ -1,5 +1,6 @@
-import type { MediaAsset } from "../types/messenger";
-import { getSavedGifs, getMediaUrl } from "../api/media";
+import type { SavedGifEntry } from "../types/messenger";
+import { getSavedGifs } from "../api/media";
+import { EncryptedImage, EncryptedGifVideo, type KeyedChat } from "./EncryptedMedia";
 import { useEffect, useState } from "react";
 import styles from "./GifPicker.module.css";
 
@@ -11,12 +12,13 @@ function isVideoMime(mimeType: string): boolean {
 }
 
 interface GifPickerProps {
+    savedChat: KeyedChat;
     onClose: () => void;
-    onSelect: (gif: MediaAsset) => void;
+    onSelect: (entry: SavedGifEntry) => void;
 }
 
-export default function GifPicker({ onClose, onSelect }: GifPickerProps) {
-    const [gifs, setGifs] = useState<MediaAsset[]>([]);
+export default function GifPicker({ savedChat, onClose, onSelect }: GifPickerProps) {
+    const [gifs, setGifs] = useState<SavedGifEntry[]>([]);
     const [loaded, setLoaded] = useState(false);
 
     useEffect(() => {
@@ -45,14 +47,18 @@ export default function GifPicker({ onClose, onSelect }: GifPickerProps) {
 
             {gifs.length > 0 && (
                 <div className={styles.grid}>
-                    {gifs.map((gif) => (
-                        <button key={gif.id} className={styles.gifTile} onClick={() => onSelect(gif)}>
-                            {isVideoMime(gif.mimeType) ? (
-                                <video src={getMediaUrl(gif.id)} autoPlay loop muted playsInline />
+                    {gifs.map(({ media, sourceMediaId }) => (
+                        <button
+                            key={media.id}
+                            className={styles.gifTile}
+                            onClick={() => onSelect({ media, sourceMediaId })}
+                        >
+                            {isVideoMime(media.mimeType) ? (
+                                <EncryptedGifVideo chat={savedChat} media={media} />
                             ) : (
-                                // Same as the chat bubble - the thumbnail is a static single
-                                // frame, showing it here would make every saved GIF look frozen.
-                                <img src={getMediaUrl(gif.id)} alt={gif.fileName} />
+                                // Same as the chat bubble - always the real file, never a
+                                // thumbnail, or the gif would just sit there frozen.
+                                <EncryptedImage chat={savedChat} media={media} alt={media.fileName} />
                             )}
                         </button>
                     ))}

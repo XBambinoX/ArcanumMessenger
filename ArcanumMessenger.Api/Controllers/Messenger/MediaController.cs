@@ -134,45 +134,63 @@ public class MediaController(AppDbContext db, MediaService media, MediaAccessSer
         var gifs = await db.SavedGifs.AsNoTracking()
             .Where(s => s.UserId == userId)
             .OrderByDescending(s => s.SavedAt)
-            .Select(s => s.Media)
+            .Select(s => new { s.Media, s.SourceMediaId })
             .ToListAsync(ct);
 
-        return Ok(new SavedGifsResponse(true, gifs.Select(MediaAssetDto.FromEntity).ToList()));
+        return Ok(new SavedGifsResponse(true,
+            gifs.Select(g => new SavedGifDto(MediaAssetDto.FromEntity(g.Media), g.SourceMediaId)).ToList()));
     }
 
+    // id is the SOURCE gif - whatever chat it's currently visible in - not
+    // the saved copy. The saved copy (request.NewMediaId) is a separate
+    // MediaAsset the client already uploaded, re-encrypted under its own
+    // Saved Messages chat key; it can't be the same object as the source
+    // once media is encrypted per-chat.
     [HttpPost("{id:guid}/save")]
-    public async Task<ActionResult<SaveGifResponse>> SaveGif(Guid id, CancellationToken ct)
+    public async Task<ActionResult<SaveGifResponse>> SaveGif(Guid id, [FromBody] SaveGifRequest request, CancellationToken ct)
     {
         if (!TryGetUserId(out var userId))
             return Unauthorized();
 
-        var asset = await access.GetAccessibleAsync(id, userId, ct);
-        if (asset is null)
+        var sourceAsset = await access.GetAccessibleAsync(id, userId, ct);
+        if (sourceAsset is null)
             return NotFound(new SaveGifResponse(false, "not_found"));
-        if (asset.Kind != "gif")
+        if (sourceAsset.Kind != "gif")
             return BadRequest(new SaveGifResponse(false, "not_a_gif"));
 
-        var exists = await db.SavedGifs.AnyAsync(s => s.UserId == userId && s.MediaId == id, ct);
-        if (!exists)
-        {
-            db.SavedGifs.Add(new SavedGif { UserId = userId, MediaId = id });
-            await db.SaveChangesAsync(ct);
-        }
+        var newAsset = await db.MediaAssets.FirstOrDefaultAsync(m => m.Id == request.NewMediaId, ct);
+        if (newAsset is null || newAsset.UploaderId != userId)
+            return BadRequest(new SaveGifResponse(false, "invalid_media"));
 
+        // A video sent "as a gif" only carries that reclassification on the
+        // original message's asset - the fresh re-upload derives its kind
+        // from mime type alone and would otherwise come back as "video".
+        if (newAsset.Kind != "gif")
+            newAsset.Kind = "gif";
+
+        var exists = await db.SavedGifs.AnyAsync(s => s.UserId == userId && s.SourceMediaId == id, ct);
+        if (!exists)
+            db.SavedGifs.Add(new SavedGif { UserId = userId, MediaId = newAsset.Id, SourceMediaId = id });
+
+        await db.SaveChangesAsync(ct);
         return Ok(new SaveGifResponse(true));
     }
 
+    // id is the SOURCE gif again, same as SaveGif - the client only ever
+    // deals in source ids, never needs to know the saved copy's own id.
     [HttpDelete("{id:guid}/save")]
     public async Task<ActionResult<SaveGifResponse>> UnsaveGif(Guid id, CancellationToken ct)
     {
         if (!TryGetUserId(out var userId))
             return Unauthorized();
 
-        var existing = await db.SavedGifs.FirstOrDefaultAsync(s => s.UserId == userId && s.MediaId == id, ct);
+        var existing = await db.SavedGifs.FirstOrDefaultAsync(s => s.UserId == userId && s.SourceMediaId == id, ct);
         if (existing is not null)
         {
             db.SavedGifs.Remove(existing);
             await db.SaveChangesAsync(ct);
+            // Best-effort - the saved copy is now unreferenced storage.
+            await media.DeleteUnusedAsync(existing.MediaId, userId, ct);
         }
 
         return Ok(new SaveGifResponse(true));
