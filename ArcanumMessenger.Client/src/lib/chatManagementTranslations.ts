@@ -88,8 +88,10 @@ export interface ChatInfoPanelTranslation {
     mediaLabel: string;
     noMediaYet: string;
     messagesLabel: string;
-    comingSoon: string;
     deleteChatButton: string;
+    generalTab: string;
+    mediaTab: string;
+    loadMore: string;
 }
 
 export interface AdminListPanelTranslation {
@@ -372,8 +374,10 @@ export const CHAT_INFO_TRANSLATIONS: Record<Language, ChatInfoPanelTranslation> 
         mediaLabel: "Media",
         noMediaYet: "No media yet",
         messagesLabel: "Messages",
-        comingSoon: "Coming soon",
         deleteChatButton: "Delete chat",
+        generalTab: "General",
+        mediaTab: "Media",
+        loadMore: "Load more",
     },
     uk: {
         closeAria: "Закрити",
@@ -401,8 +405,10 @@ export const CHAT_INFO_TRANSLATIONS: Record<Language, ChatInfoPanelTranslation> 
         mediaLabel: "Медіа",
         noMediaYet: "Ще немає медіа",
         messagesLabel: "Повідомлення",
-        comingSoon: "Скоро",
         deleteChatButton: "Видалити чат",
+        generalTab: "Загальне",
+        mediaTab: "Медіа",
+        loadMore: "Завантажити ще",
     },
     de: {
         closeAria: "Schließen",
@@ -430,7 +436,9 @@ export const CHAT_INFO_TRANSLATIONS: Record<Language, ChatInfoPanelTranslation> 
         mediaLabel: "Medien",
         noMediaYet: "Noch keine Medien",
         messagesLabel: "Nachrichten",
-        comingSoon: "Demnächst",
         deleteChatButton: "Chat löschen",
+        generalTab: "Allgemein",
+        mediaTab: "Medien",
+        loadMore: "Mehr laden",
     },
 };

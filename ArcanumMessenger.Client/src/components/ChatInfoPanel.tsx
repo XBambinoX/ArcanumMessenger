@@ -13,10 +13,12 @@ import {
     type ChatMemberInfo,
 } from "../api/chats";
 import { getUserAvatarUrl, getPresenceBulk } from "../api/users";
+import { getChatStats, type ChatStats } from "../api/messages";
 import { formatChatTime } from "../lib/time";
 import AvatarImage from "./AvatarImage";
 import AdminListPanel from "./AdminListPanel";
 import MembersManagePanel from "./MembersManagePanel";
+import ChatMediaGrid from "./ChatMediaGrid";
 import styles from "./ChatInfoPanel.module.css";
 import { useLanguage } from "../lib/language";
 import { APP_COMMON } from "../lib/appTranslations";
@@ -54,7 +56,6 @@ function sortMembers(members: ChatMemberInfo[]): ChatMemberInfo[] {
     });
 }
 
-// Media history and message count are previews - no backend for either yet.
 export default function ChatInfoPanel({
     chat, connection, onClose, onChatRemoved, chatAvatarNonce, onChatAvatarChanged,
 }: ChatInfoPanelProps) {
@@ -69,7 +70,24 @@ export default function ChatInfoPanel({
     const [roleActionId, setRoleActionId] = useState<string | null>(null);
     const [adminListOpen, setAdminListOpen] = useState(false);
     const [manageMembersOpen, setManageMembersOpen] = useState(false);
+    const [infoTab, setInfoTab] = useState<"general" | "media">("general");
+    const [stats, setStats] = useState<ChatStats | null>(null);
     const avatarInputRef = useRef<HTMLInputElement | null>(null);
+    const mediaGridTr = { noMediaYet: tr.noMediaYet, loadMore: tr.loadMore };
+
+    useEffect(() => {
+        setInfoTab("general");
+    }, [chat.id]);
+
+    useEffect(() => {
+        let cancelled = false;
+        getChatStats(chat.id).then((data) => {
+            if (!cancelled) setStats(data);
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [chat.id]);
 
     useEffect(() => {
         if (chat.type !== "group") return;
@@ -350,102 +368,129 @@ export default function ChatInfoPanel({
 
                         {chat.type === "group" ? (
                             <>
-                                {description && (
-                                    <section className={styles.infoSection}>
-                                        <p className={styles.description}>{description}</p>
+                                <div className={styles.tabBar}>
+                                    <button
+                                        className={`${styles.tabBtn} ${infoTab === "general" ? styles.tabBtnActive : ""}`}
+                                        onClick={() => setInfoTab("general")}
+                                    >
+                                        {tr.generalTab}
+                                    </button>
+                                    <button
+                                        className={`${styles.tabBtn} ${infoTab === "media" ? styles.tabBtnActive : ""}`}
+                                        onClick={() => setInfoTab("media")}
+                                    >
+                                        {tr.mediaTab}
+                                    </button>
+                                </div>
+
+                                {infoTab === "general" ? (
+                                    <>
+                                        {description && (
+                                            <section className={styles.infoSection}>
+                                                <p className={styles.description}>{description}</p>
+                                            </section>
+                                        )}
+
+                                        <section className={styles.membersSection}>
+                                            <button
+                                                className={styles.adminListRow}
+                                                onClick={() => setAdminListOpen(true)}
+                                            >
+                                                <span className={styles.adminListIcon}>
+                                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z" />
+                                                    </svg>
+                                                </span>
+                                                <span className={styles.adminListLabel}>{tr.adminsLabel}</span>
+                                                <span className={styles.adminListCount}>
+                                                    {members.filter((m) => m.isOwner || m.role === "admin").length}
+                                                </span>
+                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="M9 18l6-6-6-6" />
+                                                </svg>
+                                            </button>
+
+                                            {isAdmin && (
+                                                <button
+                                                    className={styles.adminListRow}
+                                                    onClick={() => setManageMembersOpen(true)}
+                                                >
+                                                    <span className={styles.adminListIcon}>
+                                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                                            <circle cx="9" cy="7" r="4" />
+                                                            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                                                            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                                                        </svg>
+                                                    </span>
+                                                    <span className={styles.adminListLabel}>{tr.manageMembersLabel}</span>
+                                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M9 18l6-6-6-6" />
+                                                    </svg>
+                                                </button>
+                                            )}
+
+                                            <h3 className={styles.membersTitle}>{tr.membersHeading}</h3>
+                                            <ul className={styles.memberList}>
+                                                {members.map((member) => {
+                                                    const info = presence[member.userId];
+                                                    return (
+                                                        <li key={member.userId} className={styles.memberRow}>
+                                                            <div className={styles.memberAvatar}>
+                                                                <AvatarImage
+                                                                    src={getUserAvatarUrl(member.userId)}
+                                                                    fallback={member.name.charAt(0).toUpperCase()}
+                                                                />
+                                                                {info?.isOnline && <span className={styles.onlineDot} />}
+                                                            </div>
+                                                            <div className={styles.memberBody}>
+                                                                <span className={styles.memberName}>{member.name}</span>
+                                                                <span
+                                                                    className={`${styles.memberStatus} ${info?.isOnline ? styles.memberStatusOnline : ""}`}
+                                                                >
+                                                                    {statusLabel(info, tr, common.online)}
+                                                                </span>
+                                                            </div>
+                                                            {member.isOwner ? (
+                                                                <span className={styles.ownerBadge}>{tr.ownerBadge}</span>
+                                                            ) : member.role === "admin" && (
+                                                                <span className={styles.adminBadge}>{tr.adminBadge}</span>
+                                                            )}
+                                                        </li>
+                                                    );
+                                                })}
+                                            </ul>
+                                        </section>
+                                    </>
+                                ) : (
+                                    <section className={styles.mediaSection}>
+                                        <ChatMediaGrid
+                                            chat={{ id: chat.id, wrappedChatKey: chat.wrappedChatKey }}
+                                            tr={mediaGridTr}
+                                        />
                                     </section>
                                 )}
-
-                                <section className={styles.membersSection}>
-                                    <button
-                                        className={styles.adminListRow}
-                                        onClick={() => setAdminListOpen(true)}
-                                    >
-                                        <span className={styles.adminListIcon}>
-                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                <path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z" />
-                                            </svg>
-                                        </span>
-                                        <span className={styles.adminListLabel}>{tr.adminsLabel}</span>
-                                        <span className={styles.adminListCount}>
-                                            {members.filter((m) => m.isOwner || m.role === "admin").length}
-                                        </span>
-                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="M9 18l6-6-6-6" />
-                                        </svg>
-                                    </button>
-
-                                    {isAdmin && (
-                                        <button
-                                            className={styles.adminListRow}
-                                            onClick={() => setManageMembersOpen(true)}
-                                        >
-                                            <span className={styles.adminListIcon}>
-                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                                                    <circle cx="9" cy="7" r="4" />
-                                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                                                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                                                </svg>
-                                            </span>
-                                            <span className={styles.adminListLabel}>{tr.manageMembersLabel}</span>
-                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                <path d="M9 18l6-6-6-6" />
-                                            </svg>
-                                        </button>
-                                    )}
-
-                                    <h3 className={styles.membersTitle}>{tr.membersHeading}</h3>
-                                    <ul className={styles.memberList}>
-                                        {members.map((member) => {
-                                            const info = presence[member.userId];
-                                            return (
-                                                <li key={member.userId} className={styles.memberRow}>
-                                                    <div className={styles.memberAvatar}>
-                                                        <AvatarImage
-                                                            src={getUserAvatarUrl(member.userId)}
-                                                            fallback={member.name.charAt(0).toUpperCase()}
-                                                        />
-                                                        {info?.isOnline && <span className={styles.onlineDot} />}
-                                                    </div>
-                                                    <div className={styles.memberBody}>
-                                                        <span className={styles.memberName}>{member.name}</span>
-                                                        <span
-                                                            className={`${styles.memberStatus} ${info?.isOnline ? styles.memberStatusOnline : ""}`}
-                                                        >
-                                                            {statusLabel(info, tr, common.online)}
-                                                        </span>
-                                                    </div>
-                                                    {member.isOwner ? (
-                                                        <span className={styles.ownerBadge}>{tr.ownerBadge}</span>
-                                                    ) : member.role === "admin" && (
-                                                        <span className={styles.adminBadge}>{tr.adminBadge}</span>
-                                                    )}
-                                                </li>
-                                            );
-                                        })}
-                                    </ul>
-                                </section>
                             </>
                         ) : (
-                            <section className={styles.infoSection}>
-                                <div className={styles.infoRow}>
-                                    <span className={styles.infoLabel}>
-                                        {tr.mediaLabel}
-                                    </span>
-                                    <span className={styles.infoValue}>
-                                        {tr.noMediaYet}
-                                    </span>
-                                </div>
-                                <div className={styles.infoRow}>
-                                    <span className={styles.infoLabel}>
-                                        {tr.messagesLabel}
-                                    </span>
-                                    <span className={styles.infoValue}>
-                                        {tr.comingSoon}
-                                    </span>
-                                </div>
-                            </section>
+                            <>
+                                <section className={styles.infoSection}>
+                                    <div className={styles.infoRow}>
+                                        <span className={styles.infoLabel}>
+                                            {tr.messagesLabel}
+                                        </span>
+                                        <span className={styles.infoValue}>
+                                            {stats ? stats.messageCount : ""}
+                                        </span>
+                                    </div>
+                                </section>
+                                <section className={styles.mediaSection}>
+                                    <h3 className={styles.membersTitle}>{tr.mediaLabel}</h3>
+                                    <ChatMediaGrid
+                                        chat={{ id: chat.id, wrappedChatKey: chat.wrappedChatKey }}
+                                        tr={mediaGridTr}
+                                    />
+                                </section>
+                            </>
                         )}
 
                         {chat.type !== "saved" && (

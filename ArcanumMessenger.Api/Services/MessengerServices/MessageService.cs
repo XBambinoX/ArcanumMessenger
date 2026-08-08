@@ -86,6 +86,58 @@ public class MessageService(
         return (messages, hasMore, readStates, null);
     }
 
+    public async Task<(List<ChatMediaItemDto> Items, bool HasMore, string? Reason)> GetMediaAsync(
+        Guid chatId, Guid? beforeMessageId, int take, CancellationToken ct)
+    {
+        take = Math.Clamp(take <= 0 ? DefaultTake : take, 1, MaxTake);
+
+        DateTime? beforeCreatedAt = null;
+        if (beforeMessageId is { } beforeId)
+        {
+            beforeCreatedAt = await db.Messages.AsNoTracking()
+                .Where(m => m.Id == beforeId && m.ChatId == chatId)
+                .Select(m => (DateTime?)m.CreatedAt)
+                .FirstOrDefaultAsync(ct);
+            if (beforeCreatedAt is null)
+                return ([], false, "invalid_cursor");
+        }
+
+        var query = db.Messages.AsNoTracking()
+            .Where(m => m.ChatId == chatId && !m.IsDeleted && m.MediaId != null);
+        if (beforeMessageId is { } cursor)
+            query = query.Where(m => m.CreatedAt < beforeCreatedAt ||
+                (m.CreatedAt == beforeCreatedAt && m.Id < cursor));
+
+        var page = await query
+            .OrderByDescending(m => m.CreatedAt).ThenByDescending(m => m.Id)
+            .Take(take + 1)
+            .Select(m => new { m.Id, m.MediaId, m.CreatedAt })
+            .ToListAsync(ct);
+
+        var hasMore = page.Count > take;
+        var trimmed = page.Take(take).ToList();
+
+        var mediaIds = trimmed.Select(m => m.MediaId!.Value).ToList();
+        var mediaById = await db.MediaAssets.AsNoTracking()
+            .Where(m => mediaIds.Contains(m.Id))
+            .ToDictionaryAsync(m => m.Id, ct);
+
+        var items = trimmed
+            .Where(m => mediaById.ContainsKey(m.MediaId!.Value))
+            .Select(m => new ChatMediaItemDto(m.Id, m.CreatedAt, MediaAssetDto.FromEntity(mediaById[m.MediaId!.Value])))
+            .ToList();
+
+        return (items, hasMore, null);
+    }
+
+    public async Task<(int MessageCount, int MediaCount)> GetStatsAsync(Guid chatId, CancellationToken ct)
+    {
+        var messageCount = await db.Messages.AsNoTracking().CountAsync(m => m.ChatId == chatId && !m.IsDeleted, ct);
+        var mediaCount = await db.Messages.AsNoTracking()
+            .CountAsync(m => m.ChatId == chatId && !m.IsDeleted && m.MediaId != null, ct);
+        return (messageCount, mediaCount);
+    }
+
     public async Task<(ChatMessageDto? Message, string? Reason)> SendMessageAsync(
         ChatMember membership, string? content, Guid? replyToId, Guid? mediaId, bool asGif, CancellationToken ct)
     {

@@ -1,5 +1,5 @@
 import { apiFetch } from "../lib/apiFetch";
-import type { ChatMessage, ChatReadState } from "../types/messenger";
+import type { ChatMessage, ChatReadState, MediaAsset } from "../types/messenger";
 
 export interface MessageHistoryResult {
     messages: ChatMessage[];
@@ -52,6 +52,39 @@ export async function editMessage(chatId: string, messageId: string, content: st
     });
     const data = await res.json();
     return data.success ? data.message : null;
+}
+
+export interface ChatMediaItem {
+    messageId: string;
+    createdAt: string;
+    media: MediaAsset;
+}
+
+export interface ChatMediaResult {
+    items: ChatMediaItem[];
+    hasMore: boolean;
+}
+
+export async function getChatMedia(chatId: string, before?: string): Promise<ChatMediaResult> {
+    const params = before ? `?before=${before}` : "";
+    const res = await apiFetch(`/api/chats/${chatId}/messages/media${params}`, {
+        credentials: "include",
+    });
+    const data = await res.json();
+    return { items: data.items ?? [], hasMore: data.hasMore ?? false };
+}
+
+export interface ChatStats {
+    messageCount: number;
+    mediaCount: number;
+}
+
+export async function getChatStats(chatId: string): Promise<ChatStats | null> {
+    const res = await apiFetch(`/api/chats/${chatId}/messages/stats`, {
+        credentials: "include",
+    });
+    const data = await res.json();
+    return data.success ? { messageCount: data.messageCount ?? 0, mediaCount: data.mediaCount ?? 0 } : null;
 }
 
 export interface ForwardItem {

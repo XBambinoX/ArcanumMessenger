@@ -143,6 +143,49 @@
     color: rgba(148, 163, 184, 0.6);
 }
 
+.tabBar {
+    display: flex;
+    gap: 6px;
+    border-top: 1px solid rgba(124, 58, 237, 0.12);
+    padding-top: 14px;
+    margin-bottom: 4px;
+}
+
+.tabBtn {
+    flex: 1;
+    padding: 7px 10px;
+    border-radius: 9px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: rgba(148, 163, 184, 0.75);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.tabBtn:hover {
+    background: rgba(124, 58, 237, 0.08);
+    color: rgba(226, 232, 240, 0.9);
+}
+
+.tabBtnActive {
+    background: linear-gradient(
+        135deg,
+        rgba(124, 58, 237, 0.22),
+        rgba(79, 70, 229, 0.14)
+    );
+    border-color: rgba(124, 58, 237, 0.3);
+    color: rgba(226, 232, 240, 0.95);
+}
+
+.mediaSection {
+    border-top: 1px solid rgba(124, 58, 237, 0.12);
+    padding-top: 14px;
+    margin-bottom: 16px;
+}
+
 .infoSection {
     border-top: 1px solid rgba(124, 58, 237, 0.12);
     padding-top: 14px;

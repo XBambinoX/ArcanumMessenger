@@ -25,6 +25,38 @@ public class MessagesController(MessageService messageService, ChatAccessService
         return Ok(new MessageHistoryResponse(true, messages, hasMore, ReadStates: readStates));
     }
 
+    [HttpGet("media")]
+    public async Task<ActionResult<ChatMediaResponse>> Media(
+        Guid chatId, [FromQuery] Guid? before, [FromQuery] int take, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var membership = await chatAccess.GetMembershipAsync(chatId, userId, ct);
+        if (membership is null)
+            return NotFound(new ChatMediaResponse(false, Reason: "not_found"));
+
+        var (items, hasMore, reason) = await messageService.GetMediaAsync(chatId, before, take, ct);
+        if (reason is not null)
+            return BadRequest(new ChatMediaResponse(false, Reason: reason));
+
+        return Ok(new ChatMediaResponse(true, items, hasMore));
+    }
+
+    [HttpGet("stats")]
+    public async Task<ActionResult<ChatStatsResponse>> Stats(Guid chatId, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var membership = await chatAccess.GetMembershipAsync(chatId, userId, ct);
+        if (membership is null)
+            return NotFound(new ChatStatsResponse(false, Reason: "not_found"));
+
+        var (messageCount, mediaCount) = await messageService.GetStatsAsync(chatId, ct);
+        return Ok(new ChatStatsResponse(true, messageCount, mediaCount));
+    }
+
     [HttpPost]
     public async Task<ActionResult<SendMessageResponse>> Send(
         Guid chatId, [FromBody] SendMessageRequest request, CancellationToken ct)

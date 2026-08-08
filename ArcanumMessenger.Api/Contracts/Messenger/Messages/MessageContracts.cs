@@ -48,3 +48,10 @@ public record ForwardItemRequest(Guid SourceMessageId, string EncryptedContent, 
 public record ForwardMessagesRequest(List<ForwardItemRequest> Items);
 
 public record ForwardMessagesResponse(bool Success, List<ChatMessageDto>? Messages, string? Reason = null);
+
+public record ChatMediaItemDto(Guid MessageId, DateTime CreatedAt, MediaAssetDto Media);
+
+public record ChatMediaResponse(
+    bool Success, IReadOnlyList<ChatMediaItemDto>? Items = null, bool HasMore = false, string? Reason = null);
+
+public record ChatStatsResponse(bool Success, int MessageCount = 0, int MediaCount = 0, string? Reason = null);
