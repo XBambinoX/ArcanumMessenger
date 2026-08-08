@@ -160,24 +160,34 @@ export default function NewChatPanel({ onClose, onStartChat }: NewChatPanelProps
 
                 {mode === "group-details" ? (
                     <div className={styles.groupDetails}>
-                        <input
-                            className={styles.search}
-                            type="text"
-                            placeholder={tr.groupNamePlaceholder}
-                            value={groupTitle}
-                            onChange={(e) => setGroupTitle(e.target.value)}
-                            autoFocus
-                        />
-                        <textarea
-                            className={styles.descriptionInput}
-                            placeholder={tr.descriptionPlaceholder}
-                            value={groupDescription}
-                            onChange={(e) => setGroupDescription(e.target.value)}
-                            rows={3}
-                        />
-                        <p className={styles.note}>
+                        <div className={styles.groupAvatarPreview}>
+                            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                <circle cx="9" cy="7" r="4" />
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                            </svg>
+                        </div>
+                        <div className={styles.groupFieldsCard}>
+                            <input
+                                className={styles.groupField}
+                                type="text"
+                                placeholder={tr.groupNamePlaceholder}
+                                value={groupTitle}
+                                onChange={(e) => setGroupTitle(e.target.value)}
+                                autoFocus
+                            />
+                            <textarea
+                                className={styles.groupField}
+                                placeholder={tr.descriptionPlaceholder}
+                                value={groupDescription}
+                                onChange={(e) => setGroupDescription(e.target.value)}
+                                rows={3}
+                            />
+                        </div>
+                        <span className={styles.memberCountPill}>
                             {tr.membersSelected(groupMembers.size)}
-                        </p>
+                        </span>
                         {groupError && <p className={styles.errorNote}>{groupError}</p>}
                         <button
                             className={styles.createBtn}
@@ -189,13 +199,21 @@ export default function NewChatPanel({ onClose, onStartChat }: NewChatPanelProps
                     </div>
                 ) : (
                     <>
-                        <input
-                            className={styles.search}
-                            type="text"
-                            placeholder={tr.findUserPlaceholder}
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
+                        <div className={styles.searchWrap}>
+                            <span className={styles.searchIcon}>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="11" cy="11" r="7" />
+                                    <path d="M21 21l-4.3-4.3" />
+                                </svg>
+                            </span>
+                            <input
+                                className={styles.search}
+                                type="text"
+                                placeholder={tr.findUserPlaceholder}
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                        </div>
 
                         {mode === "browse" && (
                             <button
@@ -224,66 +242,70 @@ export default function NewChatPanel({ onClose, onStartChat }: NewChatPanelProps
                         )}
 
                         {mode === "group-members" && groupMembers.size > 0 && (
-                            <ul className={styles.selectedChips}>
-                                {[...groupMembers.values()].map((member) => (
-                                    <li key={member.id} className={styles.chip}>
-                                        {member.name}
-                                        <button
-                                            className={styles.chipRemove}
-                                            onClick={() => toggleGroupMember(member)}
-                                            aria-label={tr.removeChipAria(member.name)}
-                                        >
-                                            ×
-                                        </button>
-                                    </li>
-                                ))}
-                            </ul>
+                            <div className={styles.chipsBox}>
+                                <ul className={styles.selectedChips}>
+                                    {[...groupMembers.values()].map((member) => (
+                                        <li key={member.id} className={styles.chip}>
+                                            {member.name}
+                                            <button
+                                                className={styles.chipRemove}
+                                                onClick={() => toggleGroupMember(member)}
+                                                aria-label={tr.removeChipAria(member.name)}
+                                            >
+                                                ×
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
                         )}
 
                         <h3 className={styles.sectionTitle}>
                             {query.length > 0 ? tr.searchResultsHeading : tr.contactsHeading}
                         </h3>
-                        {query.length > 0 && query.length < MIN_SEARCH_LENGTH ? (
-                            <p className={styles.note}>
-                                {tr.typeAtLeast(MIN_SEARCH_LENGTH)}
-                            </p>
-                        ) : list.length === 0 ? (
-                            <p className={styles.note}>
-                                {query.length > 0
-                                    ? tr.noMatches
-                                    : tr.noContactsYet}
-                            </p>
-                        ) : (
-                            <ul className={styles.contactList}>
-                                {list.map((entry) => (
-                                    <li key={entry.id}>
-                                        <button
-                                            className={styles.contactRow}
-                                            onClick={() =>
-                                                mode === "group-members"
-                                                    ? toggleGroupMember(entry)
-                                                    : handleViewUser(entry.id)
-                                            }
-                                        >
-                                            {mode === "group-members" && (
-                                                <span
-                                                    className={`${styles.memberCheckbox} ${
-                                                        groupMembers.has(entry.id) ? styles.memberCheckboxChecked : ""
-                                                    }`}
-                                                />
-                                            )}
-                                            <div className={styles.contactAvatar}>
-                                                <AvatarImage
-                                                    src={getUserAvatarUrl(entry.id)}
-                                                    fallback={entry.name.charAt(0).toUpperCase()}
-                                                />
-                                            </div>
-                                            <span>{entry.name}</span>
-                                        </button>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
+                        <div className={styles.listCard}>
+                            {query.length > 0 && query.length < MIN_SEARCH_LENGTH ? (
+                                <p className={styles.note}>
+                                    {tr.typeAtLeast(MIN_SEARCH_LENGTH)}
+                                </p>
+                            ) : list.length === 0 ? (
+                                <p className={styles.note}>
+                                    {query.length > 0
+                                        ? tr.noMatches
+                                        : tr.noContactsYet}
+                                </p>
+                            ) : (
+                                <ul className={styles.contactList}>
+                                    {list.map((entry) => (
+                                        <li key={entry.id}>
+                                            <button
+                                                className={styles.contactRow}
+                                                onClick={() =>
+                                                    mode === "group-members"
+                                                        ? toggleGroupMember(entry)
+                                                        : handleViewUser(entry.id)
+                                                }
+                                            >
+                                                {mode === "group-members" && (
+                                                    <span
+                                                        className={`${styles.memberCheckbox} ${
+                                                            groupMembers.has(entry.id) ? styles.memberCheckboxChecked : ""
+                                                        }`}
+                                                    />
+                                                )}
+                                                <div className={styles.contactAvatar}>
+                                                    <AvatarImage
+                                                        src={getUserAvatarUrl(entry.id)}
+                                                        fallback={entry.name.charAt(0).toUpperCase()}
+                                                    />
+                                                </div>
+                                                <span>{entry.name}</span>
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
 
                         {mode === "group-members" && (
                             <button
