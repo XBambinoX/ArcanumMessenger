@@ -9,6 +9,7 @@ import { EncryptedImage, EncryptedGifVideo, EncryptedVideoPlayer, downloadMediaT
 import { uploadMediaChunked, abortChunkedUpload, clearChunkedUploadResumeState, CHUNK_THRESHOLD } from "../api/chunkedUpload";
 import { formatMessageTime, formatChatTime } from "../lib/time";
 import { extractVideoFirstFrame } from "../lib/mediaMetadata";
+import { reencryptMediaAcrossChats } from "../lib/mediaReencrypt";
 import { encryptOutgoing, decryptIncoming, decryptIncomingList, getChatKey } from "../lib/chatCrypto";
 import { selfHealChatKeys } from "../lib/chatKeySelfHeal";
 import UserInfoPanel from "./UserInfoPanel";
@@ -555,16 +556,30 @@ export default function ChatWindow({
         setForwardIds(null);
 
         // Each source message is already decrypted in local state (that's
-        // how it's on screen right now) - it gets re-encrypted here under
+        // how it's on screen right now) - text gets re-encrypted here under
         // the DESTINATION chat's key, since the server can't do that
-        // transcoding itself under E2EE.
+        // transcoding itself under E2EE. Media can't be transcoded in place
+        // like a short string - it has to be downloaded, decrypted, and
+        // re-uploaded fully under the destination's key.
         const items: ForwardItem[] = [];
         for (const id of ids) {
             const source = messages.find((m) => m.id === id);
             if (!source) continue;
             const encryptedContent = source.content ? await encryptOutgoing(targetChat, source.content) : "";
             if (source.content && encryptedContent === null) continue; // no key for the destination yet
-            items.push({ sourceMessageId: id, encryptedContent: encryptedContent ?? "" });
+
+            let newMediaId: string | undefined;
+            if (source.media) {
+                const reencrypted = await reencryptMediaAcrossChats(
+                    { id: chat.id, wrappedChatKey: chat.wrappedChatKey },
+                    { id: targetChat.id, wrappedChatKey: targetChat.wrappedChatKey },
+                    source.media,
+                );
+                if (!reencrypted) continue; // couldn't re-encrypt the media - skip this item entirely
+                newMediaId = reencrypted.id;
+            }
+
+            items.push({ sourceMessageId: id, encryptedContent: encryptedContent ?? "", newMediaId });
         }
         if (items.length === 0) {
             if (selectMode) handleCancelSelect();

@@ -39,7 +39,12 @@ public record EditMessageResponse(bool Success, ChatMessageDto? Message, string?
 // Forwarding across chats with different keys can't be done server-side
 // under E2EE - the client decrypts each source message (it already has the
 // plaintext on screen) and re-encrypts it under the DESTINATION chat's key.
-public record ForwardItemRequest(Guid SourceMessageId, string EncryptedContent);
+// Media works the same way but can't be transcoded in place like a short
+// text string can: NewMediaId is a brand new MediaAsset the client already
+// downloaded, decrypted, and re-uploaded encrypted under the destination
+// chat's key before calling this - required whenever the source message
+// actually has media attached, ignored otherwise.
+public record ForwardItemRequest(Guid SourceMessageId, string EncryptedContent, Guid? NewMediaId = null);
 public record ForwardMessagesRequest(List<ForwardItemRequest> Items);
 
 public record ForwardMessagesResponse(bool Success, List<ChatMessageDto>? Messages, string? Reason = null);
