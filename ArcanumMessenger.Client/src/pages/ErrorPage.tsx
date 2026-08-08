@@ -24,9 +24,12 @@ export default function ErrorPage() {
         }
     }, []);
 
-    const statusLabel = !details?.status || details.status === 0
-        ? "Connection lost"
-        : `Error ${details.status}`;
+    // Deliberately shows only the status code and a short reason - no
+    // endpoint path, stack trace, or other internal detail belongs on a
+    // screen the end user (not just us) can see, in prod or otherwise.
+    const isConnectionIssue = !details?.status || details.status === 0;
+    const statusLabel = isConnectionIssue ? "Connection lost" : `Error ${details.status}`;
+    const title = isConnectionIssue ? "Couldn't reach the server" : "Something went wrong";
 
     return (
         <div className={styles.root}>
@@ -44,23 +47,10 @@ export default function ErrorPage() {
                 </div>
 
                 <p className={styles.statusLabel}>{statusLabel}</p>
-                <h1 className={styles.title}>Something went wrong on our end</h1>
+                <h1 className={styles.title}>{title}</h1>
                 <p className={styles.subtitle}>
-                    {details?.message ?? "The server ran into a problem. It's not something you did — try again in a moment."}
+                    {details?.message ?? "It's not something you did — try again in a moment."}
                 </p>
-
-                {details && (
-                    <div className={styles.detailsBox}>
-                        <div className={styles.detailsRow}>
-                            <span>Path</span>
-                            <span>{details.path}</span>
-                        </div>
-                        <div className={styles.detailsRow}>
-                            <span>Time</span>
-                            <span>{new Date(details.timestamp).toLocaleString()}</span>
-                        </div>
-                    </div>
-                )}
 
                 <div className={styles.actions}>
                     <button className={styles.btnSecondary} onClick={() => navigate("/welcome")}>

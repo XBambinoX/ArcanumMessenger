@@ -4,7 +4,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #0a0818;
+    background: rgb(var(--bg-page-rgb));
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     overflow: hidden;
     padding: 24px;
@@ -29,7 +29,7 @@
     right: -150px;
     width: 550px;
     height: 550px;
-    background: radial-gradient(circle, rgba(251, 146, 60, 0.12) 0%, transparent 65%);
+    background: radial-gradient(circle, rgba(var(--error-accent3-rgb), 0.12) 0%, transparent 65%);
 }
 
 .grid {
@@ -37,7 +37,7 @@
     position: absolute;
     inset: 0;
     opacity: 0.03;
-    background-image: linear-gradient(rgba(var(--white-rgb), 0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(var(--white-rgb), 0.15) 1px, transparent 1px);
+    background-image: linear-gradient(rgba(var(--tint-rgb), 0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(var(--tint-rgb), 0.15) 1px, transparent 1px);
     background-size: 48px 48px;
 }
 
@@ -48,7 +48,7 @@
     max-width: 440px;
     border-radius: 24px;
     border: 1px solid rgba(var(--error-accent-rgb), 0.2);
-    background: linear-gradient(135deg, rgba(var(--error-accent-rgb), 0.06), rgba(13, 11, 26, 0.95));
+    background: linear-gradient(135deg, rgba(var(--error-accent-rgb), 0.06), rgba(var(--bg-elevated-rgb), 0.95));
     backdrop-filter: blur(20px);
     box-shadow: 0 20px 60px rgba(var(--black-rgb), 0.4);
     padding: 40px 36px 36px;
@@ -60,7 +60,7 @@
     height: 56px;
     margin: 0 auto 18px;
     border-radius: 14px;
-    background: linear-gradient(135deg, rgba(var(--error-accent-rgb), 0.22), rgba(251, 146, 60, 0.14));
+    background: linear-gradient(135deg, rgba(var(--error-accent-rgb), 0.22), rgba(var(--error-accent3-rgb), 0.14));
     border: 1px solid rgba(var(--error-accent-rgb), 0.35);
     display: flex;
     align-items: center;
@@ -90,33 +90,6 @@
     color: rgba(var(--text-muted-rgb), 0.75);
     margin: 0 0 20px;
 }
-
-.detailsBox {
-    text-align: left;
-    border-radius: 12px;
-    border: 1px solid rgba(var(--accent-rgb), 0.2);
-    background: rgba(var(--accent-rgb), 0.05);
-    padding: 12px 14px;
-    margin-bottom: 24px;
-}
-
-.detailsRow {
-    display: flex;
-    justify-content: space-between;
-    font-size: 12px;
-    font-family: ui-monospace, monospace;
-    color: rgba(var(--text-muted-rgb), 0.7);
-    padding: 4px 0;
-}
-
-    .detailsRow span:first-child {
-        color: rgba(var(--accent-light-rgb), 0.7);
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        font-family: 'Inter', sans-serif;
-        font-size: 11px;
-        font-weight: 600;
-    }
 
 .actions {
     display: flex;
