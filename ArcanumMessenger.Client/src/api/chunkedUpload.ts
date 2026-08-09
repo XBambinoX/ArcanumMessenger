@@ -2,6 +2,7 @@ import { apiFetch } from "../lib/apiFetch";
 import type { MediaAsset } from "../types/messenger";
 import { encryptChunk, CHUNK_SIZE, ciphertextSizeFor } from "../crypto/chunkedMedia";
 import { readMediaMetadata } from "../lib/mediaMetadata";
+import { encryptContent } from "../crypto/chatKey";
 
 export const CHUNK_THRESHOLD = 50 * 1024 * 1024; // files under this keep using the simple uploadMedia
 const RETRY_ATTEMPTS = 3;
@@ -16,6 +17,7 @@ function fingerprintKey(file: File): string {
 
 async function startSession(
     file: File,
+    encryptedFileName: string,
     encryptedTotalSize: number,
     meta: { width?: number; height?: number; durationSeconds?: number },
     signal?: AbortSignal,
@@ -24,7 +26,7 @@ async function startSession(
         method: "POST",
         credentials: "include",
         body: JSON.stringify({
-            fileName: file.name,
+            fileName: encryptedFileName,
             mimeType: file.type || "application/octet-stream",
             totalSize: encryptedTotalSize,
             width: meta.width,
@@ -121,7 +123,8 @@ export async function uploadMediaChunked(
 
     if (!sessionId) {
         const meta = await readMediaMetadata(file);
-        sessionId = await startSession(file, encryptedTotalSize, meta, signal);
+        const encryptedFileName = await encryptContent(chatKey, chatId, file.name);
+        sessionId = await startSession(file, encryptedFileName, encryptedTotalSize, meta, signal);
         if (!sessionId) return null;
         localStorage.setItem(key, sessionId);
     }

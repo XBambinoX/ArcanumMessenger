@@ -1,6 +1,7 @@
 import type { SavedGifEntry } from "../types/messenger";
 import { getSavedGifs } from "../api/media";
 import { EncryptedImage, EncryptedGifVideo, type KeyedChat } from "./EncryptedMedia";
+import { decryptSavedGifEntries } from "../lib/chatCrypto";
 import { useEffect, useState } from "react";
 import styles from "./GifPicker.module.css";
 import { useLanguage } from "../lib/language";
@@ -25,11 +26,11 @@ export default function GifPicker({ savedChat, onClose, onSelect }: GifPickerPro
     const [loaded, setLoaded] = useState(false);
 
     useEffect(() => {
-        getSavedGifs().then((result) => {
-            setGifs(result);
+        getSavedGifs().then(async (result) => {
+            setGifs(await decryptSavedGifEntries(savedChat, result));
             setLoaded(true);
         });
-    }, []);
+    }, [savedChat]);
 
     return (
         <aside className={styles.panel}>

@@ -2,6 +2,7 @@ import { apiFetch } from "../lib/apiFetch";
 import type { MediaAsset, SavedGifEntry } from "../types/messenger";
 import { encryptChunked, encryptChunk } from "../crypto/chunkedMedia";
 import { readMediaMetadata } from "../lib/mediaMetadata";
+import { encryptContent } from "../crypto/chatKey";
 
 export function getMediaUrl(mediaId: string): string {
     return `/api/media/${mediaId}`;
@@ -22,9 +23,14 @@ export async function uploadMedia(
         encryptedChunks.push(chunk);
     }
     const meta = await readMediaMetadata(file);
+    const encryptedFileName = await encryptContent(chatKey, chatId, file.name);
 
     const formData = new FormData();
-    formData.append("file", new Blob(encryptedChunks as BlobPart[]), file.name);
+    // The Blob's own filename arg isn't a safe place for ciphertext (raw
+    // multipart header) - the real, encrypted name goes in "fileName" below,
+    // this is just a harmless placeholder.
+    formData.append("file", new Blob(encryptedChunks as BlobPart[]), "file.bin");
+    formData.append("fileName", encryptedFileName);
     formData.append("mimeType", file.type || "application/octet-stream");
     if (meta.width) formData.append("width", String(meta.width));
     if (meta.height) formData.append("height", String(meta.height));
