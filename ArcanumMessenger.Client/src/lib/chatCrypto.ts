@@ -1,6 +1,6 @@
 import { encryptContent, decryptContent } from "../crypto/chatKey";
 import { unwrapOwnChatKey } from "./chatKeys";
-import type { ChatMessage } from "../types/messenger";
+import type { ChatMessage, ChatSummary, SavedGifEntry } from "../types/messenger";
 
 /**
  * Encrypts/decrypts message content client-side using a chat's own
@@ -69,9 +69,14 @@ export async function decryptText(chat: KeyedChat, ciphertext: string): Promise<
 }
 
 export async function decryptIncoming(chat: KeyedChat, message: ChatMessage): Promise<ChatMessage> {
-    if (message.type === "system" || !message.content) return message;
-    const content = await decryptText(chat, message.content);
-    return { ...message, content };
+    if (message.type === "system") return message;
+
+    const content = message.content ? await decryptText(chat, message.content) : message.content;
+    const media = message.media
+        ? { ...message.media, fileName: await decryptText(chat, message.media.fileName) }
+        : message.media;
+
+    return { ...message, content, media };
 }
 
 export async function decryptIncomingList(chat: KeyedChat, messages: ChatMessage[]): Promise<ChatMessage[]> {
@@ -87,4 +92,39 @@ export async function decryptLastMessagePreview(
 ): Promise<string | null> {
     if (!lastMessageText || lastMessageType === "system") return lastMessageText;
     return decryptText(chat, lastMessageText);
+}
+
+// A group's title is ciphertext under its own chat key (see
+// NewChatPanel.tsx) - direct/saved chats already get a real display name
+// from the server (the other member's name, or "Saved Messages"), so this
+// is a no-op for anything but a group. Falls back to a literal "Untitled
+// group" - not decryptText's generic "[unable to decrypt]" - whenever
+// there's no key yet (a freshly-added member before self-heal catches up)
+// or decryption fails outright (pre-encryption dev data, tampering).
+export async function decryptChatTitle(chat: ChatSummary): Promise<ChatSummary> {
+    if (chat.type !== "group") return chat;
+
+    const key = await getChatKey({ id: chat.id, wrappedChatKey: chat.wrappedChatKey });
+    if (!key) return { ...chat, title: "Untitled group" };
+
+    try {
+        const title = await decryptContent(key, chat.id, chat.title);
+        return { ...chat, title };
+    } catch {
+        return { ...chat, title: "Untitled group" };
+    }
+}
+
+// Saved GIFs are fetched through their own endpoint, not decryptIncoming -
+// each entry's file name is ciphertext under the caller's Saved Messages
+// chat key (what the saved copy is actually encrypted with), not whatever
+// chat it was originally saved from.
+export async function decryptSavedGifEntries(
+    savedChat: KeyedChat,
+    entries: SavedGifEntry[],
+): Promise<SavedGifEntry[]> {
+    return Promise.all(entries.map(async (entry) => ({
+        ...entry,
+        media: { ...entry.media, fileName: await decryptText(savedChat, entry.media.fileName) },
+    })));
 }

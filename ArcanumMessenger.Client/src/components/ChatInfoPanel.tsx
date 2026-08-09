@@ -14,6 +14,7 @@ import {
 } from "../api/chats";
 import { getUserAvatarUrl, getPresenceBulk } from "../api/users";
 import { getChatStats, type ChatStats } from "../api/messages";
+import { decryptText } from "../lib/chatCrypto";
 import { formatChatTime } from "../lib/time";
 import AvatarImage from "./AvatarImage";
 import AdminListPanel from "./AdminListPanel";
@@ -113,9 +114,9 @@ export default function ChatInfoPanel({
         if (chat.type !== "group") return;
 
         let cancelled = false;
-        getChatMembers(chat.id).then((data) => {
+        getChatMembers(chat.id).then(async (data) => {
             if (cancelled || !data) return;
-            setDescription(data.description);
+            setDescription(data.description ? await decryptText(chat, data.description) : data.description);
             setMembers(data.members);
 
             const memberIds = data.members.map((m) => m.userId);

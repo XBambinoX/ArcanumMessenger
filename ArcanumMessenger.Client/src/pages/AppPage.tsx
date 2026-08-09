@@ -8,7 +8,7 @@ import { createChatHubConnection } from "../lib/chatHub";
 import { type UserSettingsResponse, getUserSettings  } from "../api/userSettings";
 import { playNotificationSound } from "../lib/notificationSound";
 import { requestDesktopNotificationPermission, showDesktopNotification } from "../lib/desktopNotification";
-import { decryptLastMessagePreview } from "../lib/chatCrypto";
+import { decryptLastMessagePreview, decryptChatTitle } from "../lib/chatCrypto";
 import { useAuth } from "../context/AuthContext";
 import ChatList from "../components/ChatList";
 import ChatWindow from "../components/ChatWindow";
@@ -115,10 +115,13 @@ export default function AppPage() {
     useEffect(() => {
         getChats().then(async (loadedChats) => {
             const decrypted = await Promise.all(
-                loadedChats.map(async (chat) => ({
-                    ...chat,
-                    lastMessageText: await decryptLastMessagePreview(chat, chat.lastMessageText, chat.lastMessageType),
-                })),
+                loadedChats.map(async (chat) => {
+                    const titled = await decryptChatTitle(chat);
+                    return {
+                        ...titled,
+                        lastMessageText: await decryptLastMessagePreview(titled, titled.lastMessageText, titled.lastMessageType),
+                    };
+                }),
             );
             setChats(decrypted);
 
@@ -318,8 +321,9 @@ export default function AppPage() {
             );
         };
 
-        const handleChatCreated = (chat: ChatSummary) => {
-            setChats((prev) => [chat, ...prev]);
+        const handleChatCreated = async (chat: ChatSummary) => {
+            const titled = await decryptChatTitle(chat);
+            setChats((prev) => [titled, ...prev]);
 
             if (chat.type === "direct" && chat.otherUserId) {
                 const otherUserId = chat.otherUserId;
@@ -424,11 +428,12 @@ export default function AppPage() {
         }
     };
 
-    const handleStartChat = (chat: ChatSummary) => {
+    const handleStartChat = async (chat: ChatSummary) => {
+        const titled = await decryptChatTitle(chat);
         setChats((prev) =>
-            prev.some((c) => c.id === chat.id) ? prev : [chat, ...prev],
+            prev.some((c) => c.id === titled.id) ? prev : [titled, ...prev],
         );
-        setSelectedChatId(chat.id);
+        setSelectedChatId(titled.id);
         setNewChatOpen(false);
 
         if (chat.type === "direct" && chat.otherUserId) {
