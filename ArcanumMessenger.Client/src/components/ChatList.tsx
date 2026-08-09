@@ -5,7 +5,24 @@ import { getChatAvatarUrl } from "../api/chats";
 import AvatarImage from "./AvatarImage";
 import styles from "./ChatList.module.css";
 import { useLanguage } from "../lib/language";
-import { CHAT_LIST_TRANSLATIONS } from "../lib/appTranslations";
+import { CHAT_LIST_TRANSLATIONS, APP_COMMON, type AppCommonTranslation } from "../lib/appTranslations";
+
+// A captionless photo/video/gif/file has a null lastMessageText (there's no
+// text to show) but is very much a real last message - falling back
+// straight to "no messages yet" for that case would be wrong whenever the
+// chat's last message happens to be bare media. Only genuinely-empty chats
+// (lastMessageAt itself null) get that fallback.
+function lastMessagePreview(chat: ChatSummary, common: AppCommonTranslation, noMessagesYet: string): string {
+    if (chat.lastMessageText) return chat.lastMessageText;
+    if (!chat.lastMessageAt) return noMessagesYet;
+    switch (chat.lastMessageType) {
+        case "image": return common.photo;
+        case "video": return common.video;
+        case "gif": return common.gif;
+        case "file": return common.file;
+        default: return noMessagesYet;
+    }
+}
 
 interface PresenceInfo {
     isOnline: boolean;
@@ -29,7 +46,9 @@ export default function ChatList({
     presence,
     chatAvatarNonce,
 }: ChatListProps) {
-    const tr = CHAT_LIST_TRANSLATIONS[useLanguage()];
+    const language = useLanguage();
+    const tr = CHAT_LIST_TRANSLATIONS[language];
+    const common = APP_COMMON[language];
 
     if (chats.length === 0) {
         return <p className={styles.empty}>{tr.noChatsYet}</p>;
@@ -153,7 +172,7 @@ export default function ChatList({
                                 </div>
                                 <div className={styles.bottomRow}>
                                     <span className={styles.preview}>
-                                        {chat.lastMessageText ?? tr.noMessagesYet}
+                                        {lastMessagePreview(chat, common, tr.noMessagesYet)}
                                     </span>
                                     {chat.unreadCount > 0 && (
                                         <span
