@@ -345,3 +345,26 @@
     background: rgba(var(--accent-rgb), 0.12);
     border-color: rgba(var(--accent-light-rgb), 0.4);
 }
+
+/* .root/.card's fixed padding (24px + 36px each side) leaves only ~200px
+   for content on a 320px-wide phone - not enough for 6 codeDigit boxes at
+   their desktop size (46px + 8px gap each = 316px total). Shrink both. */
+@media (max-width: 420px) {
+    .root {
+        padding: 16px;
+    }
+
+    .card {
+        padding: 32px 20px 28px;
+    }
+
+    .codeRow {
+        gap: 6px;
+    }
+
+    .codeDigit {
+        width: 36px;
+        height: 46px;
+        font-size: 18px;
+    }
+}
