@@ -9,6 +9,7 @@ import { type UserSettingsResponse, getUserSettings  } from "../api/userSettings
 import { playNotificationSound } from "../lib/notificationSound";
 import { requestDesktopNotificationPermission, showDesktopNotification } from "../lib/desktopNotification";
 import { decryptLastMessagePreview, decryptChatTitle } from "../lib/chatCrypto";
+import { useIsMobile } from "../lib/useMediaQuery";
 import { useAuth } from "../context/AuthContext";
 import ChatList from "../components/ChatList";
 import ChatWindow from "../components/ChatWindow";
@@ -53,6 +54,7 @@ export default function AppPage() {
         { id: "archive", label: tr.folderArchive },
     ];
 
+    const isMobile = useIsMobile();
     const [chats, setChats] = useState<ChatSummary[]>([]);
     const [profile, setProfile] = useState<User | null>(null);
     const [displayName, setDisplayName] = useState<string | null>(null);
@@ -484,11 +486,14 @@ export default function AppPage() {
 
     return (
         <div className={styles.root}>
-            <aside className={styles.sidebar} style={{ width: sidebarWidth }}>
-                <div
-                    className={styles.resizeHandle}
-                    onPointerDown={handleSidebarResizeStart}
-                />
+            {(!isMobile || !selectedChatId) && (
+            <aside className={styles.sidebar} style={{ width: isMobile ? undefined : sidebarWidth }}>
+                {!isMobile && (
+                    <div
+                        className={styles.resizeHandle}
+                        onPointerDown={handleSidebarResizeStart}
+                    />
+                )}
                 <header className={styles.sidebarHeader}>
                     <div className={styles.brandRow}>
                         <button
@@ -564,7 +569,9 @@ export default function AppPage() {
                     />
                 </div>
             </aside>
+            )}
 
+            {(!isMobile || selectedChatId) && (
             <main className={styles.main}>
                 {selectedChat ? (
                     <ChatWindow
@@ -576,6 +583,7 @@ export default function AppPage() {
                         presence={selectedChat.otherUserId ? presence[selectedChat.otherUserId] : undefined}
                         chatAvatarNonce={chatAvatarNonce}
                         onChatAvatarChanged={() => setChatAvatarNonce(Date.now())}
+                        onBack={isMobile ? () => setSelectedChatId(null) : undefined}
                     />
                 ) : (
                     <div className={styles.emptyState}>
@@ -619,6 +627,7 @@ export default function AppPage() {
                     </div>
                 )}
             </main>
+            )}
 
             {profileOpen && profile && (
                 <ProfilePanel

@@ -5,6 +5,7 @@ export interface ChatWindowTranslation {
     onlyVisibleToYou: string;
     lastSeenPrefix: string;
     chatInfoAria: string;
+    backAria: string;
     noMessagesYet: string;
     forwardedFromPrefix: string;
     cancelSelectionAria: string;
@@ -144,6 +145,7 @@ export const CHAT_WINDOW_TRANSLATIONS: Record<Language, ChatWindowTranslation> =
         onlyVisibleToYou: "only visible to you",
         lastSeenPrefix: "last seen ",
         chatInfoAria: "Chat info",
+        backAria: "Back",
         noMessagesYet: "No messages yet",
         forwardedFromPrefix: "Forwarded from ",
         cancelSelectionAria: "Cancel selection",
@@ -172,6 +174,7 @@ export const CHAT_WINDOW_TRANSLATIONS: Record<Language, ChatWindowTranslation> =
         onlyVisibleToYou: "видно лише вам",
         lastSeenPrefix: "був(ла) в мережі ",
         chatInfoAria: "Інформація про чат",
+        backAria: "Назад",
         noMessagesYet: "Ще немає повідомлень",
         forwardedFromPrefix: "Переслано від ",
         cancelSelectionAria: "Скасувати вибір",
@@ -200,6 +203,7 @@ export const CHAT_WINDOW_TRANSLATIONS: Record<Language, ChatWindowTranslation> =
         onlyVisibleToYou: "nur für dich sichtbar",
         lastSeenPrefix: "zuletzt online ",
         chatInfoAria: "Chat-Info",
+        backAria: "Zurück",
         noMessagesYet: "Noch keine Nachrichten",
         forwardedFromPrefix: "Weitergeleitet von ",
         cancelSelectionAria: "Auswahl abbrechen",

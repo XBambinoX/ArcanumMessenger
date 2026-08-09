@@ -117,6 +117,10 @@ interface ChatWindowProps {
     presence?: { isOnline: boolean; lastSeen: string | null };
     chatAvatarNonce: number;
     onChatAvatarChanged: () => void;
+    // Present only when the caller is showing this chat as a single
+    // full-screen pane (mobile) instead of alongside the chat list -
+    // renders a back button that returns to the list.
+    onBack?: () => void;
 }
 
 const ANIMATE_MS = 260;
@@ -135,7 +139,7 @@ function dayLabel(iso: string, common: AppCommonTranslation): string {
 }
 
 export default function ChatWindow({
-    chat, connection, onStartChat, onChatRemoved, presence, chatAvatarNonce, onChatAvatarChanged,
+    chat, connection, onStartChat, onChatRemoved, presence, chatAvatarNonce, onChatAvatarChanged, onBack,
 }: ChatWindowProps) {
     const language = useLanguage();
     const common = APP_COMMON[language];
@@ -709,6 +713,27 @@ export default function ChatWindow({
     return (
         <div className={styles.root}>
             <header className={styles.header}>
+                {onBack && (
+                    <button
+                        className={styles.backBtn}
+                        onClick={onBack}
+                        aria-label={tr.backAria}
+                        title={tr.backAria}
+                    >
+                        <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        >
+                            <path d="M15 18l-6-6 6-6" />
+                        </svg>
+                    </button>
+                )}
                 <div
                     className={`${styles.avatar} ${chat.type === "group" ? styles.avatarGroup : ""} ${chat.type === "saved" ? styles.avatarSaved : ""} ${chat.type === "direct" ? styles.avatarClickable : ""}`}
                     onClick={handleAvatarClick}

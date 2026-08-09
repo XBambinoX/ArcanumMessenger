@@ -16,6 +16,26 @@
     background: rgba(var(--bg-page-rgb), 0.6);
 }
 
+/* Only rendered on mobile (single-pane nav) - see ChatWindow.tsx's onBack prop */
+.backBtn {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    color: rgba(var(--text-rgb), 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s;
+}
+
+.backBtn:hover {
+    background: rgba(var(--accent-rgb), 0.1);
+}
+
 .avatar {
     width: 40px;
     height: 40px;

@@ -1,6 +1,6 @@
 .root {
     display: flex;
-    height: 100vh;
+    height: 100svh;
     background: rgb(var(--bg-rgb));
     color: rgba(var(--text-rgb), 0.95);
     font-family:
@@ -226,4 +226,13 @@
     font-size: 14px;
     color: rgba(var(--text-muted-rgb), 0.6);
     margin: 0;
+}
+
+/* Keep in sync with useMediaQuery.ts's MOBILE_BREAKPOINT_QUERY - below this
+   width, AppPage.tsx only ever renders one of .sidebar/.main at a time, so
+   this is a CSS-level fallback for that width, not the primary mechanism. */
+@media (max-width: 760px) {
+    .sidebar {
+        width: 100% !important;
+    }
 }
