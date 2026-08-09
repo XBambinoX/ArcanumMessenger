@@ -31,14 +31,21 @@ export async function sealChatKeyFor(chatKey: Uint8Array, members: MemberPublicK
 
 // For a brand-new chat: generates the key and seals it for every member,
 // including the caller themselves (so their own device can read it back).
-export async function sealNewChatKey(otherMembers: MemberPublicKey[]): Promise<MemberKey[]> {
+// Returns the raw key too - a group's title/description have to be
+// encrypted with it before the create-chat request is even sent (see
+// NewChatPanel.tsx), which direct chats never need since they have no
+// title.
+export async function sealNewChatKey(
+    otherMembers: MemberPublicKey[],
+): Promise<{ memberKeys: MemberKey[]; chatKey: Uint8Array }> {
     const chatKey = generateChatKey();
     const myUserId = await getMyUserId();
     const myPublicKeyRaw = sessionKeys.getPublicKeyRaw();
     const members = myUserId && myPublicKeyRaw
         ? [...otherMembers, { userId: myUserId, ecdhPublicKey: toBase64(myPublicKeyRaw) }]
         : otherMembers;
-    return sealChatKeyFor(chatKey, members);
+    const memberKeys = await sealChatKeyFor(chatKey, members);
+    return { memberKeys, chatKey };
 }
 
 // Unwraps this device's own copy of an existing chat's key, so it can be

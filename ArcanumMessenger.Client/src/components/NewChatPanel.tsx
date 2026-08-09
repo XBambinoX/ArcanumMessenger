@@ -3,6 +3,7 @@ import { getContacts } from "../api/contacts";
 import { searchUsers, getUser, getUserAvatarUrl } from "../api/users";
 import { createGroupChat } from "../api/chats";
 import { sealNewChatKey } from "../lib/chatKeys";
+import { encryptContent } from "../crypto/chatKey";
 import type { ChatSummary, User, UserSearchResult } from "../types/messenger";
 import UserInfoPanel from "./UserInfoPanel";
 import AvatarImage from "./AvatarImage";
@@ -76,12 +77,23 @@ export default function NewChatPanel({ onClose, onStartChat }: NewChatPanelProps
                 userId: m.id,
                 ecdhPublicKey: m.ecdhPublicKey,
             }));
-            const memberKeys = await sealNewChatKey(members);
+            const { memberKeys, chatKey } = await sealNewChatKey(members);
+
+            // The chat doesn't exist yet, so there's no id from the server
+            // to encrypt title/description under - generating one here and
+            // having the server use it as the real chat id is what lets
+            // this stay a single request (see ChatContracts.ChatId).
+            const chatId = crypto.randomUUID();
+            const description = groupDescription.trim();
+            const encryptedTitle = await encryptContent(chatKey, chatId, title);
+            const encryptedDescription = description ? await encryptContent(chatKey, chatId, description) : undefined;
+
             const { chat, reason } = await createGroupChat(
-                title,
-                groupDescription.trim() || undefined,
+                encryptedTitle,
+                encryptedDescription,
                 [...groupMembers.keys()],
                 memberKeys,
+                chatId,
             );
             if (chat) {
                 onStartChat(chat);

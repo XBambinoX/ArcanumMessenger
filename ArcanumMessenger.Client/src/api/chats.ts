@@ -56,16 +56,21 @@ export async function createDirectChat(otherUserId: string, memberKeys: MemberKe
     return { chat: data.success ? data.chat : null, reason: data.reason ?? null };
 }
 
+// title/description arrive here already encrypted under chatId's key (see
+// NewChatPanel.tsx) - chatId has to be generated client-side and sent along
+// for that same reason, since the server doesn't have one to hand back yet
+// at the point the encryption happens.
 export async function createGroupChat(
     title: string,
     description: string | undefined,
     memberIds: string[],
     memberKeys: MemberKey[],
+    chatId: string,
 ): Promise<CreateChatResult> {
     const res = await apiFetch("/api/chats", {
         method: "POST",
         credentials: "include",
-        body: JSON.stringify({ type: "group", title, description, memberIds, memberKeys }),
+        body: JSON.stringify({ type: "group", title, description, memberIds, memberKeys, chatId }),
     });
     const data = await res.json();
     return { chat: data.success ? data.chat : null, reason: data.reason ?? null };

@@ -36,7 +36,7 @@ export default function UserInfoPanel({
 
     const handleWrite = async () => {
         if (!canInteract) return;
-        const memberKeys = await sealNewChatKey([{ userId, ecdhPublicKey: user.ecdhPublicKey }]);
+        const { memberKeys } = await sealNewChatKey([{ userId, ecdhPublicKey: user.ecdhPublicKey }]);
         const { chat, reason } = await createDirectChat(userId, memberKeys);
         if (chat) {
             onStartChat(chat);
