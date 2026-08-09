@@ -868,7 +868,7 @@ export default function ChatWindow({
                                                 media={message.media}
                                                 className={styles.mediaImage}
                                                 alt={message.media.fileName}
-                                                onClick={(url) => window.open(url, "_blank")}
+                                                openOnClick
                                             />
                                             {bareMedia && (
                                                 <span className={styles.mediaTime}>
@@ -887,7 +887,7 @@ export default function ChatWindow({
                                                     chat={{ id: chat.id, wrappedChatKey: chat.wrappedChatKey }}
                                                     media={message.media}
                                                     className={styles.mediaImage}
-                                                    onClick={(url) => window.open(url, "_blank")}
+                                                    openOnClick
                                                 />
                                             ) : (
                                                 // A real animated GIF file - always decrypted and loaded in full
@@ -898,7 +898,7 @@ export default function ChatWindow({
                                                     media={message.media}
                                                     className={styles.mediaImage}
                                                     alt={message.media.fileName}
-                                                    onClick={(url) => window.open(url, "_blank")}
+                                                    openOnClick
                                                 />
                                             )}
                                             {bareMedia && (

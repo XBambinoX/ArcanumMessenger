@@ -1,6 +1,7 @@
 import { apiFetch } from "./apiFetch";
 import { getMediaUrl, getMediaThumbnailUrl } from "../api/media";
 import { decryptChunk, ciphertextChunkRanges } from "../crypto/chunkedMedia";
+import { makeMp4Faststart } from "./mp4Faststart";
 
 const RETRY_ATTEMPTS = 3;
 
@@ -56,7 +57,19 @@ export async function downloadAndDecryptMedia(
         onProgress?.(loaded, media.sizeBytes);
     }
 
-    return new Blob(plainChunks as BlobPart[], { type: media.mimeType });
+    const totalLength = plainChunks.reduce((sum, chunk) => sum + chunk.length, 0);
+    const combined = new Uint8Array(totalLength);
+    let writeOffset = 0;
+    for (const chunk of plainChunks) {
+        combined.set(chunk, writeOffset);
+        writeOffset += chunk.length;
+    }
+
+    // A no-op for anything that isn't a non-faststart MP4 (wrong magic
+    // bytes, already faststart, etc.) - see mp4Faststart.ts for why some
+    // otherwise-perfectly-valid videos would fail to play from a blob: URL
+    // without this.
+    return new Blob([makeMp4Faststart(combined) as BlobPart], { type: media.mimeType });
 }
 
 // A video thumbnail is always a single small chunk (see

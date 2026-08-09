@@ -110,37 +110,62 @@ export function EncryptedThumbnail({ chat, mediaId, className, alt }: EncryptedT
     return <img className={className} src={url} alt={alt} />;
 }
 
+// Opens a full-size view in a new tab using its OWN freshly-decrypted blob
+// URL, deliberately independent from whatever object URL a bubble/tile
+// might already be showing inline. Reusing that one would tie the new
+// tab's content to this component's mount lifecycle - if the bubble
+// unmounts (chat switched, list re-rendered) while the new tab is still
+// loading, its URL.revokeObjectURL cleanup would invalidate the very blob
+// the new tab is trying to open, and the browser reports it as an
+// unsupported/corrupt file even though nothing was actually wrong with the
+// decrypted bytes. This one is intentionally never revoked - it belongs to
+// whatever tab the browser opened, not to this component.
+async function openFullSize(chat: KeyedChat, media: DownloadableMedia): Promise<void> {
+    const chatKey = await getChatKey({ id: chat.id, wrappedChatKey: chat.wrappedChatKey });
+    if (!chatKey) return;
+    const blob = await downloadAndDecryptMedia(chatKey, chat.id, media);
+    window.open(URL.createObjectURL(blob), "_blank");
+}
+
 interface EncryptedImageProps {
     chat: KeyedChat;
     media: DownloadableMedia;
     className?: string;
     alt?: string;
-    onClick?: (url: string) => void;
+    openOnClick?: boolean;
 }
 
-export function EncryptedImage({ chat, media, className, alt, onClick }: EncryptedImageProps) {
+export function EncryptedImage({ chat, media, className, alt, openOnClick }: EncryptedImageProps) {
     const { url, status } = useDecryptedMediaUrl(chat, media, true);
     if (status === "error") return <div className={className} />;
     if (!url) return <div className={className} />;
-    return <img className={className} src={url} alt={alt} onClick={() => onClick?.(url)} />;
+    return (
+        <img
+            className={className}
+            src={url}
+            alt={alt}
+            onClick={openOnClick ? () => openFullSize(chat, media) : undefined}
+        />
+    );
 }
 
 // For real animated GIF files sent as (or converted to) a video-mime asset -
 // same eager-decrypt treatment as a photo, just rendered as a looping,
 // controls-less <video> instead of an <img>.
-export function EncryptedGifVideo({ chat, media, className, onClick }: EncryptedImageProps) {
+export function EncryptedGifVideo({ chat, media, className, openOnClick }: EncryptedImageProps) {
     const { url, status } = useDecryptedMediaUrl(chat, media, true);
     if (status === "error" || !url) return <div className={className} />;
     return (
         <video
             className={className}
-            src={url}
             autoPlay
             loop
             muted
             playsInline
-            onClick={() => onClick?.(url)}
-        />
+            onClick={openOnClick ? () => openFullSize(chat, media) : undefined}
+        >
+            <source src={url} type={media.mimeType} />
+        </video>
     );
 }
 
@@ -166,7 +191,11 @@ export function EncryptedVideoPlayer({
     const thumbnailUrl = useDecryptedThumbnailUrl(chat, media.id, media.hasThumbnail);
 
     if (status === "ready" && url) {
-        return <video className={className} src={url} controls autoPlay />;
+        return (
+            <video className={className} controls autoPlay>
+                <source src={url} type={media.mimeType} />
+            </video>
+        );
     }
 
     return (

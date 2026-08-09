@@ -74,7 +74,7 @@ export default function ChatMediaGrid({ chat, tr }: ChatMediaGridProps) {
                                 media={media}
                                 className={styles.tile}
                                 alt={media.fileName}
-                                onClick={(url) => window.open(url, "_blank")}
+                                openOnClick
                             />
                         );
                     }
@@ -86,7 +86,7 @@ export default function ChatMediaGrid({ chat, tr }: ChatMediaGridProps) {
                                 chat={chat}
                                 media={media}
                                 className={styles.tile}
-                                onClick={(url) => window.open(url, "_blank")}
+                                openOnClick
                             />
                         ) : (
                             <EncryptedImage
@@ -95,7 +95,7 @@ export default function ChatMediaGrid({ chat, tr }: ChatMediaGridProps) {
                                 media={media}
                                 className={styles.tile}
                                 alt={media.fileName}
-                                onClick={(url) => window.open(url, "_blank")}
+                                openOnClick
                             />
                         );
                     }
