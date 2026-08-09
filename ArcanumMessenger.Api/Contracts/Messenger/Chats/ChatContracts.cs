@@ -27,9 +27,16 @@ public record ChatListResponse(bool Success, IReadOnlyList<ChatSummaryDto>? Chat
 // crypto/chatKey.ts and crypto/ecdh.ts's seal().
 public record MemberKeyDto(Guid UserId, string WrappedChatKey);
 
+// ChatId is only meaningful (and only ever sent) for group chats - the
+// client has to encrypt Title/Description with the chat's own key before
+// this request even exists, and that encryption needs a chat id as
+// authenticated data before the server has assigned one. The client
+// generates it instead; a random v4 GUID collision is astronomically
+// unlikely, and the DB's primary key would just reject the insert if it
+// somehow happened, not corrupt anything.
 public record CreateChatRequest(
     string Type, Guid? OtherUserId, string? Title, string? Description,
-    List<Guid>? MemberIds, List<MemberKeyDto>? MemberKeys = null);
+    List<Guid>? MemberIds, List<MemberKeyDto>? MemberKeys = null, Guid? ChatId = null);
 
 public record CreateChatResponse(bool Success, ChatSummaryDto? Chat, string? Reason = null);
 

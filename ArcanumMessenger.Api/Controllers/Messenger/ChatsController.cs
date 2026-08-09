@@ -31,7 +31,7 @@ public class ChatsController(ChatService chatService, ChatAccessService chatAcce
                 await chatService.CreateDirectChatAsync(userId, otherId, request.MemberKeys, ct),
             "direct" => (null, "missing_other_user"),
             "group" => await chatService.CreateGroupChatAsync(
-                userId, request.Title, request.Description, request.MemberIds, request.MemberKeys, ct),
+                userId, request.Title, request.Description, request.MemberIds, request.MemberKeys, request.ChatId, ct),
             _ => (null, "invalid_type"),
         };
 

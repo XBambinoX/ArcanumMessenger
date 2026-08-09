@@ -60,7 +60,11 @@ public class ChatService(
                     {
                         "direct" => r.OtherMemberId is { } otherId ? names.GetValueOrDefault(otherId, "Unknown user") : "Unknown user",
                         "saved" => "Saved Messages",
-                        _ => r.Title ?? "Untitled group",
+                        // Ciphertext, sealed under the chat's own key - the
+                        // server can't read it to supply a real fallback
+                        // anymore, so an empty group title is passed through
+                        // as-is and the client decides what to show instead.
+                        _ => r.Title ?? "",
                     },
                     r.LastMessageContent,
                     r.LastMessageAt,
@@ -206,7 +210,7 @@ public class ChatService(
 
     public async Task<(ChatSummaryDto? Chat, string? Reason)> CreateGroupChatAsync(
         Guid callerId, string? title, string? description, List<Guid>? memberIds,
-        List<MemberKeyDto>? memberKeys, CancellationToken ct)
+        List<MemberKeyDto>? memberKeys, Guid? chatId, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(title))
             return (null, "missing_title");
@@ -224,8 +228,14 @@ public class ChatService(
 
         var keyByUserId = (memberKeys ?? []).ToDictionary(k => k.UserId, k => k.WrappedChatKey);
 
+        // Title/Description are ciphertext under this chat's own key, sealed
+        // client-side before this request was even sent - that needs the
+        // chat's id as authenticated data before the id exists, so the
+        // client generates one itself instead of waiting for the server to
+        // assign one (see CreateChatRequest.ChatId).
         var chat = new Chat
         {
+            Id = chatId ?? Guid.NewGuid(),
             Type = "group",
             CreatedBy = callerId,
             Title = title.Trim(),
