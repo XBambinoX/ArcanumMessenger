@@ -772,3 +772,12 @@
         transform: translateX(0) scale(1);
     }
 }
+
+/* Keep in sync with useMediaQuery.ts's MOBILE_BREAKPOINT_QUERY. */
+@media (max-width: 760px) {
+    .infoBtn,
+    .backBtn {
+        width: 40px;
+        height: 40px;
+    }
+}

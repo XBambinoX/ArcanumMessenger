@@ -128,6 +128,16 @@
     background: rgba(var(--accent-rgb), 0.25);
 }
 
+/* Touch devices have no hover state to reveal this on - show it plainly
+   instead, and give it a real touch target while we're at it. */
+@media (hover: none) {
+    .archiveBtn {
+        opacity: 1;
+        width: 28px;
+        height: 28px;
+    }
+}
+
 .bottomRow {
     display: flex;
     align-items: center;

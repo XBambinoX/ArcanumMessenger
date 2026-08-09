@@ -235,4 +235,9 @@
     .sidebar {
         width: 100% !important;
     }
+
+    .iconBtn {
+        width: 40px;
+        height: 40px;
+    }
 }
