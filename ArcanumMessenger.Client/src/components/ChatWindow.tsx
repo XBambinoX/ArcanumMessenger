@@ -4,8 +4,8 @@ import type { ChatMessage, ChatReadState, ChatSummary, MediaAsset, SavedGifEntry
 import { getMessageHistory, sendMessage, deleteMessage, editMessage, forwardMessages, type ForwardItem } from "../api/messages";
 import { getUser, getUserAvatarUrl } from "../api/users";
 import { getChats, getChatAvatarUrl } from "../api/chats";
-import { uploadMedia, uploadMediaThumbnail, deleteMedia, getMediaThumbnailUrl, getSavedGifs, saveGif, unsaveGif } from "../api/media";
-import { EncryptedImage, EncryptedGifVideo, EncryptedVideoPlayer, downloadMediaToDisk } from "./EncryptedMedia";
+import { uploadMedia, uploadMediaThumbnail, deleteMedia, getSavedGifs, saveGif, unsaveGif } from "../api/media";
+import { EncryptedImage, EncryptedGifVideo, EncryptedVideoPlayer, EncryptedThumbnail, downloadMediaToDisk } from "./EncryptedMedia";
 import { uploadMediaChunked, abortChunkedUpload, clearChunkedUploadResumeState, CHUNK_THRESHOLD } from "../api/chunkedUpload";
 import { formatMessageTime, formatChatTime } from "../lib/time";
 import { extractVideoFirstFrame } from "../lib/mediaMetadata";
@@ -660,11 +660,11 @@ export default function ChatWindow({
             },
         });
 
-          if (message.type === "gif" && media) {
+        if (message.type === "gif" && media) {
             const isSaved = savedGifIds.has(media.id);
             items.push({
                 label: isSaved ? tr.removeFromGifs : tr.saveToGifs,
-                onClick: () => handleToggleSaveGif(media.id),
+                onClick: () => handleToggleSaveGif(media),
             });
         }
 
@@ -1097,9 +1097,10 @@ export default function ChatWindow({
                                 ) : pendingMedia && (
                                     <>
                                         {pendingMedia.hasThumbnail ? (
-                                            <img
+                                            <EncryptedThumbnail
+                                                chat={{ id: chat.id, wrappedChatKey: chat.wrappedChatKey }}
+                                                mediaId={pendingMedia.id}
                                                 className={styles.pendingThumb}
-                                                src={getMediaThumbnailUrl(pendingMedia.id)}
                                                 alt=""
                                             />
                                         ) : (

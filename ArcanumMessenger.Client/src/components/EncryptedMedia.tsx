@@ -93,6 +93,23 @@ function useDecryptedThumbnailUrl(chat: KeyedChat, mediaId: string, hasThumbnail
     return url;
 }
 
+interface EncryptedThumbnailProps {
+    chat: KeyedChat;
+    mediaId: string;
+    className?: string;
+    alt?: string;
+}
+
+// A standalone thumbnail, decrypted on its own rather than as part of
+// EncryptedVideoPlayer's placeholder - used by the compose-box "about to
+// send" preview, which shows a just-uploaded video's thumbnail before any
+// message (and therefore no <EncryptedVideoPlayer>) exists yet.
+export function EncryptedThumbnail({ chat, mediaId, className, alt }: EncryptedThumbnailProps) {
+    const url = useDecryptedThumbnailUrl(chat, mediaId, true);
+    if (!url) return null;
+    return <img className={className} src={url} alt={alt} />;
+}
+
 interface EncryptedImageProps {
     chat: KeyedChat;
     media: DownloadableMedia;
