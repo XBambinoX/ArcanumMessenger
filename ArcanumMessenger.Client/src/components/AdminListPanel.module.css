@@ -187,3 +187,19 @@
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+/* Full-screen sheet instead of a centered card - keep in sync with
+   useMediaQuery.ts's MOBILE_BREAKPOINT_QUERY. */
+@media (max-width: 760px) {
+    .overlay {
+        padding: 0;
+    }
+
+    .panel {
+        width: 100%;
+        height: 100%;
+        max-width: 100%;
+        max-height: 100%;
+        border-radius: 0;
+    }
+}
