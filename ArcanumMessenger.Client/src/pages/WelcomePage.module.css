@@ -14,6 +14,20 @@
     -webkit-user-select: none;
 }
 
+/* Both switchers as one centered group - .topBar below (brand on the
+   left, Sign in/Create Account on the right, once scrolled in) already
+   claims both corners, so center-top is the one spot proven clear of it
+   regardless of scroll position. */
+.cornerSwitchers {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 50;
+    display: flex;
+    gap: 10px;
+}
+
 /* ── ambient layers ── */
 .mouseGlow {
     position: fixed;

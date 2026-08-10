@@ -1,6 +1,7 @@
-/* Positioning (fixed/centered/z-index) lives on WelcomePage's own
-   .cornerSwitchers wrapper now, which this and ThemeSwitcher sit inside
-   as a paired group - see its comment for why. */
+/* Positioning lives on WelcomePage's own .cornerSwitchers wrapper now -
+   see its comment. This used to sit fixed at the top-right corner on its
+   own, which put it directly on top of the scrolled-in top bar's Sign
+   in/Create Account buttons (also right-aligned, in that same corner). */
 .switcher {
     display: flex;
     gap: 4px;
@@ -12,14 +13,15 @@
 }
 
 .option {
-    padding: 6px 12px;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     border: none;
     border-radius: 999px;
     background: transparent;
     color: rgba(var(--text-rgb), 0.65);
-    font-size: 12.5px;
-    font-weight: 600;
-    letter-spacing: 0.02em;
     cursor: pointer;
     transition: background 0.15s, color 0.15s;
 }
