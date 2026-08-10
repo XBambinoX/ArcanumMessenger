@@ -4,7 +4,14 @@ import { encryptChunk, CHUNK_SIZE, ciphertextSizeFor } from "../crypto/chunkedMe
 import { readMediaMetadata } from "../lib/mediaMetadata";
 import { encryptContent } from "../crypto/chatKey";
 
-export const CHUNK_THRESHOLD = 50 * 1024 * 1024; // files under this keep using the simple uploadMedia
+// Files under this keep using the simple, single-request uploadMedia - no
+// per-request progress event exists for that path (fetch doesn't expose
+// upload progress), so anything worth watching a progress bar for goes
+// through the chunked/resumable path instead, which already tracks it
+// chunk by chunk. 1MB (not e.g. a few KB) so tiny attachments - stickers,
+// small images - skip the extra session/part/complete round trips for a
+// transfer that's over near-instantly anyway.
+export const CHUNK_THRESHOLD = 1 * 1024 * 1024;
 const RETRY_ATTEMPTS = 3;
 
 // A live File handle can't survive a page reload, so this is the only way
