@@ -34,6 +34,7 @@ export interface GifPickerTranslation {
     title: string;
     closeAria: string;
     noGifsYet: string;
+    removeFromGifs: string;
 }
 
 export interface ForwardPanelTranslation {
@@ -64,18 +65,21 @@ export const GIF_PICKER_TRANSLATIONS: Record<Language, GifPickerTranslation> = {
         closeAria: "Close",
         noGifsYet:
             "No saved GIFs yet - send or receive one, then save it from the chat to see it here.",
+        removeFromGifs: "Remove from GIFs",
     },
     uk: {
         title: "Збережені GIF",
         closeAria: "Закрити",
         noGifsYet:
             "Ще немає збережених GIF – надішліть або отримайте один, а потім збережіть його з чату, щоб побачити тут.",
+        removeFromGifs: "Видалити з GIF",
     },
     de: {
         title: "Gespeicherte GIFs",
         closeAria: "Schließen",
         noGifsYet:
             "Noch keine gespeicherten GIFs – sende oder empfange eines und speichere es aus dem Chat, um es hier zu sehen.",
+        removeFromGifs: "Aus GIFs entfernen",
     },
 };
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { getChatKey } from "../lib/chatCrypto";
 import { downloadAndDecryptMedia, downloadAndDecryptThumbnail } from "../lib/mediaDownload";
+import styles from "./EncryptedMedia.module.css";
 
 export interface KeyedChat {
     id: string;
@@ -33,6 +34,7 @@ function useDecryptedMediaUrl(chat: KeyedChat, media: DownloadableMedia, auto: b
         (async () => {
             const chatKey = await getChatKey({ id: chat.id, wrappedChatKey: chat.wrappedChatKey });
             if (!chatKey) {
+                startedRef.current = false;
                 setStatus("error");
                 return;
             }
@@ -43,6 +45,11 @@ function useDecryptedMediaUrl(chat: KeyedChat, media: DownloadableMedia, auto: b
                 setUrl(objectUrl);
                 setStatus("ready");
             } catch {
+                // Resetting this (rather than leaving it stuck true) is what
+                // makes calling start() again - e.g. a tap on the failed
+                // placeholder - actually retry instead of silently no-op'ing,
+                // which is the whole point of exposing start() as a retry.
+                startedRef.current = false;
                 setStatus("error");
             }
         })();
@@ -129,16 +136,63 @@ async function openFullSize(chat: KeyedChat, media: DownloadableMedia): Promise<
 
 interface EncryptedImageProps {
     chat: KeyedChat;
-    media: DownloadableMedia;
+    media: DownloadableMedia & { width: number | null; height: number | null };
     className?: string;
+    // Applied only to the loading/failed placeholder, on top of className -
+    // separate from it because the loaded <img>/<video> needs to stay free
+    // to auto-size both dimensions from its own real content (so a tall
+    // photo shrinks proportionally instead of being squashed to a fixed
+    // width), while the placeholder - empty apart from an absolutely
+    // positioned spinner that doesn't count as sizeable content - needs an
+    // explicit width or its container has nothing to size itself around
+    // and collapses to nothing.
+    loadingClassName?: string;
     alt?: string;
     openOnClick?: boolean;
 }
 
-export function EncryptedImage({ chat, media, className, alt, openOnClick }: EncryptedImageProps) {
-    const { url, status } = useDecryptedMediaUrl(chat, media, true);
-    if (status === "error") return <div className={className} />;
-    if (!url) return <div className={className} />;
+// Published as a custom property (see EncryptedVideoPlayer's own copy of
+// this comment) so the loading placeholder reserves the photo's real shape
+// instead of collapsing to 0x0 - a <div> has no intrinsic size the way an
+// <img> does, so without this the spinner box is invisible until the bytes
+// actually arrive, leaving only the timestamp floating in empty space.
+function useMediaAspectVar(media: { width: number | null; height: number | null }) {
+    return media.width && media.height
+        ? ({ "--media-aspect": `${media.width} / ${media.height}` } as React.CSSProperties)
+        : undefined;
+}
+
+// Retrying needs to both start() again and keep the click from also
+// triggering whatever the caller's own onClick does with a tile that isn't
+// actually loaded yet (GifPicker's tiles send on click, for one) - stopping
+// propagation here means a caller never has to know this element might be
+// in a still-failed, not-really-clickable-yet state.
+function handleRetryClick(e: React.MouseEvent, start: () => void) {
+    e.stopPropagation();
+    start();
+}
+
+export function EncryptedImage({ chat, media, className, loadingClassName, alt, openOnClick }: EncryptedImageProps) {
+    const { url, status, start } = useDecryptedMediaUrl(chat, media, true);
+    const ratioVar = useMediaAspectVar(media);
+    if (status === "error") {
+        return (
+            <div
+                className={`${className ?? ""} ${loadingClassName ?? ""} ${styles.failed}`}
+                style={ratioVar}
+                onClick={(e) => handleRetryClick(e, start)}
+            >
+                <span className={styles.retryIcon}>↻</span>
+            </div>
+        );
+    }
+    if (!url) {
+        return (
+            <div className={`${className ?? ""} ${loadingClassName ?? ""} ${styles.loading}`} style={ratioVar}>
+                <span className={styles.spinner} />
+            </div>
+        );
+    }
     return (
         <img
             className={className}
@@ -152,9 +206,27 @@ export function EncryptedImage({ chat, media, className, alt, openOnClick }: Enc
 // For real animated GIF files sent as (or converted to) a video-mime asset -
 // same eager-decrypt treatment as a photo, just rendered as a looping,
 // controls-less <video> instead of an <img>.
-export function EncryptedGifVideo({ chat, media, className, openOnClick }: EncryptedImageProps) {
-    const { url, status } = useDecryptedMediaUrl(chat, media, true);
-    if (status === "error" || !url) return <div className={className} />;
+export function EncryptedGifVideo({ chat, media, className, loadingClassName, openOnClick }: EncryptedImageProps) {
+    const { url, status, start } = useDecryptedMediaUrl(chat, media, true);
+    const ratioVar = useMediaAspectVar(media);
+    if (status === "error") {
+        return (
+            <div
+                className={`${className ?? ""} ${loadingClassName ?? ""} ${styles.failed}`}
+                style={ratioVar}
+                onClick={(e) => handleRetryClick(e, start)}
+            >
+                <span className={styles.retryIcon}>↻</span>
+            </div>
+        );
+    }
+    if (!url) {
+        return (
+            <div className={`${className ?? ""} ${loadingClassName ?? ""} ${styles.loading}`} style={ratioVar}>
+                <span className={styles.spinner} />
+            </div>
+        );
+    }
     return (
         <video
             className={className}
@@ -190,11 +262,15 @@ export function EncryptedVideoPlayer({
 }: EncryptedVideoPlayerProps) {
     const { url, status, start } = useDecryptedMediaUrl(chat, media, false);
     const thumbnailUrl = useDecryptedThumbnailUrl(chat, media.id, media.hasThumbnail);
-    // Reserves the real aspect ratio up front, before the browser has read
-    // the video's own metadata - without this the element sits at its tiny
-    // intrinsic default (300x150) and visibly snaps to full size a moment
-    // later ("squished, then pops in").
-    const aspectRatio = media.width && media.height ? `${media.width} / ${media.height}` : undefined;
+    // Published as a custom property rather than a plain inline
+    // `aspect-ratio` so each caller's own CSS decides whether to use it:
+    // a chat bubble wants the video's real shape reserved up front (or the
+    // element sits at its tiny 300x150 intrinsic default and visibly snaps
+    // to size once metadata loads), while the chat-info media grid wants
+    // its tiles square regardless. An inline aspect-ratio would beat both.
+    const ratioVar = media.width && media.height
+        ? ({ "--media-aspect": `${media.width} / ${media.height}` } as React.CSSProperties)
+        : undefined;
 
     if (status === "ready" && url) {
         return (
@@ -203,7 +279,7 @@ export function EncryptedVideoPlayer({
             // browser's autoplay policy is concerned, so it either silently
             // blocks playback or starts it unpredictably later - neither is
             // what starting the video via <video controls> alone would give.
-            <video className={className} style={{ aspectRatio }} controls>
+            <video className={className} style={ratioVar} controls>
                 <source src={url} type={media.mimeType} />
             </video>
         );
@@ -213,7 +289,7 @@ export function EncryptedVideoPlayer({
         <div
             className={placeholderClassName}
             style={{
-                aspectRatio,
+                ...ratioVar,
                 ...(thumbnailUrl ? { backgroundImage: `url(${thumbnailUrl})` } : {}),
             }}
             onClick={start}

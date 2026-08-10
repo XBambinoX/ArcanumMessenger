@@ -65,7 +65,14 @@ export async function extractVideoFirstFrame(file: File): Promise<Blob | null> {
         const cleanup = () => URL.revokeObjectURL(url);
 
         video.onloadeddata = () => {
-            video.currentTime = 0;
+            // Not currentTime = 0: the element is already there after
+            // loadeddata, so assigning the same value can complete without
+            // ever firing `seeked` (leaving this promise hanging), and
+            // frame zero is a black/blank fade-in often enough that the
+            // resulting "preview" is just a dark rectangle. Nudging a
+            // fraction of a second in guarantees a real seek and lands on
+            // actual picture, while staying inside even very short clips.
+            video.currentTime = Math.min(0.3, (video.duration || 1) / 2);
         };
         video.onseeked = () => {
             const scale = Math.min(1, THUMBNAIL_MAX_EDGE / Math.max(video.videoWidth, video.videoHeight));

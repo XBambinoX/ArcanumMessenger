@@ -112,6 +112,11 @@
 .messages {
     flex: 1;
     overflow-y: auto;
+    /* Safety net: nothing in a message row should ever need to scroll the
+       chat sideways - if a future media/content size ever slips past its
+       bubble again, this keeps it from turning into a horizontal scrollbar
+       instead of just clipping at the edge. */
+    overflow-x: hidden;
     padding: 16px 18px;
     display: flex;
     flex-direction: column;
@@ -158,6 +163,7 @@
     align-items: center;
     gap: 8px;
     justify-content: flex-start;
+    min-width: 0;
 }
 
 .bubbleRow.own {
@@ -170,6 +176,11 @@
     flex-direction: column;
     gap: 3px;
     max-width: min(70%, 520px);
+    /* Flex items refuse to shrink below their content's own min-content
+       size by default - a fixed-size media child inside otherwise forces
+       .bubble (and the whole row) wider than max-width, which is what let
+       a photo push .bubbleRow into horizontal scroll on a narrow phone. */
+    min-width: 0;
     padding: 8px 12px;
     border-radius: 16px;
     border-bottom-left-radius: 6px;
@@ -297,33 +308,96 @@
     margin-top: 4px;
 }
 
+/* max-width only, no width, no aspect-ratio, no object-fit - a loaded
+   <img>/<video> already knows its own real dimensions and shrinks to fit
+   both this and max-height together, preserving its true proportions (a
+   fixed width here, tried briefly, clamped a tall photo's height down to
+   max-height without letting the now-too-wide width follow suit, visibly
+   squashing it - not what was wanted; a forced aspect-ratio box +
+   object-fit: cover, tried before that, cropped it outright instead).
+   The number matches .mediaWrap's own cap exactly (see its comment) rather
+   than a percentage of it, so the two never disagree about how wide the
+   media is allowed to get - including at the mobile breakpoint below,
+   where both shrink together. */
 .mediaImage {
     display: block;
-    max-width: min(340px, 100%);
+    max-width: 340px;
     max-height: 340px;
     border-radius: 12px;
+    overflow: hidden;
     cursor: pointer;
-    object-fit: cover;
+}
+
+/* Same box as .mediaImage, but for the <video> gif-mime rendering path
+   specifically (EncryptedGifVideo's onSelect="isVideoMime" branch) - no
+   border-radius/overflow. Firefox hardware-decodes some of these straight
+   into a compositor overlay layer that bypasses all CSS clipping (border-
+   radius, overflow, clip-path, transform tricks - none of it reached the
+   overlay), so gifs ended up with inconsistent, sometimes-square corners
+   no matter what was tried here. A real photo/image-file gif (<img>,
+   .mediaImage above) never had this problem - only the video tag does -
+   so square corners are accepted for this one case rather than chasing an
+   unreliable fix further. */
+.mediaGifVideo {
+    display: block;
+    max-width: 340px;
+    max-height: 340px;
+    cursor: pointer;
+}
+
+/* Applied only to the loading/failed placeholder (see EncryptedMedia's
+   loadingClassName), never to the loaded media above - that element needs
+   the freedom to auto-size both dimensions from its own content, but an
+   empty placeholder <div> has nothing to size itself from and would
+   collapse to 0 width without an explicit value here. Deliberately a
+   plain number, not width: 100% of .mediaWrap: during the loading phase
+   this is .mediaWrap's *only* content, so a percentage here would be
+   asking .mediaWrap's size to depend on this element's size depending on
+   .mediaWrap's size - the same circular trap .mediaWrap's own cap exists
+   to avoid, just one element over.
+
+   max-height matters here too: the placeholder's height comes from
+   --media-aspect (the real recorded ratio) with nothing else constraining
+   it, so a portrait video/gif turned this into a huge, oddly tall box -
+   the retry icon centred inside it, but the box itself dwarfed the rest
+   of the chat. Capping it to the same number .mediaImage/.mediaGifVideo
+   use for the loaded state keeps the placeholder roughly that size
+   instead of literally as tall as the real content would be. */
+.mediaImageLoading {
+    width: 340px;
+    max-height: 340px;
 }
 
 .mediaVideo {
     display: block;
-    max-width: min(380px, 100%);
+    width: 100%;
     max-height: 420px;
+    /* Same reserved shape the placeholder used, so swapping one for the
+       other on click doesn't resize the bubble. */
+    aspect-ratio: var(--media-aspect);
     border-radius: 12px;
+    /* See .mediaImage's comment - reverted the clip-path/transform
+       experiment, it made corner clipping worse rather than better. */
+    overflow: hidden;
 }
 
 .videoPlaceholder {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: min(260px, 100%);
-    /* Overridden inline once the real width/height are known (same value
-       the eventual <video> reserves) - this is just the fallback for the
-       rare case they aren't, so there's nothing to size against yet. */
-    aspect-ratio: 4 / 3;
+    /* Fills .mediaWrapVideo, which carries the real width cap - same size
+       the eventual <video> gets, so opening one never resizes the bubble. */
+    width: 100%;
+    /* --media-aspect is the video's real shape, published by
+       EncryptedVideoPlayer; the 4/3 only covers an asset whose dimensions
+       were never recorded, so there'd be nothing to reserve otherwise. */
+    aspect-ratio: var(--media-aspect, 4 / 3);
+    max-height: 420px;
     border-radius: 12px;
-    background-color: rgba(var(--black-rgb), 0.35);
+    /* Only actually visible when there's no thumbnail to show (a real
+       thumbnail's background-image, set inline, fully covers this) - a
+       flat black box read as "broken" rather than "preview pending". */
+    background-color: rgba(var(--accent-rgb), 0.16);
     background-size: cover;
     background-position: center;
     color: rgb(var(--white-rgb));
@@ -335,19 +409,20 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 48px;
-    height: 48px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
-    background: rgba(var(--black-rgb), 0.45);
-    font-size: 18px;
+    background: rgba(var(--black-rgb), 0.5);
+    font-size: 20px;
     line-height: 1;
 }
 
 .videoSpinner {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
-    border: 3px solid rgba(var(--white-rgb), 0.25);
+    background: rgba(var(--black-rgb), 0.4);
+    border: 3px solid rgba(var(--white-rgb), 0.3);
     border-top-color: rgb(var(--white-rgb));
     animation: videoSpin 0.8s linear infinite;
 }
@@ -362,6 +437,55 @@
     position: relative;
     display: block;
     line-height: 0;
+    /* .bubble is a flex column, and flex items stretch across the cross
+       axis by default - without this, .mediaWrap claimed the bubble's
+       whole width, stranding the timestamp (positioned against *this*
+       box's corner, not the image's) in the empty space past the image. */
+    align-self: flex-start;
+    /* Lets flex-shrink actually shrink this below its content's size on a
+       narrow phone - a flex item's automatic minimum size otherwise
+       refuses to go below its content's own min-content width. */
+    min-width: 0;
+    /* A plain number, not min(340px, 100%): percentages here depend on
+       .bubble's width, which itself depends on .mediaWrap's content (the
+       image) - a circular reference two levels of ancestor sizing don't
+       always agree on resolving, which is what let this render fine on a
+       wide desktop window but collapse to nothing on a narrow phone. This
+       is the one non-circular anchor in the whole chain; .mediaImage
+       carries the exact same number rather than a percentage of it, so
+       the two never disagree about the available width. */
+    max-width: 340px;
+}
+
+/* Video gets a little more room than a photo (see .mediaVideo's own cap). */
+.mediaWrapVideo {
+    max-width: 380px;
+}
+
+/* Keep in sync with useMediaQuery.ts's MOBILE_BREAKPOINT_QUERY. vw, not %:
+   a percentage here would recreate the exact circular-reference problem
+   the comment above exists to avoid, since it would once again depend on
+   an ancestor whose own size depends on this element's content. vw always
+   resolves against the viewport, independent of any ancestor, so it can
+   shrink these caps well below their desktop px value with no ambiguity.
+   Chosen comfortably under .bubble's own 70%-of-column cap so the media
+   itself is always the tighter constraint - never the reason the row
+   overflows sideways - while also directly making media smaller on
+   phones, as asked for separately from the overflow fix. */
+@media (max-width: 760px) {
+    .mediaWrap,
+    .mediaImage,
+    .mediaGifVideo {
+        max-width: min(220px, 58vw);
+    }
+
+    .mediaImageLoading {
+        width: min(220px, 58vw);
+    }
+
+    .mediaWrapVideo {
+        max-width: min(240px, 62vw);
+    }
 }
 
 /* Captioned media still sits inside a padded bubble (the caption needs the

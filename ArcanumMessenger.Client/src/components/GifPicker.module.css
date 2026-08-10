@@ -95,6 +95,14 @@
     transition: border-color 0.2s;
 }
 
+/* A gif sent as a <video> (as opposed to a real .gif image file) doesn't
+   reliably clip to border-radius in Firefox - see ChatWindow.module.css's
+   .mediaGifVideo comment. Square corners here rather than an unreliable
+   fix. */
+.gifTileVideo {
+    border-radius: 0;
+}
+
 .gifTile:hover {
     border-color: rgba(var(--accent-light-rgb), 0.5);
 }
@@ -105,6 +113,18 @@
     height: 100%;
     object-fit: cover;
     display: block;
+}
+
+/* The loading/failed placeholder otherwise sizes itself from the gif's
+   real aspect ratio (see EncryptedMedia's .loading) - fine in a chat
+   bubble, but here it just needs to fill this already-square tile like
+   the loaded img/video above does. Without this, a non-square gif's
+   placeholder ran taller or wider than the tile, got clipped by
+   .gifTile's overflow: hidden, and the spinner - centered on the
+   uncropped box, not the visible one - landed off-center. */
+.gifTileLoading {
+    width: 100%;
+    height: 100%;
 }
 
 /* On mobile this becomes a bottom sheet instead of a small anchored

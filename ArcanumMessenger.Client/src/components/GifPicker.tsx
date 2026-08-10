@@ -1,11 +1,12 @@
 import type { SavedGifEntry } from "../types/messenger";
-import { getSavedGifs } from "../api/media";
+import { getSavedGifs, unsaveGif } from "../api/media";
 import { EncryptedImage, EncryptedGifVideo, type KeyedChat } from "./EncryptedMedia";
 import { decryptSavedGifEntries } from "../lib/chatCrypto";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import styles from "./GifPicker.module.css";
 import { useLanguage } from "../lib/language";
 import { GIF_PICKER_TRANSLATIONS } from "../lib/chatWindowTranslations";
+import MessageContextMenu from "./MessageContextMenu";
 
 // A gif "sent as video" has no thumbnail (thumbnails are only generated for
 // real image/gif files at upload time, before the sender's later choice to
@@ -13,6 +14,8 @@ import { GIF_PICKER_TRANSLATIONS } from "../lib/chatWindowTranslations";
 function isVideoMime(mimeType: string): boolean {
     return mimeType.startsWith("video/");
 }
+
+const LONG_PRESS_MS = 450;
 
 interface GifPickerProps {
     savedChat: KeyedChat;
@@ -28,6 +31,12 @@ export default function GifPicker({ savedChat, onClose, onSelect, variant = "sta
     const tr = GIF_PICKER_TRANSLATIONS[useLanguage()];
     const [gifs, setGifs] = useState<SavedGifEntry[]>([]);
     const [loaded, setLoaded] = useState(false);
+    const [contextMenu, setContextMenu] = useState<{ sourceMediaId: string; x: number; y: number } | null>(null);
+    const longPressTimer = useRef<number | null>(null);
+    // A long-press that opens the menu also ends in a native click on
+    // release in most mobile browsers - without this the same touch would
+    // both open the "remove" menu and send the gif into the chat.
+    const suppressClickRef = useRef(false);
 
     useEffect(() => {
         getSavedGifs().then(async (result) => {
@@ -35,6 +44,27 @@ export default function GifPicker({ savedChat, onClose, onSelect, variant = "sta
             setLoaded(true);
         });
     }, [savedChat]);
+
+    const clearLongPressTimer = () => {
+        if (longPressTimer.current !== null) {
+            window.clearTimeout(longPressTimer.current);
+            longPressTimer.current = null;
+        }
+    };
+
+    const handleTouchStart = (e: React.TouchEvent, sourceMediaId: string) => {
+        const { clientX: x, clientY: y } = e.touches[0];
+        clearLongPressTimer();
+        longPressTimer.current = window.setTimeout(() => {
+            suppressClickRef.current = true;
+            setContextMenu({ sourceMediaId, x, y });
+        }, LONG_PRESS_MS);
+    };
+
+    const handleRemoveSaved = async (sourceMediaId: string) => {
+        const ok = await unsaveGif(sourceMediaId);
+        if (ok) setGifs((prev) => prev.filter((g) => g.sourceMediaId !== sourceMediaId));
+    };
 
     const body = (
         <>
@@ -57,26 +87,63 @@ export default function GifPicker({ savedChat, onClose, onSelect, variant = "sta
 
             {gifs.length > 0 && (
                 <div className={styles.grid}>
-                    {gifs.map(({ media, sourceMediaId }) => (
-                        <button
-                            key={media.id}
-                            className={styles.gifTile}
-                            onClick={() => onSelect({ media, sourceMediaId })}
-                        >
-                            {isVideoMime(media.mimeType) ? (
-                                <EncryptedGifVideo chat={savedChat} media={media} />
-                            ) : (
-                                // Same as the chat bubble - always the real file, never a
-                                // thumbnail, or the gif would just sit there frozen.
-                                <EncryptedImage chat={savedChat} media={media} alt={media.fileName} />
-                            )}
-                        </button>
-                    ))}
+                    {gifs.map(({ media, sourceMediaId }) => {
+                        const isVideo = isVideoMime(media.mimeType);
+                        return (
+                            <button
+                                key={media.id}
+                                className={`${styles.gifTile} ${isVideo ? styles.gifTileVideo : ""}`}
+                                onClick={() => {
+                                    if (suppressClickRef.current) {
+                                        suppressClickRef.current = false;
+                                        return;
+                                    }
+                                    onSelect({ media, sourceMediaId });
+                                }}
+                                onContextMenu={(e) => {
+                                    e.preventDefault();
+                                    setContextMenu({ sourceMediaId, x: e.clientX, y: e.clientY });
+                                }}
+                                onTouchStart={(e) => handleTouchStart(e, sourceMediaId)}
+                                onTouchEnd={clearLongPressTimer}
+                                onTouchMove={clearLongPressTimer}
+                            >
+                                {isVideo ? (
+                                    <EncryptedGifVideo
+                                        chat={savedChat}
+                                        media={media}
+                                        loadingClassName={styles.gifTileLoading}
+                                    />
+                                ) : (
+                                    // Same as the chat bubble - always the real file, never a
+                                    // thumbnail, or the gif would just sit there frozen.
+                                    <EncryptedImage
+                                        chat={savedChat}
+                                        media={media}
+                                        alt={media.fileName}
+                                        loadingClassName={styles.gifTileLoading}
+                                    />
+                                )}
+                            </button>
+                        );
+                    })}
                 </div>
+            )}
+
+            {contextMenu && (
+                <MessageContextMenu
+                    x={contextMenu.x}
+                    y={contextMenu.y}
+                    onClose={() => setContextMenu(null)}
+                    items={[{
+                        label: tr.removeFromGifs,
+                        danger: true,
+                        onClick: () => handleRemoveSaved(contextMenu.sourceMediaId),
+                    }]}
+                />
             )}
         </>
     );
 
     return variant === "standalone" ? <aside className={styles.panel}>{body}</aside> : body;
 }
-

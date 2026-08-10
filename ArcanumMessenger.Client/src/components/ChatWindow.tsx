@@ -538,7 +538,11 @@ export default function ChatWindow({
         );
         if (!reencrypted) return;
 
-        const sent = await sendMessage(chat.id, "", reencrypted.id, false, replyToId);
+        // Re-encrypting for this chat is a fresh upload server-side, so its
+        // Kind is re-derived from mime type alone - a gif sent as a video
+        // file would come back as "video" without this, having lost the
+        // "gif" classification the original message's asset had.
+        const sent = await sendMessage(chat.id, "", reencrypted.id, true, replyToId);
         if (sent) {
             setMessages((prev) => appendUnique(prev, [sent]));
             markAnimated(sent.id);
@@ -833,7 +837,9 @@ export default function ChatWindow({
                     const isMediaKind = message.type === "image" || message.type === "gif" || message.type === "video";
                     const hasCaption = isMediaKind && !!message.content;
                     const bareMedia = isMediaKind && !hasCaption;
-                    const mediaWrapClass = `${styles.mediaWrap} ${hasCaption ? styles.mediaBleedTop : ""}`;
+                    const mediaWrapClass = `${styles.mediaWrap} ${hasCaption ? styles.mediaBleedTop : ""} ${
+                        message.type === "video" ? styles.mediaWrapVideo : ""
+                    }`;
 
                     return (
                         <div key={message.id}>
@@ -913,6 +919,7 @@ export default function ChatWindow({
                                                 chat={{ id: chat.id, wrappedChatKey: chat.wrappedChatKey }}
                                                 media={message.media}
                                                 className={styles.mediaImage}
+                                                loadingClassName={styles.mediaImageLoading}
                                                 alt={message.media.fileName}
                                                 openOnClick
                                             />
@@ -932,7 +939,8 @@ export default function ChatWindow({
                                                 <EncryptedGifVideo
                                                     chat={{ id: chat.id, wrappedChatKey: chat.wrappedChatKey }}
                                                     media={message.media}
-                                                    className={styles.mediaImage}
+                                                    className={styles.mediaGifVideo}
+                                                    loadingClassName={styles.mediaImageLoading}
                                                     openOnClick
                                                 />
                                             ) : (
@@ -943,6 +951,7 @@ export default function ChatWindow({
                                                     chat={{ id: chat.id, wrappedChatKey: chat.wrappedChatKey }}
                                                     media={message.media}
                                                     className={styles.mediaImage}
+                                                    loadingClassName={styles.mediaImageLoading}
                                                     alt={message.media.fileName}
                                                     openOnClick
                                                 />
@@ -1305,6 +1314,11 @@ export default function ChatWindow({
                     onChatRemoved={onChatRemoved}
                     chatAvatarNonce={chatAvatarNonce}
                     onChatAvatarChanged={onChatAvatarChanged}
+                    onJumpToMessage={(messageId) => {
+                        setChatInfoOpen(false);
+                        handleJumpToMessage(messageId);
+                    }}
+                    onDeleteMessage={handleDeleteMessage}
                 />
             )}
 
