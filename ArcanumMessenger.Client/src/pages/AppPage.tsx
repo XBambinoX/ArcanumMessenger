@@ -9,7 +9,7 @@ import { type UserSettingsResponse, getUserSettings  } from "../api/userSettings
 import { playNotificationSound } from "../lib/notificationSound";
 import { requestDesktopNotificationPermission, showDesktopNotification } from "../lib/desktopNotification";
 import { decryptLastMessagePreview, decryptChatTitle } from "../lib/chatCrypto";
-import { useIsMobile } from "../lib/useMediaQuery";
+import { useIsMobile, useVisualViewportHeight } from "../lib/useMediaQuery";
 import { useAuth } from "../context/AuthContext";
 import ChatList from "../components/ChatList";
 import ChatWindow from "../components/ChatWindow";
@@ -55,6 +55,7 @@ export default function AppPage() {
     ];
 
     const isMobile = useIsMobile();
+    const vvHeight = useVisualViewportHeight();
     const [chats, setChats] = useState<ChatSummary[]>([]);
     const [profile, setProfile] = useState<User | null>(null);
     const [displayName, setDisplayName] = useState<string | null>(null);
@@ -485,7 +486,7 @@ export default function AppPage() {
     };
 
     return (
-        <div className={styles.root}>
+        <div className={styles.root} style={{ height: isMobile ? vvHeight : undefined }}>
             {(!isMobile || !selectedChatId) && (
             <aside className={styles.sidebar} style={{ width: isMobile ? undefined : sidebarWidth }}>
                 {!isMobile && (
