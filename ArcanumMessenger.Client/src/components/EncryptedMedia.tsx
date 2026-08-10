@@ -127,11 +127,20 @@ export function EncryptedThumbnail({ chat, mediaId, className, alt }: EncryptedT
 // unsupported/corrupt file even though nothing was actually wrong with the
 // decrypted bytes. This one is intentionally never revoked - it belongs to
 // whatever tab the browser opened, not to this component.
-async function openFullSize(chat: KeyedChat, media: DownloadableMedia): Promise<void> {
-    const chatKey = await getChatKey({ id: chat.id, wrappedChatKey: chat.wrappedChatKey });
-    if (!chatKey) return;
-    const blob = await downloadAndDecryptMedia(chatKey, chat.id, media);
-    window.open(URL.createObjectURL(blob), "_blank");
+async function openFullSize(chat: KeyedChat, media: DownloadableMedia): Promise<boolean> {
+    try {
+        const chatKey = await getChatKey({ id: chat.id, wrappedChatKey: chat.wrappedChatKey });
+        if (!chatKey) return false;
+        const blob = await downloadAndDecryptMedia(chatKey, chat.id, media);
+        window.open(URL.createObjectURL(blob), "_blank");
+        return true;
+    } catch {
+        // A slow/dropped connection shouldn't surface as an unhandled
+        // rejection - callers that show a "opening..." state (see
+        // EncryptedVideoPlayer's openInNewTab) need this to actually
+        // settle instead of leaving that state stuck forever.
+        return false;
+    }
 }
 
 interface EncryptedImageProps {
@@ -266,6 +275,19 @@ export function EncryptedVideoPlayer({
 }: EncryptedVideoPlayerProps) {
     const { url, status, start } = useDecryptedMediaUrl(chat, media, false);
     const thumbnailUrl = useDecryptedThumbnailUrl(chat, media.id, media.hasThumbnail);
+    // openInNewTab bypasses useDecryptedMediaUrl's own status entirely (see
+    // the click handler below), so on a slow connection there was no
+    // feedback at all between the click and the new tab actually opening -
+    // it just looked like the click did nothing. This is that feedback.
+    const [opening, setOpening] = useState(false);
+    const handleClick = () => {
+        if (!openInNewTab) {
+            start();
+            return;
+        }
+        setOpening(true);
+        openFullSize(chat, media).finally(() => setOpening(false));
+    };
     // Published as a custom property rather than a plain inline
     // `aspect-ratio` so each caller's own CSS decides whether to use it:
     // a chat bubble wants the video's real shape reserved up front (or the
@@ -296,9 +318,9 @@ export function EncryptedVideoPlayer({
                 ...ratioVar,
                 ...(thumbnailUrl ? { backgroundImage: `url(${thumbnailUrl})` } : {}),
             }}
-            onClick={openInNewTab ? () => openFullSize(chat, media) : start}
+            onClick={handleClick}
         >
-            {status === "loading" && !openInNewTab ? (
+            {opening || (status === "loading" && !openInNewTab) ? (
                 <span className={spinnerClassName} />
             ) : (
                 <span className={playIconClassName}>{status === "error" && !openInNewTab ? "!" : "▶"}</span>
