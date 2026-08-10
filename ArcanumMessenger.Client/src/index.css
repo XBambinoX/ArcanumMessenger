@@ -101,8 +101,19 @@
   --color-scheme: light;
 }
 
+/* No page-level scroll anywhere - html/body/#root are pinned to the real
+   window height instead of being free to grow taller than it, so there's
+   nothing for the visual viewport to scroll to when a mobile keyboard
+   opens. Without this, AppPage's own keyboard-aware height (see
+   useVisualViewportHeight) could still end up positioned wrong, because
+   the page underneath it was free to be taller than the visible area. */
+html, body {
+    height: 100%;
+    overflow: hidden;
+}
+
 #root {
-    min-height: 100svh;
+    height: 100%;
 }
 
 body {

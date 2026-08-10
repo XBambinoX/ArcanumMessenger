@@ -36,10 +36,17 @@ export function useVisualViewportHeight(): number {
         const vv = window.visualViewport;
         if (!vv) return;
 
+        // Some mobile browsers fire "scroll" instead of (or ahead of)
+        // "resize" when a keyboard opens - watching only one leaves the
+        // height stale on those.
         const handler = () => setHeight(vv.height);
         handler();
         vv.addEventListener("resize", handler);
-        return () => vv.removeEventListener("resize", handler);
+        vv.addEventListener("scroll", handler);
+        return () => {
+            vv.removeEventListener("resize", handler);
+            vv.removeEventListener("scroll", handler);
+        };
     }, []);
 
     return height;
