@@ -78,6 +78,10 @@
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 8px;
+    /* Only ever rendered "embedded" now (inside StickerPicker), which
+       provides no padding of its own around this content - GifPicker used
+       to get that for free from its own standalone .panel. */
+    padding: 8px;
 }
 
 .gifTile {

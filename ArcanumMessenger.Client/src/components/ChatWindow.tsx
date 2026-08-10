@@ -965,6 +965,7 @@ export default function ChatWindow({
                                                 className={styles.mediaVideo}
                                                 placeholderClassName={styles.videoPlaceholder}
                                                 playIconClassName={styles.videoPlayIcon}
+                                                spinnerClassName={styles.videoSpinner}
                                             />
                                             {bareMedia && (
                                                 <span className={styles.mediaTime}>

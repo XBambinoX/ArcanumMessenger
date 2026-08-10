@@ -430,15 +430,23 @@
     max-width: 380px;
     border-radius: 20px;
     border: 1px solid rgba(var(--accent-rgb), 0.3);
-    background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.1), rgba(var(--bg-page-rgb), 0.97));
-    box-shadow: 0 20px 60px rgba(var(--black-rgb), 0.5), 0 0 40px rgba(var(--accent-rgb), 0.12);
+    background: rgb(var(--bg-elevated-rgb));
+    box-shadow: 0 20px 60px rgba(var(--black-rgb), 0.35), 0 0 40px rgba(var(--accent-rgb), 0.1);
     padding: 28px 26px 24px;
     text-align: center;
 }
 
-.modalIcon {
-    font-size: 32px;
-    margin-bottom: 10px;
+.modalIconBox {
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 14px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.2), rgba(var(--accent2-rgb), 0.12));
+    border: 1px solid rgba(var(--accent-rgb), 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgb(var(--accent-rgb));
 }
 
 .modalTitle {
@@ -463,10 +471,25 @@
     margin-top: 18px;
 }
 
-.modalWarning {
-    display: block;
+.modalWarningBox {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 4px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(var(--error-accent-rgb), 0.08);
+    border: 1px solid rgba(var(--error-accent-rgb), 0.25);
     color: rgb(var(--error-accent-rgb));
+    font-size: 12.5px;
     font-weight: 600;
+    line-height: 1.5;
+    text-align: left;
+}
+
+.modalWarningBox svg {
+    flex-shrink: 0;
+    margin-top: 1px;
 }
 
 /* ── Email consent checkbox ── */

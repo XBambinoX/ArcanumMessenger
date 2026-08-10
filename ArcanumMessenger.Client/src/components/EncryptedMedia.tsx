@@ -175,6 +175,7 @@ interface EncryptedVideoPlayerProps {
     className?: string;
     placeholderClassName?: string;
     playIconClassName?: string;
+    spinnerClassName?: string;
 }
 
 // Never auto-decrypts - a full video can be large, so nothing downloads
@@ -185,7 +186,7 @@ interface EncryptedVideoPlayerProps {
 // <video controls> - seeking from there on is local, no further
 // network/decryption involved.
 export function EncryptedVideoPlayer({
-    chat, media, className, placeholderClassName, playIconClassName,
+    chat, media, className, placeholderClassName, playIconClassName, spinnerClassName,
 }: EncryptedVideoPlayerProps) {
     const { url, status, start } = useDecryptedMediaUrl(chat, media, false);
     const thumbnailUrl = useDecryptedThumbnailUrl(chat, media.id, media.hasThumbnail);
@@ -211,12 +212,17 @@ export function EncryptedVideoPlayer({
     return (
         <div
             className={placeholderClassName}
-            style={thumbnailUrl ? { backgroundImage: `url(${thumbnailUrl})` } : undefined}
+            style={{
+                aspectRatio,
+                ...(thumbnailUrl ? { backgroundImage: `url(${thumbnailUrl})` } : {}),
+            }}
             onClick={start}
         >
-            <span className={playIconClassName}>
-                {status === "loading" ? "…" : status === "error" ? "!" : "▶"}
-            </span>
+            {status === "loading" ? (
+                <span className={spinnerClassName} />
+            ) : (
+                <span className={playIconClassName}>{status === "error" ? "!" : "▶"}</span>
+            )}
         </div>
     );
 }
