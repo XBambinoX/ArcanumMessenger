@@ -171,7 +171,7 @@ export function EncryptedGifVideo({ chat, media, className, openOnClick }: Encry
 
 interface EncryptedVideoPlayerProps {
     chat: KeyedChat;
-    media: DownloadableMedia & { hasThumbnail: boolean };
+    media: DownloadableMedia & { hasThumbnail: boolean; width: number | null; height: number | null };
     className?: string;
     placeholderClassName?: string;
     playIconClassName?: string;
@@ -189,10 +189,20 @@ export function EncryptedVideoPlayer({
 }: EncryptedVideoPlayerProps) {
     const { url, status, start } = useDecryptedMediaUrl(chat, media, false);
     const thumbnailUrl = useDecryptedThumbnailUrl(chat, media.id, media.hasThumbnail);
+    // Reserves the real aspect ratio up front, before the browser has read
+    // the video's own metadata - without this the element sits at its tiny
+    // intrinsic default (300x150) and visibly snaps to full size a moment
+    // later ("squished, then pops in").
+    const aspectRatio = media.width && media.height ? `${media.width} / ${media.height}` : undefined;
 
     if (status === "ready" && url) {
         return (
-            <video className={className} controls autoPlay>
+            // No autoPlay: by the time decryption finishes, the click that
+            // started it is no longer a "recent user gesture" as far as the
+            // browser's autoplay policy is concerned, so it either silently
+            // blocks playback or starts it unpredictably later - neither is
+            // what starting the video via <video controls> alone would give.
+            <video className={className} style={{ aspectRatio }} controls>
                 <source src={url} type={media.mimeType} />
             </video>
         );
