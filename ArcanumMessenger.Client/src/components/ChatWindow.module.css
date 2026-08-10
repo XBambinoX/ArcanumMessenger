@@ -368,9 +368,18 @@
     max-height: 340px;
 }
 
+/* width: 380px, not 100% - .mediaWrapVideo has no content-independent
+   width of its own (just a max-width, see its comment), and this element's
+   normal-flow content is nothing but a small icon (see .videoPlaceholder's
+   own comment) with no real intrinsic size to size a percentage against.
+   That let .mediaWrapVideo's fit-content computation collapse down to
+   roughly icon-sized instead of the intended 380px - a plain number here
+   is what .mediaWrap/.mediaImage's own anchor comments already describe,
+   just one element over again. */
 .mediaVideo {
     display: block;
-    width: 100%;
+    width: 380px;
+    max-width: 100%;
     max-height: 420px;
     /* Same reserved shape the placeholder used, so swapping one for the
        other on click doesn't resize the bubble. */
@@ -385,9 +394,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    /* Fills .mediaWrapVideo, which carries the real width cap - same size
-       the eventual <video> gets, so opening one never resizes the bubble. */
-    width: 100%;
+    /* See .mediaVideo's comment just above - this is .mediaWrapVideo's
+       *only* content before a click, and its own content (a small play
+       icon, in normal flow) isn't enough to size .mediaWrapVideo up to
+       380px on its own, so this needs the plain number directly rather
+       than a percentage of a parent with nothing else to go on. */
+    width: 380px;
+    max-width: 100%;
     /* --media-aspect is the video's real shape, published by
        EncryptedVideoPlayer; the 4/3 only covers an asset whose dimensions
        were never recorded, so there'd be nothing to reserve otherwise. */
@@ -485,6 +498,11 @@
 
     .mediaWrapVideo {
         max-width: min(240px, 62vw);
+    }
+
+    .mediaVideo,
+    .videoPlaceholder {
+        width: min(240px, 62vw);
     }
 }
 

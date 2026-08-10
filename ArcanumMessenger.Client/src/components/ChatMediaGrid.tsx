@@ -174,6 +174,7 @@ export default function ChatMediaGrid({ chat, tr, onJumpToMessage, onDeleteMessa
                                     placeholderClassName={`${styles.tile} ${styles.videoPlaceholderTile}`}
                                     playIconClassName={styles.playIcon}
                                     spinnerClassName={styles.tileSpinner}
+                                    openInNewTab
                                 />
                             </div>
                         );

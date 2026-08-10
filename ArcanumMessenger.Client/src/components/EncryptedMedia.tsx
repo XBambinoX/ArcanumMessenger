@@ -248,6 +248,10 @@ interface EncryptedVideoPlayerProps {
     placeholderClassName?: string;
     playIconClassName?: string;
     spinnerClassName?: string;
+    // A small grid tile is too cramped a place to actually watch a video -
+    // this opens it in a new tab (same as a photo's openOnClick) instead of
+    // decrypting inline and handing off to <video controls> in place.
+    openInNewTab?: boolean;
 }
 
 // Never auto-decrypts - a full video can be large, so nothing downloads
@@ -258,7 +262,7 @@ interface EncryptedVideoPlayerProps {
 // <video controls> - seeking from there on is local, no further
 // network/decryption involved.
 export function EncryptedVideoPlayer({
-    chat, media, className, placeholderClassName, playIconClassName, spinnerClassName,
+    chat, media, className, placeholderClassName, playIconClassName, spinnerClassName, openInNewTab,
 }: EncryptedVideoPlayerProps) {
     const { url, status, start } = useDecryptedMediaUrl(chat, media, false);
     const thumbnailUrl = useDecryptedThumbnailUrl(chat, media.id, media.hasThumbnail);
@@ -292,12 +296,12 @@ export function EncryptedVideoPlayer({
                 ...ratioVar,
                 ...(thumbnailUrl ? { backgroundImage: `url(${thumbnailUrl})` } : {}),
             }}
-            onClick={start}
+            onClick={openInNewTab ? () => openFullSize(chat, media) : start}
         >
-            {status === "loading" ? (
+            {status === "loading" && !openInNewTab ? (
                 <span className={spinnerClassName} />
             ) : (
-                <span className={playIconClassName}>{status === "error" ? "!" : "▶"}</span>
+                <span className={playIconClassName}>{status === "error" && !openInNewTab ? "!" : "▶"}</span>
             )}
         </div>
     );

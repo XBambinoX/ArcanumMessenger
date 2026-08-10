@@ -62,7 +62,23 @@ export async function extractVideoFirstFrame(file: File): Promise<Blob | null> {
         const url = URL.createObjectURL(file);
         video.src = url;
 
-        const cleanup = () => URL.revokeObjectURL(url);
+        let settled = false;
+        const finish = (result: Blob | null) => {
+            if (settled) return;
+            settled = true;
+            window.clearTimeout(timeoutId);
+            URL.revokeObjectURL(url);
+            resolve(result);
+        };
+        // Some containers (seen in practice with certain screen-recording
+        // exports) report a real width/height but never a usable duration -
+        // video.duration comes back NaN even once frame data is available.
+        // NaN/2 is NaN, and setting currentTime to NaN is simply ignored by
+        // the spec, so `seeked` would never fire and this would hang
+        // forever with no error either. This timeout is the actual
+        // guarantee that a broken file resolves null instead of leaving
+        // the caller's upload flow waiting indefinitely.
+        const timeoutId = window.setTimeout(() => finish(null), 6000);
 
         video.onloadeddata = () => {
             // Not currentTime = 0: the element is already there after
@@ -72,7 +88,10 @@ export async function extractVideoFirstFrame(file: File): Promise<Blob | null> {
             // resulting "preview" is just a dark rectangle. Nudging a
             // fraction of a second in guarantees a real seek and lands on
             // actual picture, while staying inside even very short clips.
-            video.currentTime = Math.min(0.3, (video.duration || 1) / 2);
+            const duration = video.duration;
+            video.currentTime = Number.isFinite(duration) && duration > 0
+                ? Math.min(0.3, duration / 2)
+                : 0.1;
         };
         video.onseeked = () => {
             const scale = Math.min(1, THUMBNAIL_MAX_EDGE / Math.max(video.videoWidth, video.videoHeight));
@@ -82,23 +101,12 @@ export async function extractVideoFirstFrame(file: File): Promise<Blob | null> {
 
             const ctx = canvas.getContext("2d");
             if (!ctx) {
-                cleanup();
-                resolve(null);
+                finish(null);
                 return;
             }
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            canvas.toBlob(
-                (blob) => {
-                    cleanup();
-                    resolve(blob);
-                },
-                "image/jpeg",
-                0.8,
-            );
+            canvas.toBlob((blob) => finish(blob), "image/jpeg", 0.8);
         };
-        video.onerror = () => {
-            cleanup();
-            resolve(null);
-        };
+        video.onerror = () => finish(null);
     });
 }
