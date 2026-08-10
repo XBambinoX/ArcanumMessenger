@@ -119,6 +119,7 @@ export default function NewChatPanel({ onClose, onStartChat }: NewChatPanelProps
                 className={styles.panel}
                 onClick={(e) => e.stopPropagation()}
             >
+                <div className={styles.panelScroll}>
                 <header className={styles.header}>
                     <div className={styles.headerLeft}>
                         {mode !== "browse" && (
@@ -330,6 +331,7 @@ export default function NewChatPanel({ onClose, onStartChat }: NewChatPanelProps
                         )}
                     </>
                 )}
+                </div>
             </aside>
         </div>
 

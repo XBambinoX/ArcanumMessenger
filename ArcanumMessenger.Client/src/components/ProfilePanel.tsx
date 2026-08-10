@@ -1054,6 +1054,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
     return (
         <div className={styles.overlay} onClick={onClose}>
             <aside className={styles.panel} onClick={(e) => e.stopPropagation()}>
+                <div className={styles.panelScroll}>
                 <header className={styles.header}>
                     {section === "main" ? (
                         <h2 className={styles.title}>{sectionTitles.main}</h2>
@@ -1098,6 +1099,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                     >
                         {renderSection(section)}
                     </div>
+                </div>
                 </div>
             </aside>
             {deleteModalOpen && (

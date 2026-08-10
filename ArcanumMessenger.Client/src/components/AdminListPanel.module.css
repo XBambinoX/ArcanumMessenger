@@ -15,14 +15,20 @@
     width: 320px;
     max-width: 100%;
     max-height: 85vh;
-    overflow-y: auto;
+    /* Scrolling lives on .panelScroll now, not here - see
+       ChatInfoPanel.module.css's .panel comment for why: a native
+       scrollbar is browser chrome, not "content", and border-radius
+       doesn't reliably clip it in every engine (Firefox in particular can
+       render it as a flat bar cutting straight through a rounded corner).
+       overflow: hidden here is what actually guarantees nothing - the
+       inner scrollbar included - ever renders outside this rounded shape. */
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     background: rgb(var(--bg-elevated-rgb));
     border: 1px solid rgba(var(--accent-rgb), 0.2);
     border-radius: 16px;
     box-shadow: 0 24px 70px rgba(var(--black-rgb), 0.5);
-    padding: 20px;
     animation: panelPop 0.16s ease-out;
 }
 
@@ -37,16 +43,25 @@
     }
 }
 
-.panel::-webkit-scrollbar {
+.panelScroll {
+    overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(var(--accent-rgb), 0.35) transparent;
+    padding: 20px;
+}
+
+.panelScroll::-webkit-scrollbar {
     width: 6px;
 }
 
-.panel::-webkit-scrollbar-thumb {
+.panelScroll::-webkit-scrollbar-thumb {
     background: rgba(var(--accent-rgb), 0.35);
     border-radius: 3px;
 }
 
-.panel::-webkit-scrollbar-track {
+.panelScroll::-webkit-scrollbar-track {
     background: transparent;
 }
 

@@ -106,6 +106,7 @@ export default function MembersManagePanel({
                 className={styles.panel}
                 onClick={(e) => e.stopPropagation()}
             >
+                <div className={styles.panelScroll}>
                 <header className={styles.header}>
                     <div className={styles.headerLeft}>
                         {mode === "add" && (
@@ -244,6 +245,7 @@ export default function MembersManagePanel({
                         </button>
                     </>
                 )}
+                </div>
             </aside>
         </div>
     );

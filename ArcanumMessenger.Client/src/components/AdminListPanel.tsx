@@ -33,6 +33,7 @@ export default function AdminListPanel({
                 className={styles.panel}
                 onClick={(e) => e.stopPropagation()}
             >
+                <div className={styles.panelScroll}>
                 <header className={styles.header}>
                     <h2 className={styles.title}>{tr.title}</h2>
                     <button
@@ -116,6 +117,7 @@ export default function AdminListPanel({
                         )}
                     </>
                 )}
+                </div>
             </aside>
         </div>
     );
