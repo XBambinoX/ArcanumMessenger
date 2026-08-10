@@ -91,7 +91,10 @@ export interface ChatInfoPanelTranslation {
     deleteChatButton: string;
     generalTab: string;
     mediaTab: string;
+    gifTab: string;
     loadMore: string;
+    goToMessage: string;
+    deleteMediaMessage: string;
 }
 
 export interface AdminListPanelTranslation {
@@ -377,7 +380,10 @@ export const CHAT_INFO_TRANSLATIONS: Record<Language, ChatInfoPanelTranslation> 
         deleteChatButton: "Delete chat",
         generalTab: "General",
         mediaTab: "Media",
+        gifTab: "GIF",
         loadMore: "Load more",
+        goToMessage: "Go to message",
+        deleteMediaMessage: "Delete",
     },
     uk: {
         closeAria: "Закрити",
@@ -408,7 +414,10 @@ export const CHAT_INFO_TRANSLATIONS: Record<Language, ChatInfoPanelTranslation> 
         deleteChatButton: "Видалити чат",
         generalTab: "Загальне",
         mediaTab: "Медіа",
+        gifTab: "GIF",
         loadMore: "Завантажити ще",
+        goToMessage: "До повідомлення",
+        deleteMediaMessage: "Видалити",
     },
     de: {
         closeAria: "Schließen",
@@ -439,6 +448,9 @@ export const CHAT_INFO_TRANSLATIONS: Record<Language, ChatInfoPanelTranslation> 
         deleteChatButton: "Chat löschen",
         generalTab: "Allgemein",
         mediaTab: "Medien",
+        gifTab: "GIF",
         loadMore: "Mehr laden",
+        goToMessage: "Zur Nachricht",
+        deleteMediaMessage: "Löschen",
     },
 };

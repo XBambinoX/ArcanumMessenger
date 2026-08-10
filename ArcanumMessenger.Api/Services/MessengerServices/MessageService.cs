@@ -87,7 +87,7 @@ public class MessageService(
     }
 
     public async Task<(List<ChatMediaItemDto> Items, bool HasMore, string? Reason)> GetMediaAsync(
-        Guid chatId, Guid? beforeMessageId, int take, CancellationToken ct)
+        Guid chatId, Guid? beforeMessageId, int take, string? kind, CancellationToken ct)
     {
         take = Math.Clamp(take <= 0 ? DefaultTake : take, 1, MaxTake);
 
@@ -104,6 +104,17 @@ public class MessageService(
 
         var query = db.Messages.AsNoTracking()
             .Where(m => m.ChatId == chatId && !m.IsDeleted && m.MediaId != null);
+        // The chat-info panel splits gifs into their own tab - they can pile
+        // up fast (stickers, reactions) and would otherwise crowd out actual
+        // photos/videos in the same grid. "media" is everything else
+        // (photo/video/file), not just photo/video, so the two tabs stay a
+        // clean partition of the same list rather than dropping files.
+        query = kind switch
+        {
+            "gif" => query.Where(m => m.Type == "gif"),
+            "media" => query.Where(m => m.Type != "gif"),
+            _ => query,
+        };
         if (beforeMessageId is { } cursor)
             query = query.Where(m => m.CreatedAt < beforeCreatedAt ||
                 (m.CreatedAt == beforeCreatedAt && m.Id < cursor));

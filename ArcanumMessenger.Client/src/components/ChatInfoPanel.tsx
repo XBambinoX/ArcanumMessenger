@@ -32,6 +32,8 @@ interface ChatInfoPanelProps {
     onChatRemoved: (chatId: string) => void;
     chatAvatarNonce: number;
     onChatAvatarChanged: () => void;
+    onJumpToMessage: (messageId: string) => void;
+    onDeleteMessage: (messageId: string) => void;
 }
 
 interface PresenceInfo {
@@ -59,6 +61,7 @@ function sortMembers(members: ChatMemberInfo[]): ChatMemberInfo[] {
 
 export default function ChatInfoPanel({
     chat, connection, onClose, onChatRemoved, chatAvatarNonce, onChatAvatarChanged,
+    onJumpToMessage, onDeleteMessage,
 }: ChatInfoPanelProps) {
     const language = useLanguage();
     const common = APP_COMMON[language];
@@ -77,7 +80,14 @@ export default function ChatInfoPanel({
     const tabContentRef = useRef<HTMLDivElement | null>(null);
     const prevInfoTabRef = useRef<"general" | "media">("general");
     const [tabContentHeight, setTabContentHeight] = useState<number | undefined>(undefined);
-    const mediaGridTr = { noMediaYet: tr.noMediaYet, loadMore: tr.loadMore };
+    const mediaGridTr = {
+        noMediaYet: tr.noMediaYet,
+        loadMore: tr.loadMore,
+        mediaTab: tr.mediaTab,
+        gifTab: tr.gifTab,
+        goToMessage: tr.goToMessage,
+        deleteMediaMessage: tr.deleteMediaMessage,
+    };
     const tabOrder: Record<"general" | "media", number> = { general: 0, media: 1 };
     const tabDirection = tabOrder[infoTab] >= tabOrder[prevInfoTabRef.current] ? 1 : -1;
 
@@ -252,6 +262,8 @@ export default function ChatInfoPanel({
                         <path d="M18 6L6 18M6 6l12 12" />
                     </svg>
                 </button>
+
+                <div className={styles.panelScroll}>
 
                 {confirming ? (
                     <div className={styles.confirmView}>
@@ -494,6 +506,8 @@ export default function ChatInfoPanel({
                                                 <ChatMediaGrid
                                                     chat={{ id: chat.id, wrappedChatKey: chat.wrappedChatKey }}
                                                     tr={mediaGridTr}
+                                                    onJumpToMessage={onJumpToMessage}
+                                                    onDeleteMessage={onDeleteMessage}
                                                 />
                                             </section>
                                         )}
@@ -513,10 +527,11 @@ export default function ChatInfoPanel({
                                     </div>
                                 </section>
                                 <section className={styles.mediaSection}>
-                                    <h3 className={styles.membersTitle}>{tr.mediaLabel}</h3>
                                     <ChatMediaGrid
                                         chat={{ id: chat.id, wrappedChatKey: chat.wrappedChatKey }}
                                         tr={mediaGridTr}
+                                        onJumpToMessage={onJumpToMessage}
+                                        onDeleteMessage={onDeleteMessage}
                                     />
                                 </section>
                             </>
@@ -548,6 +563,7 @@ export default function ChatInfoPanel({
                         )}
                     </>
                 )}
+                </div>
             </aside>
         </div>
 

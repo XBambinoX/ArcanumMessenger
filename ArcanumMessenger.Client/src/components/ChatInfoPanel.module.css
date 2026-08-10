@@ -13,29 +13,48 @@
 .panel {
     position: relative;
     box-sizing: border-box;
-    width: 320px;
+    /* Matches ProfilePanel/NewChatPanel's own width - 320px left the media
+       grid's 3 columns cramped, and desktop has the room to spare. */
+    width: 480px;
     max-width: 100%;
     max-height: 85vh;
-    overflow-y: auto;
+    /* Scrolling lives on .panelScroll now, not here - a native scrollbar
+       is browser chrome, not "content", and border-radius doesn't
+       reliably clip it in every engine (Firefox in particular can render
+       it as a flat bar cutting straight through a rounded corner). This
+       overflow: hidden is what actually guarantees nothing - including
+       the inner scrollbar - ever renders outside this rounded shape. */
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     background: rgb(var(--bg-elevated-rgb));
     border: 1px solid rgba(var(--accent-rgb), 0.2);
     border-radius: 16px;
     box-shadow: 0 20px 60px rgba(var(--black-rgb), 0.45);
+}
+
+.panelScroll {
+    overflow-y: auto;
+    /* Lets this actually shrink to fit .panel's max-height instead of
+       pushing past it - a flex item's default min-height would otherwise
+       refuse to go below its content's own size. */
+    flex: 1 1 auto;
+    min-height: 0;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(var(--accent-rgb), 0.35) transparent;
     padding: 18px;
 }
 
-.panel::-webkit-scrollbar {
+.panelScroll::-webkit-scrollbar {
     width: 6px;
 }
 
-.panel::-webkit-scrollbar-thumb {
+.panelScroll::-webkit-scrollbar-thumb {
     background: rgba(var(--accent-rgb), 0.35);
     border-radius: 3px;
 }
 
-.panel::-webkit-scrollbar-track {
+.panelScroll::-webkit-scrollbar-track {
     background: transparent;
 }
 
@@ -43,6 +62,12 @@
     position: absolute;
     top: 14px;
     right: 14px;
+    /* Sits before .panelScroll in the DOM (so its own top/right offsets
+       stay anchored to .panel, not to whatever scrolled into view) but
+       that means .panelScroll's content would otherwise paint over it -
+       this keeps it on top. Also means it now stays put while the panel
+       scrolls instead of scrolling away with the rest of the content. */
+    z-index: 1;
     width: 30px;
     height: 30px;
     border-radius: 9px;
@@ -80,7 +105,11 @@
     font-size: 24px;
     font-weight: 700;
     color: rgb(var(--white-rgb));
-    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
+    background: linear-gradient(
+        135deg,
+        rgb(var(--accent-rgb)),
+        rgb(var(--accent2-rgb))
+    );
     margin-bottom: 10px;
 }
 
@@ -124,11 +153,19 @@
 }
 
 .chatAvatarGroup {
-    background: linear-gradient(135deg, rgb(var(--accent-cyan3-rgb)), rgb(var(--accent2-rgb)));
+    background: linear-gradient(
+        135deg,
+        rgb(var(--accent-cyan3-rgb)),
+        rgb(var(--accent2-rgb))
+    );
 }
 
 .chatAvatarSaved {
-    background: linear-gradient(135deg, rgb(var(--accent-blue-rgb)), rgb(var(--accent-blue2-rgb)));
+    background: linear-gradient(
+        135deg,
+        rgb(var(--accent-blue-rgb)),
+        rgb(var(--accent-blue2-rgb))
+    );
 }
 
 .chatTitle {
@@ -300,7 +337,11 @@
     font-size: 14px;
     font-weight: 700;
     color: rgb(var(--white-rgb));
-    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
+    background: linear-gradient(
+        135deg,
+        rgb(var(--accent-rgb)),
+        rgb(var(--accent2-rgb))
+    );
 }
 
 .onlineDot {
@@ -385,7 +426,11 @@
     flex-shrink: 0;
     border-radius: 50%;
     color: rgb(var(--white-rgb));
-    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
+    background: linear-gradient(
+        135deg,
+        rgb(var(--accent-rgb)),
+        rgb(var(--accent2-rgb))
+    );
 }
 
 .adminListLabel {

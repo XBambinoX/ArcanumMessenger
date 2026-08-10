@@ -65,9 +65,16 @@ export interface ChatMediaResult {
     hasMore: boolean;
 }
 
-export async function getChatMedia(chatId: string, before?: string): Promise<ChatMediaResult> {
-    const params = before ? `?before=${before}` : "";
-    const res = await apiFetch(`/api/chats/${chatId}/messages/media${params}`, {
+export async function getChatMedia(
+    chatId: string,
+    before?: string,
+    kind?: "media" | "gif",
+): Promise<ChatMediaResult> {
+    const params = new URLSearchParams();
+    if (before) params.set("before", before);
+    if (kind) params.set("kind", kind);
+    const query = params.toString();
+    const res = await apiFetch(`/api/chats/${chatId}/messages/media${query ? `?${query}` : ""}`, {
         credentials: "include",
     });
     const data = await res.json();

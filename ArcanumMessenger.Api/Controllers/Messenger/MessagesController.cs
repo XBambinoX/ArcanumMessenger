@@ -27,7 +27,7 @@ public class MessagesController(MessageService messageService, ChatAccessService
 
     [HttpGet("media")]
     public async Task<ActionResult<ChatMediaResponse>> Media(
-        Guid chatId, [FromQuery] Guid? before, [FromQuery] int take, CancellationToken ct)
+        Guid chatId, [FromQuery] Guid? before, [FromQuery] int take, [FromQuery] string? kind, CancellationToken ct)
     {
         if (!TryGetUserId(out var userId))
             return Unauthorized();
@@ -36,7 +36,7 @@ public class MessagesController(MessageService messageService, ChatAccessService
         if (membership is null)
             return NotFound(new ChatMediaResponse(false, Reason: "not_found"));
 
-        var (items, hasMore, reason) = await messageService.GetMediaAsync(chatId, before, take, ct);
+        var (items, hasMore, reason) = await messageService.GetMediaAsync(chatId, before, take, kind, ct);
         if (reason is not null)
             return BadRequest(new ChatMediaResponse(false, Reason: reason));
 
