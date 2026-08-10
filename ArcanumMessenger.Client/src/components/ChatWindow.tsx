@@ -20,6 +20,7 @@ import ForwardPanel from "./ForwardPanel";
 import AvatarImage from "./AvatarImage";
 import MessageContextMenu, { type MessageContextMenuItem } from "./MessageContextMenu";
 import styles from "./ChatWindow.module.css";
+import mediaStyles from "./EncryptedMedia.module.css";
 import { useLanguage } from "../lib/language";
 import { useIsMobile } from "../lib/useMediaQuery";
 import { APP_COMMON, type AppCommonTranslation } from "../lib/appTranslations";
@@ -164,6 +165,11 @@ export default function ChatWindow({
     const [stickerPickerOpen, setStickerPickerOpen] = useState(false);
     const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
     const [savedGifIds, setSavedGifIds] = useState<Set<string>>(new Set());
+    // A gif send re-encrypts+re-uploads the file before the real message
+    // exists at all, which can take a while on a slow connection - this is
+    // what shows a "sending..." placeholder bubble in the meantime instead
+    // of the tap appearing to do nothing.
+    const [pendingGifSends, setPendingGifSends] = useState<{ tempId: string; media: MediaAsset }[]>([]);
     const [contextMenu, setContextMenu] = useState<{ message: ChatMessage; x: number; y: number } | null>(null);
     const [replyTarget, setReplyTarget] = useState<ChatMessage | null>(null);
     const [editTarget, setEditTarget] = useState<ChatMessage | null>(null);
@@ -530,19 +536,26 @@ export default function ChatWindow({
         const replyToId = replyTarget?.id ?? null;
         setReplyTarget(null);
 
+        const tempId = `pending-${crypto.randomUUID()}`;
+        setPendingGifSends((prev) => [...prev, { tempId, media: entry.media }]);
+
         // A saved gif is encrypted under the Saved Messages chat's key -
         // has to be re-encrypted under this chat's key before it can be
         // sent here, same as forwarding.
         const reencrypted = await reencryptMediaAcrossChats(
             savedChat, { id: chat.id, wrappedChatKey: chat.wrappedChatKey }, entry.media,
         );
-        if (!reencrypted) return;
+        if (!reencrypted) {
+            setPendingGifSends((prev) => prev.filter((p) => p.tempId !== tempId));
+            return;
+        }
 
         // Re-encrypting for this chat is a fresh upload server-side, so its
         // Kind is re-derived from mime type alone - a gif sent as a video
         // file would come back as "video" without this, having lost the
         // "gif" classification the original message's asset had.
         const sent = await sendMessage(chat.id, "", reencrypted.id, true, replyToId);
+        setPendingGifSends((prev) => prev.filter((p) => p.tempId !== tempId));
         if (sent) {
             setMessages((prev) => appendUnique(prev, [sent]));
             markAnimated(sent.id);
@@ -1031,6 +1044,26 @@ export default function ChatWindow({
                         </div>
                     );
                 })}
+                {pendingGifSends.map(({ tempId, media }) => {
+                    const ratioVar = media.width && media.height
+                        ? ({ "--media-aspect": `${media.width} / ${media.height}` } as React.CSSProperties)
+                        : undefined;
+                    return (
+                        <div key={tempId} className={`${styles.bubbleRow} ${styles.own}`}>
+                            <div className={`${styles.bubble} ${styles.bubbleBare}`}>
+                                <div className={styles.mediaWrap}>
+                                    {/* .mediaImageLoading, not just .mediaImage - see its own comment
+                                        in ChatWindow.module.css: a plain div has no intrinsic size the
+                                        way a loaded <img> does, so it needs an explicit width or this
+                                        collapses to nothing instead of showing a real placeholder box. */}
+                                    <div className={`${styles.mediaImageLoading} ${mediaStyles.loading}`} style={ratioVar}>
+                                        <span className={mediaStyles.spinner} />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
                 <div ref={scrollAnchor} />
             </div>
 
@@ -1273,6 +1306,15 @@ export default function ChatWindow({
                             />
                             <button
                                 className={styles.sendBtn}
+                                // Tapping a button moves focus to it by default,
+                                // and away from the draft textarea - since a
+                                // button isn't a text field, that's what tells
+                                // the on-screen keyboard to close. Blocking just
+                                // that default (not the click itself) keeps the
+                                // textarea focused, so the keyboard stays open
+                                // through a send and only closes when the user
+                                // actually taps outside the input themselves.
+                                onMouseDown={(e) => e.preventDefault()}
                                 onClick={handleSend}
                                 disabled={!draft.trim() && !pendingMedia}
                                 aria-label={common.send}

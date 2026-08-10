@@ -56,7 +56,7 @@ namespace ArcanumMessenger.Migrations
                         .IsUnique()
                         .HasFilter("\"Type\" = 'saved'");
 
-                    b.ToTable("Chats");
+                    b.ToTable("Chats", (string)null);
                 });
 
             modelBuilder.Entity("ArcanumMessenger.Entities.ChatMember", b =>
@@ -93,7 +93,7 @@ namespace ArcanumMessenger.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("ChatMembers");
+                    b.ToTable("ChatMembers", (string)null);
                 });
 
             modelBuilder.Entity("ArcanumMessenger.Entities.Contact", b =>
@@ -119,7 +119,7 @@ namespace ArcanumMessenger.Migrations
 
                     b.HasIndex("ContactId");
 
-                    b.ToTable("Contacts");
+                    b.ToTable("Contacts", (string)null);
                 });
 
             modelBuilder.Entity("ArcanumMessenger.Entities.MediaAsset", b =>
@@ -172,7 +172,7 @@ namespace ArcanumMessenger.Migrations
 
                     b.HasIndex("UploaderId");
 
-                    b.ToTable("MediaAssets");
+                    b.ToTable("MediaAssets", (string)null);
                 });
 
             modelBuilder.Entity("ArcanumMessenger.Entities.Message", b =>
@@ -231,7 +231,7 @@ namespace ArcanumMessenger.Migrations
 
                     b.HasIndex("ChatId", "CreatedAt");
 
-                    b.ToTable("Messages");
+                    b.ToTable("Messages", (string)null);
                 });
 
             modelBuilder.Entity("ArcanumMessenger.Entities.SavedGif", b =>
@@ -254,7 +254,7 @@ namespace ArcanumMessenger.Migrations
 
                     b.HasIndex("MediaId");
 
-                    b.ToTable("SavedGifs");
+                    b.ToTable("SavedGifs", (string)null);
                 });
 
             modelBuilder.Entity("ArcanumMessenger.Entities.Session", b =>
@@ -301,7 +301,7 @@ namespace ArcanumMessenger.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Sessions");
+                    b.ToTable("Sessions", (string)null);
                 });
 
             modelBuilder.Entity("ArcanumMessenger.Entities.User", b =>
@@ -377,7 +377,7 @@ namespace ArcanumMessenger.Migrations
 
                     b.HasIndex("PublicIdPrefixHash");
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("ArcanumMessenger.Entities.UserSettings", b =>
@@ -464,7 +464,7 @@ namespace ArcanumMessenger.Migrations
 
                     b.HasKey("UserId");
 
-                    b.ToTable("UserSettings");
+                    b.ToTable("UserSettings", (string)null);
                 });
 
             modelBuilder.Entity("ArcanumMessenger.Entities.Chat", b =>
