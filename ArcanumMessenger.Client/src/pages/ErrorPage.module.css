@@ -1,6 +1,6 @@
 .root {
     position: relative;
-    min-height: 100vh;
+    height: 100svh;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -8,6 +8,7 @@
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     overflow: hidden;
     padding: 24px;
+    box-sizing: border-box;
 }
 
 .orb1, .orb2 {
@@ -46,6 +47,9 @@
     z-index: 2;
     width: 100%;
     max-width: 440px;
+    max-height: calc(100svh - 48px);
+    overflow-y: auto;
+    box-sizing: border-box;
     border-radius: 24px;
     border: 1px solid rgba(var(--error-accent-rgb), 0.2);
     background: linear-gradient(135deg, rgba(var(--error-accent-rgb), 0.06), rgba(var(--bg-elevated-rgb), 0.95));
