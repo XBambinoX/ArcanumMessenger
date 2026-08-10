@@ -1,0 +1,105 @@
+.panel {
+    box-sizing: border-box;
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 0;
+    width: 320px;
+    max-width: min(320px, 80vw);
+    max-height: min(400px, 58vh);
+    display: flex;
+    flex-direction: column;
+    background: rgb(var(--bg-elevated-rgb));
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
+    border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(var(--black-rgb), 0.45);
+    z-index: 10;
+    overflow: hidden;
+    animation: panelPop 0.14s ease-out;
+}
+
+@keyframes panelPop {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.topBar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 8px 0;
+    flex-shrink: 0;
+}
+
+.topTabs {
+    flex: 1;
+    display: flex;
+    gap: 4px;
+}
+
+.topTab {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: rgba(var(--text-muted-rgb), 0.7);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s;
+}
+
+.topTab:hover {
+    background: rgba(var(--accent-rgb), 0.1);
+}
+
+.topTabActive {
+    background: rgba(var(--accent-rgb), 0.18);
+    border-color: rgba(var(--accent-rgb), 0.3);
+    color: rgba(var(--accent-light-rgb), 0.95);
+}
+
+.closeBtn {
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    background: rgba(var(--accent-rgb), 0.05);
+    color: rgba(var(--accent-light-rgb), 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.closeBtn:hover {
+    background: rgba(var(--accent-rgb), 0.12);
+    border-color: rgba(var(--accent-light-rgb), 0.4);
+}
+
+/* Same bottom-sheet treatment as the two pickers this composes - see
+   EmojiPicker.module.css/GifPicker.module.css for the full rationale.
+   Keep in sync with useMediaQuery.ts's MOBILE_BREAKPOINT_QUERY. */
+@media (max-width: 760px) {
+    .panel {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 78px;
+        top: auto;
+        width: 100%;
+        max-width: 100%;
+        max-height: 42vh;
+        border-radius: 16px;
+    }
+}

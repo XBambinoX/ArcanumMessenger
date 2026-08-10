@@ -18,9 +18,13 @@ interface GifPickerProps {
     savedChat: KeyedChat;
     onClose: () => void;
     onSelect: (entry: SavedGifEntry) => void;
+    // "embedded" drops the outer panel shell, title, and close button -
+    // used by StickerPicker, which provides its own shared shell/close
+    // button around this and EmojiPicker's content under one set of tabs.
+    variant?: "standalone" | "embedded";
 }
 
-export default function GifPicker({ savedChat, onClose, onSelect }: GifPickerProps) {
+export default function GifPicker({ savedChat, onClose, onSelect, variant = "standalone" }: GifPickerProps) {
     const tr = GIF_PICKER_TRANSLATIONS[useLanguage()];
     const [gifs, setGifs] = useState<SavedGifEntry[]>([]);
     const [loaded, setLoaded] = useState(false);
@@ -32,16 +36,18 @@ export default function GifPicker({ savedChat, onClose, onSelect }: GifPickerPro
         });
     }, [savedChat]);
 
-    return (
-        <aside className={styles.panel}>
-            <header className={styles.header}>
-                <h2 className={styles.title}>{tr.title}</h2>
-                <button className={styles.closeBtn} onClick={onClose} aria-label={tr.closeAria}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-                        <path d="M18 6L6 18M6 6l12 12" />
-                    </svg>
-                </button>
-            </header>
+    const body = (
+        <>
+            {variant === "standalone" && (
+                <div className={styles.header}>
+                    <h2 className={styles.title}>{tr.title}</h2>
+                    <button className={styles.closeBtn} onClick={onClose} aria-label={tr.closeAria}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                            <path d="M18 6L6 18M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            )}
 
             {loaded && gifs.length === 0 && (
                 <p className={styles.note}>
@@ -68,7 +74,9 @@ export default function GifPicker({ savedChat, onClose, onSelect }: GifPickerPro
                     ))}
                 </div>
             )}
-        </aside>
+        </>
     );
+
+    return variant === "standalone" ? <aside className={styles.panel}>{body}</aside> : body;
 }
 

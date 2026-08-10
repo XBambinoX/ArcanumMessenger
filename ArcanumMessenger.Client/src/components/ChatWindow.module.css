@@ -504,7 +504,7 @@
     border-color: rgba(var(--accent-light-rgb), 0.4);
 }
 
-.gifButtonWrap {
+.stickerButtonWrap {
     position: relative;
     flex-shrink: 0;
 }
@@ -621,6 +621,10 @@
 
 .input {
     flex: 1;
+    /* Without this a flex item's shrink floor defaults to its content's
+       intrinsic width, not 0 - on a narrow phone that alone was enough to
+       push the send button off the right edge of the screen. */
+    min-width: 0;
     padding: 11px 16px;
     border-radius: 12px;
     border: 1px solid rgba(var(--accent-rgb), 0.2);
@@ -628,7 +632,12 @@
     color: rgba(var(--text-rgb), 0.95);
     font-family: inherit;
     font-size: 14px;
+    line-height: 1.4;
     outline: none;
+    resize: none;
+    box-sizing: border-box;
+    max-height: 120px;
+    overflow-y: auto;
     transition:
         border-color 0.2s,
         background 0.2s;

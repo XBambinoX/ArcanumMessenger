@@ -14,13 +14,14 @@ import { encryptOutgoing, decryptIncoming, decryptIncomingList, getChatKey } fro
 import { selfHealChatKeys } from "../lib/chatKeySelfHeal";
 import UserInfoPanel from "./UserInfoPanel";
 import ChatInfoPanel from "./ChatInfoPanel";
-import GifPicker from "./GifPicker";
 import EmojiPicker from "./EmojiPicker";
+import StickerPicker from "./StickerPicker";
 import ForwardPanel from "./ForwardPanel";
 import AvatarImage from "./AvatarImage";
 import MessageContextMenu, { type MessageContextMenuItem } from "./MessageContextMenu";
 import styles from "./ChatWindow.module.css";
 import { useLanguage } from "../lib/language";
+import { useIsMobile } from "../lib/useMediaQuery";
 import { APP_COMMON, type AppCommonTranslation } from "../lib/appTranslations";
 import { CHAT_WINDOW_TRANSLATIONS } from "../lib/chatWindowTranslations";
 
@@ -124,6 +125,7 @@ interface ChatWindowProps {
 }
 
 const ANIMATE_MS = 260;
+const MAX_COMPOSE_HEIGHT = 120;
 
 function dayLabel(iso: string, common: AppCommonTranslation): string {
     const date = new Date(iso);
@@ -142,6 +144,7 @@ export default function ChatWindow({
     chat, connection, onStartChat, onChatRemoved, presence, chatAvatarNonce, onChatAvatarChanged, onBack,
 }: ChatWindowProps) {
     const language = useLanguage();
+    const isMobile = useIsMobile();
     const common = APP_COMMON[language];
     const tr = CHAT_WINDOW_TRANSLATIONS[language];
     const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -155,7 +158,10 @@ export default function ChatWindow({
     const [sendAsGif, setSendAsGif] = useState(false);
     const [uploadingFile, setUploadingFile] = useState(false);
     const [uploadProgress, setUploadProgress] = useState<{ loaded: number; total: number } | null>(null);
-    const [gifPickerOpen, setGifPickerOpen] = useState(false);
+    // The merged emoji+GIF picker (StickerPicker) shown in the normal
+    // compose state; editing a message falls back to a plain emoji-only
+    // button below (attaching a new GIF while editing isn't supported).
+    const [stickerPickerOpen, setStickerPickerOpen] = useState(false);
     const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
     const [savedGifIds, setSavedGifIds] = useState<Set<string>>(new Set());
     const [contextMenu, setContextMenu] = useState<{ message: ChatMessage; x: number; y: number } | null>(null);
@@ -167,9 +173,9 @@ export default function ChatWindow({
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const scrollAnchor = useRef<HTMLDivElement | null>(null);
     const messagesRef = useRef<HTMLDivElement | null>(null);
-    const gifPanelRef = useRef<HTMLDivElement | null>(null);
+    const stickerPanelRef = useRef<HTMLDivElement | null>(null);
     const emojiPanelRef = useRef<HTMLDivElement | null>(null);
-    const draftInputRef = useRef<HTMLInputElement | null>(null);
+    const draftInputRef = useRef<HTMLTextAreaElement | null>(null);
     const prependingRef = useRef(false);
     const uploadAbortRef = useRef<AbortController | null>(null);
     const uploadFileRef = useRef<File | null>(null);
@@ -247,17 +253,17 @@ export default function ChatWindow({
     }, []);
 
     useEffect(() => {
-        if (!gifPickerOpen) return;
+        if (!stickerPickerOpen) return;
 
         const handleClickOutside = (e: MouseEvent) => {
-            if (gifPanelRef.current && !gifPanelRef.current.contains(e.target as Node)) {
-                setGifPickerOpen(false);
+            if (stickerPanelRef.current && !stickerPanelRef.current.contains(e.target as Node)) {
+                setStickerPickerOpen(false);
             }
         };
 
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [gifPickerOpen]);
+    }, [stickerPickerOpen]);
 
     useEffect(() => {
         if (!emojiPickerOpen) return;
@@ -299,6 +305,21 @@ export default function ChatWindow({
     useEffect(() => {
         selfHealChatKeys(chat.id, chat.wrappedChatKey);
     }, [chat.id, chat.wrappedChatKey]);
+
+    // Grows the compose box with its content up to MAX_COMPOSE_HEIGHT, then
+    // scrolls internally beyond that - resetting height to "auto" first is
+    // what lets scrollHeight shrink back down after deleting a line, not
+    // just grow. .input is box-sizing:border-box, so its border isn't part
+    // of scrollHeight - without adding it back, the content area ends up
+    // exactly `border` px too short for its own content, and that's enough
+    // overflow to keep a scrollbar showing even on a single short line.
+    useEffect(() => {
+        const el = draftInputRef.current;
+        if (!el) return;
+        el.style.height = "auto";
+        const border = el.offsetHeight - el.clientHeight;
+        el.style.height = `${Math.min(el.scrollHeight + border, MAX_COMPOSE_HEIGHT)}px`;
+    }, [draft]);
 
     useEffect(() => {
         if (!connection) return;
@@ -1161,7 +1182,7 @@ export default function ChatWindow({
                             </div>
                         )}
                         <div className={styles.inputRow}>
-                            {!editTarget && (
+                            {!editTarget ? (
                                 <>
                                     <input
                                         type="file"
@@ -1179,56 +1200,66 @@ export default function ChatWindow({
                                             <path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.33 3.33 0 0 1 4.71 4.71l-9.2 9.19a1.67 1.67 0 0 1-2.36-2.36l8.49-8.48" />
                                         </svg>
                                     </button>
-                                    <div className={styles.gifButtonWrap} ref={gifPanelRef}>
+                                    <div className={styles.stickerButtonWrap} ref={stickerPanelRef}>
                                         <button
                                             className={styles.attachBtn}
-                                            onClick={() => setGifPickerOpen((prev) => !prev)}
-                                            aria-label={tr.savedGifsAria}
-                                            title={tr.savedGifsAria}
+                                            onClick={() => setStickerPickerOpen((prev) => !prev)}
+                                            aria-label={tr.emojiAria}
+                                            title={tr.emojiAria}
                                         >
                                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                <rect x="3" y="5" width="18" height="14" rx="2" />
-                                                <path d="M7 9v6M11 9v6M11 12h2M16 9v6M16 9h3M16 12h2" />
+                                                <circle cx="12" cy="12" r="10" />
+                                                <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                                                <path d="M9 9h.01M15 9h.01" />
                                             </svg>
                                         </button>
-                                        {gifPickerOpen && savedChat && (
-                                            <GifPicker
+                                        {stickerPickerOpen && savedChat && (
+                                            <StickerPicker
                                                 savedChat={savedChat}
-                                                onClose={() => setGifPickerOpen(false)}
-                                                onSelect={handleSendGif}
+                                                onClose={() => setStickerPickerOpen(false)}
+                                                onSelectEmoji={handleInsertEmoji}
+                                                onSelectGif={handleSendGif}
                                             />
                                         )}
                                     </div>
                                 </>
+                            ) : (
+                                <div className={styles.emojiButtonWrap} ref={emojiPanelRef}>
+                                    <button
+                                        className={styles.attachBtn}
+                                        onClick={() => setEmojiPickerOpen((prev) => !prev)}
+                                        aria-label={tr.emojiAria}
+                                        title={tr.emojiAria}
+                                    >
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <circle cx="12" cy="12" r="10" />
+                                            <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                                            <path d="M9 9h.01M15 9h.01" />
+                                        </svg>
+                                    </button>
+                                    {emojiPickerOpen && (
+                                        <EmojiPicker
+                                            onClose={() => setEmojiPickerOpen(false)}
+                                            onSelect={handleInsertEmoji}
+                                        />
+                                    )}
+                                </div>
                             )}
-                            <div className={styles.emojiButtonWrap} ref={emojiPanelRef}>
-                                <button
-                                    className={styles.attachBtn}
-                                    onClick={() => setEmojiPickerOpen((prev) => !prev)}
-                                    aria-label={tr.emojiAria}
-                                    title={tr.emojiAria}
-                                >
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <circle cx="12" cy="12" r="10" />
-                                        <path d="M8 14s1.5 2 4 2 4-2 4-2" />
-                                        <path d="M9 9h.01M15 9h.01" />
-                                    </svg>
-                                </button>
-                                {emojiPickerOpen && (
-                                    <EmojiPicker
-                                        onClose={() => setEmojiPickerOpen(false)}
-                                        onSelect={handleInsertEmoji}
-                                    />
-                                )}
-                            </div>
-                            <input
+                            <textarea
                                 ref={draftInputRef}
                                 className={styles.input}
-                                type="text"
+                                rows={1}
                                 placeholder={tr.messagePlaceholder}
                                 value={draft}
                                 onChange={(e) => setDraft(e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                                onKeyDown={(e) => {
+                                    // Mobile: Enter always inserts a newline (there's no
+                                    // convenient Shift key) - sending is send-button-only.
+                                    // Desktop: Enter sends, Shift+Enter inserts a newline.
+                                    if (e.key !== "Enter" || e.shiftKey || isMobile) return;
+                                    e.preventDefault();
+                                    handleSend();
+                                }}
                             />
                             <button
                                 className={styles.sendBtn}
