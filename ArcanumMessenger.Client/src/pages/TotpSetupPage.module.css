@@ -242,6 +242,9 @@
 .actions {
     display: flex;
     align-items: center;
+    /* Centers the back button + primary button together as one group,
+       rather than each fighting to center itself independently. */
+    justify-content: center;
     gap: 10px;
     margin-top: 24px;
 }
@@ -267,7 +270,9 @@
 }
 
 .btnPrimary {
-    flex: 1;
+    /* Not flex: 1 - that sets flex-basis: 0%, which makes the browser grow
+       the item to fill the row from zero and ignore width entirely. */
+    width: 70%;
     position: relative;
     overflow: hidden;
     padding: 14px 20px;

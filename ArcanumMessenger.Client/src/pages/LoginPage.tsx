@@ -345,7 +345,7 @@ export default function LoginPage() {
                         style={{ transform: `translateX(-${step * 100}%)` }}
                     >
                         {/* ── STEP 0: Email ── */}
-                        <div className={styles.slide} ref={(el) => { slideRefs.current[0] = el; }}>
+                        <div className={styles.slide} ref={(el) => { slideRefs.current[0] = el; }} inert={step !== 0}>
                             <h2 className={styles.stepTitle}>
                                 {stepTitles[0].title}
                             </h2>
@@ -393,7 +393,7 @@ export default function LoginPage() {
                         </div>
 
                         {/* ── STEP 1: Password ── */}
-                        <div className={styles.slide} ref={(el) => { slideRefs.current[1] = el; }}>
+                        <div className={styles.slide} ref={(el) => { slideRefs.current[1] = el; }} inert={step !== 1}>
                             <h2 className={styles.stepTitle}>
                                 {stepTitles[1].title}
                             </h2>
@@ -462,7 +462,7 @@ export default function LoginPage() {
                         </div>
 
                         {/* ── STEP 2: TOTP (only if enabled in settings) ── */}
-                        <div className={styles.slide} ref={(el) => { slideRefs.current[2] = el; }}>
+                        <div className={styles.slide} ref={(el) => { slideRefs.current[2] = el; }} inert={step !== 2}>
                             <h2 className={styles.stepTitle}>
                                 {stepTitles[2].title}
                             </h2>

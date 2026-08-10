@@ -560,7 +560,7 @@ export default function RegisterPage() {
                         style={{ transform: `translateX(-${step * 100}%)` }}
                     >
                         {/* ── STEP 0: Username ── */}
-                        <div className={styles.slide} ref={(el) => { slideRefs.current[0] = el; }}>
+                        <div className={styles.slide} ref={(el) => { slideRefs.current[0] = el; }} inert={step !== 0}>
                             <h2 className={styles.stepTitle}>
                                 {stepTitles[0].title}
                             </h2>
@@ -609,7 +609,7 @@ export default function RegisterPage() {
                         </div>
 
                         {/* ── STEP 1: Email ── */}
-                        <div className={styles.slide} ref={(el) => { slideRefs.current[1] = el; }}>
+                        <div className={styles.slide} ref={(el) => { slideRefs.current[1] = el; }} inert={step !== 1}>
                             <h2 className={styles.stepTitle}>
                                 {stepTitles[1].title}
                             </h2>
@@ -678,7 +678,7 @@ export default function RegisterPage() {
                         </div>
 
                         {/* ── STEP 2: Email code ── */}
-                        <div className={styles.slide} ref={(el) => { slideRefs.current[2] = el; }}>
+                        <div className={styles.slide} ref={(el) => { slideRefs.current[2] = el; }} inert={step !== 2}>
                             <h2 className={styles.stepTitle}>
                                 {stepTitles[2].title}
                             </h2>
@@ -769,7 +769,7 @@ export default function RegisterPage() {
                         </div>
 
                         {/* ── STEP 3: Password ── */}
-                        <div className={styles.slide} ref={(el) => { slideRefs.current[3] = el; }}>
+                        <div className={styles.slide} ref={(el) => { slideRefs.current[3] = el; }} inert={step !== 3}>
                             <h2 className={styles.stepTitle}>
                                 {stepTitles[3].title}
                             </h2>
@@ -870,7 +870,7 @@ export default function RegisterPage() {
                         </div>
 
                         {/* ── STEP 4: Recovery phrases ── */}
-                        <div className={styles.slide} ref={(el) => { slideRefs.current[4] = el; }}>
+                        <div className={styles.slide} ref={(el) => { slideRefs.current[4] = el; }} inert={step !== 4}>
                             <h2 className={styles.stepTitle}>
                                 {stepTitles[4].title}
                             </h2>
@@ -989,7 +989,7 @@ export default function RegisterPage() {
                         </div>
 
                         {/* ── STEP 5: Interface language ── */}
-                        <div className={styles.slide} ref={(el) => { slideRefs.current[5] = el; }}>
+                        <div className={styles.slide} ref={(el) => { slideRefs.current[5] = el; }} inert={step !== 5}>
                             <h2 className={styles.stepTitle}>
                                 {stepTitles[5].title}
                             </h2>
@@ -1071,7 +1071,7 @@ export default function RegisterPage() {
                             <span>{tr.modalWarning}</span>
                         </div>
                         <button
-                            className={styles.btnPrimary}
+                            className={`${styles.btnPrimary} ${styles.modalAckBtn}`}
                             onClick={handleEmailInfoAck}
                             disabled={emailInfoCountdown > 0}
                         >

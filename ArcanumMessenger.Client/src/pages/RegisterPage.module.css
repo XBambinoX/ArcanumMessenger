@@ -6,13 +6,18 @@
     align-items: center;
     justify-content: center;
     background: rgb(var(--bg-rgb));
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family:
+        "Inter",
+        -apple-system,
+        BlinkMacSystemFont,
+        sans-serif;
     overflow: hidden;
     padding: 24px;
 }
 
 /* Background ambience */
-.orb1, .orb2 {
+.orb1,
+.orb2 {
     pointer-events: none;
     position: absolute;
     border-radius: 50%;
@@ -23,7 +28,11 @@
     left: -150px;
     width: 600px;
     height: 600px;
-    background: radial-gradient(circle, rgba(var(--accent-rgb), 0.18) 0%, transparent 65%);
+    background: radial-gradient(
+        circle,
+        rgba(var(--accent-rgb), 0.18) 0%,
+        transparent 65%
+    );
 }
 
 .orb2 {
@@ -31,7 +40,11 @@
     right: -150px;
     width: 550px;
     height: 550px;
-    background: radial-gradient(circle, rgba(var(--accent-cyan2-rgb), 0.13) 0%, transparent 65%);
+    background: radial-gradient(
+        circle,
+        rgba(var(--accent-cyan2-rgb), 0.13) 0%,
+        transparent 65%
+    );
 }
 
 .grid {
@@ -39,7 +52,9 @@
     position: absolute;
     inset: 0;
     opacity: 0.03;
-    background-image: linear-gradient(rgba(var(--tint-rgb), 0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(var(--tint-rgb), 0.15) 1px, transparent 1px);
+    background-image:
+        linear-gradient(rgba(var(--tint-rgb), 0.15) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(var(--tint-rgb), 0.15) 1px, transparent 1px);
     background-size: 48px 48px;
 }
 
@@ -48,14 +63,20 @@
     position: relative;
     z-index: 2;
     width: 100%;
-    max-width: 420px;
+    max-width: 460px;
     max-height: calc(100svh - 48px);
     box-sizing: border-box;
     border-radius: 24px;
     border: 1px solid rgba(var(--accent-rgb), 0.18);
-    background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.06), rgba(var(--bg-page-rgb), 0.9));
+    background: linear-gradient(
+        135deg,
+        rgba(var(--accent-rgb), 0.06),
+        rgba(var(--bg-page-rgb), 0.9)
+    );
     backdrop-filter: blur(20px);
-    box-shadow: 0 20px 60px rgba(var(--black-rgb), 0.4), 0 0 40px rgba(var(--accent-rgb), 0.08);
+    box-shadow:
+        0 20px 60px rgba(var(--black-rgb), 0.4),
+        0 0 40px rgba(var(--accent-rgb), 0.08);
     padding: 40px 36px 36px;
     overflow-y: auto;
     overflow-x: hidden;
@@ -76,7 +97,11 @@
     height: 52px;
     border-radius: 14px;
     border: 1px solid rgba(var(--accent-rgb), 0.45);
-    background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.28), rgba(var(--accent2-rgb), 0.18));
+    background: linear-gradient(
+        135deg,
+        rgba(var(--accent-rgb), 0.28),
+        rgba(var(--accent2-rgb), 0.18)
+    );
     display: flex;
     align-items: center;
     justify-content: center;
@@ -86,7 +111,11 @@
 .brand {
     font-size: 20px;
     font-weight: 700;
-    background: linear-gradient(135deg, rgb(var(--accent-light-rgb)), rgb(var(--accent-cyan-rgb)));
+    background: linear-gradient(
+        135deg,
+        rgb(var(--accent-light-rgb)),
+        rgb(var(--accent-cyan-rgb))
+    );
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -110,15 +139,19 @@
     transition: all 0.35s ease;
 }
 
-    .dot.active {
-        width: 24px;
-        border-radius: 4px;
-        background: linear-gradient(90deg, rgb(var(--accent-light-rgb)), rgb(var(--accent-cyan-rgb)));
-    }
+.dot.active {
+    width: 24px;
+    border-radius: 4px;
+    background: linear-gradient(
+        90deg,
+        rgb(var(--accent-light-rgb)),
+        rgb(var(--accent-cyan-rgb))
+    );
+}
 
-    .dot.done {
-        background: rgba(var(--accent-light-rgb), 0.5);
-    }
+.dot.done {
+    background: rgba(var(--accent-light-rgb), 0.5);
+}
 
 /* ── STEP VIEWPORT (carousel) ── */
 .viewport {
@@ -163,10 +196,10 @@
     line-height: 1.5;
 }
 
-    .stepSubtitle b {
-        color: rgba(var(--accent-light-rgb), 0.9);
-        font-weight: 600;
-    }
+.stepSubtitle b {
+    color: rgba(var(--accent-light-rgb), 0.9);
+    font-weight: 600;
+}
 
 .field {
     display: flex;
@@ -177,6 +210,7 @@
 
 .label {
     font-size: 12px;
+    margin-left: 7%;
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -184,7 +218,8 @@
 }
 
 .input {
-    width: 100%;
+    width: 90%;
+    align-self: center;
     box-sizing: border-box;
     padding: 13px 16px;
     border-radius: 12px;
@@ -194,22 +229,25 @@
     font-family: inherit;
     font-size: 15px;
     outline: none;
-    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    transition:
+        border-color 0.2s,
+        background 0.2s,
+        box-shadow 0.2s;
 }
 
-    .input::placeholder {
-        color: rgba(var(--text-muted-rgb), 0.4);
-    }
+.input::placeholder {
+    color: rgba(var(--text-muted-rgb), 0.4);
+}
 
-    .input:focus {
-        border-color: rgba(var(--accent-light-rgb), 0.6);
-        background: rgba(var(--accent-rgb), 0.09);
-        box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.12);
-    }
+.input:focus {
+    border-color: rgba(var(--accent-light-rgb), 0.6);
+    background: rgba(var(--accent-rgb), 0.09);
+    box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.12);
+}
 
-    .input.error {
-        border-color: rgba(var(--danger-rgb), 0.6);
-    }
+.input.error {
+    border-color: rgba(var(--danger-rgb), 0.6);
+}
 
 .errorText {
     font-size: 12px;
@@ -237,14 +275,17 @@
     font-weight: 700;
     text-align: center;
     outline: none;
-    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    transition:
+        border-color 0.2s,
+        background 0.2s,
+        box-shadow 0.2s;
 }
 
-    .codeDigit:focus {
-        border-color: rgba(var(--accent-light-rgb), 0.6);
-        background: rgba(var(--accent-rgb), 0.09);
-        box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.12);
-    }
+.codeDigit:focus {
+    border-color: rgba(var(--accent-light-rgb), 0.6);
+    background: rgba(var(--accent-rgb), 0.09);
+    box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.12);
+}
 
 .resendRow {
     text-align: center;
@@ -264,16 +305,16 @@
     padding: 0;
 }
 
-    .resendLink:hover {
-        color: rgba(var(--accent-light-rgb), 1);
-        text-decoration: underline;
-    }
+.resendLink:hover {
+    color: rgba(var(--accent-light-rgb), 1);
+    text-decoration: underline;
+}
 
-    .resendLink:disabled {
-        color: rgba(var(--text-muted-rgb), 0.4);
-        cursor: default;
-        text-decoration: none;
-    }
+.resendLink:disabled {
+    color: rgba(var(--text-muted-rgb), 0.4);
+    cursor: default;
+    text-decoration: none;
+}
 
 /* Password strength bar */
 .strengthRow {
@@ -300,6 +341,8 @@
 .actions {
     display: flex;
     align-items: center;
+    /* Centers the back button + primary button together as one group */
+    justify-content: center;
     gap: 10px;
     margin-top: 24px;
 }
@@ -319,13 +362,13 @@
     transition: all 0.2s;
 }
 
-    .btnBack:hover {
-        background: rgba(var(--accent-rgb), 0.12);
-        border-color: rgba(var(--accent-light-rgb), 0.4);
-    }
+.btnBack:hover {
+    background: rgba(var(--accent-rgb), 0.12);
+    border-color: rgba(var(--accent-light-rgb), 0.4);
+}
 
 .btnPrimary {
-    flex: 1;
+    width: 70%;
     position: relative;
     overflow: hidden;
     padding: 14px 20px;
@@ -336,24 +379,33 @@
     font-weight: 600;
     color: rgb(var(--white-rgb));
     cursor: pointer;
-    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
-    box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.3), inset 0 1px 0 rgba(var(--white-rgb), 0.1);
-    transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+    background: linear-gradient(
+        135deg,
+        rgb(var(--accent-rgb)),
+        rgb(var(--accent2-rgb))
+    );
+    box-shadow:
+        0 0 20px rgba(var(--accent-rgb), 0.3),
+        inset 0 1px 0 rgba(var(--white-rgb), 0.1);
+    transition:
+        transform 0.15s,
+        box-shadow 0.15s,
+        opacity 0.15s;
 }
 
-    .btnPrimary:hover:not(:disabled) {
-        transform: scale(1.02);
-        box-shadow: 0 0 26px rgba(var(--accent-rgb), 0.45);
-    }
+.btnPrimary:hover:not(:disabled) {
+    transform: scale(1.02);
+    box-shadow: 0 0 26px rgba(var(--accent-rgb), 0.45);
+}
 
-    .btnPrimary:active:not(:disabled) {
-        transform: scale(0.98);
-    }
+.btnPrimary:active:not(:disabled) {
+    transform: scale(0.98);
+}
 
-    .btnPrimary:disabled {
-        opacity: 0.45;
-        cursor: not-allowed;
-    }
+.btnPrimary:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
 
 /* Footer link to login */
 .footerNote {
@@ -374,9 +426,9 @@
     padding: 0;
 }
 
-    .footerLink:hover {
-        text-decoration: underline;
-    }
+.footerLink:hover {
+    text-decoration: underline;
+}
 
 /* Success step icon */
 .successIcon {
@@ -384,7 +436,11 @@
     height: 64px;
     margin: 0 auto 16px;
     border-radius: 50%;
-    background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.25), rgba(var(--accent-cyan-rgb), 0.2));
+    background: linear-gradient(
+        135deg,
+        rgba(var(--accent-rgb), 0.25),
+        rgba(var(--accent-cyan-rgb), 0.2)
+    );
     border: 1px solid rgba(var(--accent-light-rgb), 0.4);
     display: flex;
     align-items: center;
@@ -408,10 +464,10 @@
     transition: all 0.2s;
 }
 
-    .backHome:hover {
-        background: rgba(var(--accent-rgb), 0.12);
-        border-color: rgba(var(--accent-light-rgb), 0.4);
-    }
+.backHome:hover {
+    background: rgba(var(--accent-rgb), 0.12);
+    border-color: rgba(var(--accent-light-rgb), 0.4);
+}
 
 .modalOverlay {
     position: fixed;
@@ -431,7 +487,9 @@
     border-radius: 20px;
     border: 1px solid rgba(var(--accent-rgb), 0.3);
     background: rgb(var(--bg-elevated-rgb));
-    box-shadow: 0 20px 60px rgba(var(--black-rgb), 0.35), 0 0 40px rgba(var(--accent-rgb), 0.1);
+    box-shadow:
+        0 20px 60px rgba(var(--black-rgb), 0.35),
+        0 0 40px rgba(var(--accent-rgb), 0.1);
     padding: 28px 26px 24px;
     text-align: center;
 }
@@ -441,12 +499,21 @@
     height: 52px;
     margin: 0 auto 14px;
     border-radius: 14px;
-    background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.2), rgba(var(--accent2-rgb), 0.12));
+    background: linear-gradient(
+        135deg,
+        rgba(var(--accent-rgb), 0.2),
+        rgba(var(--accent2-rgb), 0.12)
+    );
     border: 1px solid rgba(var(--accent-rgb), 0.3);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: rgb(var(--accent-rgb));
+    /* --accent-light-rgb, not --accent-rgb: it's the variant each theme
+       tunes for legibility against that theme's own background (light
+       purple on the dark themes, deep purple on the light one), which is
+       what every other icon in the app sits on. Raw --accent-rgb is close
+       to invisible against the dark themes' elevated surface. */
+    color: rgb(var(--accent-light-rgb));
 }
 
 .modalTitle {
@@ -490,6 +557,15 @@
 .modalWarningBox svg {
     flex-shrink: 0;
     margin-top: 1px;
+}
+
+/* .btnPrimary is built for the step footer's flex row (it's `flex: 1`
+   there) - on its own inside the modal that does nothing, leaving a
+   <button>'s default shrink-to-fit width. This spans it properly. */
+.modalAckBtn {
+    display: block;
+    width: 100%;
+    margin-top: 18px;
 }
 
 /* ── Email consent checkbox ── */
@@ -555,13 +631,15 @@
     resize: none;
     outline: none;
     cursor: text;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
 }
 
-    .recoveryTextarea:focus {
-        border-color: rgba(var(--accent-light-rgb), 0.5);
-        box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.1);
-    }
+.recoveryTextarea:focus {
+    border-color: rgba(var(--accent-light-rgb), 0.5);
+    box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.1);
+}
 
 .btnDownloadPdf {
     display: flex;
@@ -582,10 +660,10 @@
     transition: all 0.2s;
 }
 
-    .btnDownloadPdf:hover {
-        background: rgba(var(--accent-rgb), 0.15);
-        border-color: rgba(var(--accent-light-rgb), 0.5);
-    }
+.btnDownloadPdf:hover {
+    background: rgba(var(--accent-rgb), 0.15);
+    border-color: rgba(var(--accent-light-rgb), 0.5);
+}
 
 /* ── Language picker (final step) ── */
 .langGrid {
@@ -612,13 +690,17 @@
     transition: all 0.2s;
 }
 
-    .langOption:hover {
-        background: rgba(var(--accent-rgb), 0.12);
-        border-color: rgba(var(--accent-light-rgb), 0.4);
-    }
+.langOption:hover {
+    background: rgba(var(--accent-rgb), 0.12);
+    border-color: rgba(var(--accent-light-rgb), 0.4);
+}
 
 .langOptionActive {
-    background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.25), rgba(var(--accent2-rgb), 0.25));
+    background: linear-gradient(
+        135deg,
+        rgba(var(--accent-rgb), 0.25),
+        rgba(var(--accent2-rgb), 0.25)
+    );
     border-color: rgba(var(--accent-light-rgb), 0.7);
     color: rgb(var(--white-rgb));
     box-shadow: 0 0 16px rgba(var(--accent-rgb), 0.25);
