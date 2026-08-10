@@ -53,21 +53,79 @@ async function getUploadedParts(sessionId: string, signal?: AbortSignal): Promis
     return data.success ? new Set<number>(data.uploadedPartNumbers ?? []) : null;
 }
 
-async function uploadPartOnce(sessionId: string, partNumber: number, chunk: Blob, signal?: AbortSignal): Promise<boolean> {
-    const res = await apiFetch(`/api/media/chunked/${sessionId}/parts/${partNumber}`, {
-        method: "PUT",
-        credentials: "include",
-        headers: { "Content-Type": "application/octet-stream" },
-        body: chunk,
-        signal,
+// fetch has no upload-progress event at all - only XMLHttpRequest exposes
+// one (xhr.upload.onprogress), which is the only reason this exists instead
+// of just another apiFetch call like every other request here. Without it,
+// progress only moved once per whole 10MB chunk landing, which on a slow
+// connection reads as "stuck at 0%" for however long that chunk takes -
+// exactly the ambiguity between slow and stalled this is meant to remove.
+function putPartWithProgress(
+    url: string,
+    body: Blob,
+    onProgress: (loadedBytes: number) => void,
+    signal?: AbortSignal,
+): Promise<{ ok: boolean }> {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", url, true);
+        xhr.withCredentials = true;
+        xhr.setRequestHeader("Content-Type", "application/octet-stream");
+
+        xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) onProgress(e.loaded);
+        };
+        xhr.onload = () => {
+            if (xhr.status < 200 || xhr.status >= 300) {
+                resolve({ ok: false });
+                return;
+            }
+            try {
+                resolve({ ok: JSON.parse(xhr.responseText)?.success === true });
+            } catch {
+                resolve({ ok: false });
+            }
+        };
+        xhr.onerror = () => resolve({ ok: false });
+        xhr.onabort = () => reject(new DOMException("The upload was aborted", "AbortError"));
+
+        if (signal) {
+            if (signal.aborted) {
+                xhr.abort();
+                return;
+            }
+            signal.addEventListener("abort", () => xhr.abort());
+        }
+
+        xhr.send(body);
     });
-    const data = await res.json();
-    return data.success === true;
 }
 
-async function uploadPartWithRetry(sessionId: string, partNumber: number, chunk: Blob, signal?: AbortSignal): Promise<boolean> {
+async function uploadPartOnce(
+    sessionId: string,
+    partNumber: number,
+    chunk: Blob,
+    onChunkProgress: (loadedBytes: number) => void,
+    signal?: AbortSignal,
+): Promise<boolean> {
+    const result = await putPartWithProgress(
+        `/api/media/chunked/${sessionId}/parts/${partNumber}`,
+        chunk,
+        onChunkProgress,
+        signal,
+    );
+    return result.ok;
+}
+
+async function uploadPartWithRetry(
+    sessionId: string,
+    partNumber: number,
+    chunk: Blob,
+    onChunkProgress: (loadedBytes: number) => void,
+    signal?: AbortSignal,
+): Promise<boolean> {
     for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
-        if (await uploadPartOnce(sessionId, partNumber, chunk, signal)) return true;
+        if (await uploadPartOnce(sessionId, partNumber, chunk, onChunkProgress, signal)) return true;
+        onChunkProgress(0); // a failed attempt's partial progress doesn't carry over to the retry
         if (attempt < RETRY_ATTEMPTS) await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
     }
     return false;
@@ -149,8 +207,21 @@ export async function uploadMediaChunked(
         const plainChunk = file.slice(start, Math.min(start + CHUNK_SIZE, file.size));
         const plainBytes = new Uint8Array(await plainChunk.arrayBuffer());
         const encryptedBytes = await encryptChunk(chatKey, chatId, partNumber - 1, plainBytes);
+        const encryptedLength = encryptedBytes.length;
 
-        const ok = await uploadPartWithRetry(sessionId, partNumber, new Blob([encryptedBytes as BlobPart]), signal);
+        const ok = await uploadPartWithRetry(
+            sessionId,
+            partNumber,
+            new Blob([encryptedBytes as BlobPart]),
+            // xhr.upload.onprogress reports ciphertext bytes actually sent
+            // over the wire - scaled back to plaintext bytes so it lines up
+            // with `loaded`/file.size, which are both in plaintext terms.
+            (chunkLoadedBytes) => {
+                const ratio = encryptedLength > 0 ? chunkLoadedBytes / encryptedLength : 0;
+                onProgress(Math.min(loaded + ratio * plainChunk.size, file.size), file.size);
+            },
+            signal,
+        );
         if (!ok) return null; // localStorage entry stays - retrying the same file resumes, not restarts
 
         loaded += plainChunk.size;
