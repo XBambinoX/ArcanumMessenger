@@ -111,3 +111,24 @@
 .emojiBtn:hover {
     background: rgba(var(--accent-rgb), 0.12);
 }
+
+/* On mobile this becomes a bottom sheet instead of a small popover
+   anchored to the emoji button - left:0 relative to a button near the
+   right edge of the compose row pushes a fixed-width panel off-screen on
+   narrow viewports. position:fixed here escapes that small button's
+   positioning context entirely, so it can't overflow regardless of which
+   button triggered it. Keep in sync with useMediaQuery.ts's
+   MOBILE_BREAKPOINT_QUERY. */
+@media (max-width: 760px) {
+    .panel {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        top: auto;
+        width: 100%;
+        max-width: 100%;
+        max-height: 50vh;
+        border-radius: 16px 16px 0 0;
+    }
+}

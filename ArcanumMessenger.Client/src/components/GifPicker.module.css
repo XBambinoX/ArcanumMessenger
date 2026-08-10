@@ -103,19 +103,21 @@
     display: block;
 }
 
-/* On mobile this becomes a full-screen sheet instead of a small anchored
-   popover above the compose bar, same treatment as the other overlay
-   panels - keep in sync with useMediaQuery.ts's MOBILE_BREAKPOINT_QUERY. */
+/* On mobile this becomes a bottom sheet instead of a small anchored
+   popover above the compose bar - full-screen (tried first) hid the chat
+   entirely, so picking several GIFs in a row gave no visible confirmation
+   any of them actually sent. Keeping the chat visible above fixes that.
+   Keep in sync with useMediaQuery.ts's MOBILE_BREAKPOINT_QUERY. */
 @media (max-width: 760px) {
     .panel {
         position: fixed;
-        inset: 0;
-        bottom: auto;
-        left: auto;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        top: auto;
         width: 100%;
-        height: 100%;
         max-width: 100%;
-        max-height: 100%;
-        border-radius: 0;
+        max-height: 50vh;
+        border-radius: 16px 16px 0 0;
     }
 }
