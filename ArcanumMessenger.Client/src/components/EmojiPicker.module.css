@@ -117,18 +117,21 @@
    right edge of the compose row pushes a fixed-width panel off-screen on
    narrow viewports. position:fixed here escapes that small button's
    positioning context entirely, so it can't overflow regardless of which
-   button triggered it. Keep in sync with useMediaQuery.ts's
-   MOBILE_BREAKPOINT_QUERY. */
+   button triggered it. bottom is offset by the compose row's own height
+   (42px buttons + 12px top/bottom padding, ~66px, rounded up) so the
+   sheet sits above the input row instead of covering it - docking flush
+   to the screen edge hid the text you were typing. Keep in sync with
+   useMediaQuery.ts's MOBILE_BREAKPOINT_QUERY. */
 @media (max-width: 760px) {
     .panel {
         position: fixed;
         left: 0;
         right: 0;
-        bottom: 0;
+        bottom: 78px;
         top: auto;
         width: 100%;
         max-width: 100%;
-        max-height: 50vh;
-        border-radius: 16px 16px 0 0;
+        max-height: 42vh;
+        border-radius: 16px;
     }
 }
