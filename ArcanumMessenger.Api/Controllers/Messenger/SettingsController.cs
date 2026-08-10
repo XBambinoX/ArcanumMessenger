@@ -173,6 +173,23 @@ public class SettingsController(AppDbContext db, EncryptionService encryption, T
         return Ok(new KdfSaltResponse(user.KdfSalt));
     }
 
+    [HttpGet("identity-keys")]
+    [Authorize]
+    public async Task<ActionResult<IdentityKeysResponse>> GetIdentityKeys(CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var user = await db.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted, ct);
+
+        if (user is null)
+            return NotFound();
+
+        return Ok(new IdentityKeysResponse(user.EcdhPublicKey, user.WrappedEcdhPrivateKey));
+    }
+
     [HttpPatch("notifications")]
     [Authorize]
     public async Task<IActionResult> UpdateNotificationSettings(

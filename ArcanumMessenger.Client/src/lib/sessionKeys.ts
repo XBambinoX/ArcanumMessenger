@@ -43,6 +43,13 @@ export async function getPrivateKey(): Promise<CryptoKey | null> {
     return cachedPrivateKey;
 }
 
+// Cheap sync check for whether this tab has an E2EE identity at all - used
+// right after a cookie-based auto-login (no password entry, so setIdentity
+// never ran) to tell that apart from a real, usable session.
+export function hasIdentity(): boolean {
+    return cachedPrivateKey !== null || readStorage() !== null;
+}
+
 export function getPublicKeyRaw(): Uint8Array | null {
     if (cachedPublicKeyRaw) return cachedPublicKeyRaw;
     const stored = readStorage();

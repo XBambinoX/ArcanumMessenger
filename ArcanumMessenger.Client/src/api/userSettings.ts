@@ -78,6 +78,16 @@ export async function getKdfSalt(): Promise<string> {
     return (await res.json()).kdfSalt;
 }
 
+export interface IdentityKeysResponse {
+    ecdhPublicKey: string | null;
+    wrappedEcdhPrivateKey: string | null;
+}
+
+export async function getIdentityKeys(): Promise<IdentityKeysResponse> {
+    const res = await apiFetch("/api/settings/identity-keys");
+    return res.json();
+}
+
 export interface UpdateNotificationSettingsRequest {
     notificationsEnabled?: boolean;
     groupNotifications?: boolean;

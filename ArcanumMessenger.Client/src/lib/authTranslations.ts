@@ -102,6 +102,17 @@ export interface RegisterTranslation {
     modalAckWithCountdown: (seconds: number) => string;
 }
 
+export interface UnlockTranslation {
+    title: string;
+    subtitle: string;
+    passwordPlaceholder: string;
+    unlockButton: string;
+    unlocking: string;
+    incorrectPassword: string;
+    somethingWrong: string;
+    logoutInstead: string;
+}
+
 export interface RecoveryTranslation {
     backToLoginAria: string;
 
@@ -268,6 +279,39 @@ export const LOGIN_TRANSLATIONS: Record<Language, LoginTranslation> = {
         createOne: "Konto erstellen",
         forgotPassword: "Passwort vergessen?",
         changeIt: "Ändern",
+    },
+};
+
+export const UNLOCK_TRANSLATIONS: Record<Language, UnlockTranslation> = {
+    en: {
+        title: "Unlock your chats",
+        subtitle: "Enter your password to load your encryption key on this device",
+        passwordPlaceholder: "Password",
+        unlockButton: "Unlock",
+        unlocking: "Unlocking…",
+        incorrectPassword: "Incorrect password",
+        somethingWrong: "Something went wrong, try again",
+        logoutInstead: "Log out instead",
+    },
+    uk: {
+        title: "Розблокуйте свої чати",
+        subtitle: "Введіть пароль, щоб завантажити ключ шифрування на цьому пристрої",
+        passwordPlaceholder: "Пароль",
+        unlockButton: "Розблокувати",
+        unlocking: "Розблокування…",
+        incorrectPassword: "Неправильний пароль",
+        somethingWrong: "Щось пішло не так, спробуйте ще раз",
+        logoutInstead: "Вийти з акаунта",
+    },
+    de: {
+        title: "Entsperre deine Chats",
+        subtitle: "Gib dein Passwort ein, um deinen Verschlüsselungsschlüssel auf diesem Gerät zu laden",
+        passwordPlaceholder: "Passwort",
+        unlockButton: "Entsperren",
+        unlocking: "Wird entsperrt…",
+        incorrectPassword: "Falsches Passwort",
+        somethingWrong: "Etwas ist schiefgelaufen, versuche es erneut",
+        logoutInstead: "Stattdessen abmelden",
     },
 };
 

@@ -1,10 +1,18 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { checkSession, refreshSession } from "../api/session";
+import * as sessionKeys from "../lib/sessionKeys";
 
 interface AuthContextValue {
     isAuthenticated: boolean;
     sessionChecked: boolean;
     setAuthenticated: (value: boolean) => void;
+    // True once isAuthenticated is true (a valid session cookie) but this
+    // tab never went through the password-entry login flow, so there's no
+    // E2EE identity in memory yet - e.g. a fresh tab opened against an
+    // already-valid refresh token. Every encrypt/decrypt call silently
+    // does nothing until this is resolved (see UnlockPage).
+    needsUnlock: boolean;
+    confirmUnlocked: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -21,7 +29,17 @@ const ACCESS_TOKEN_REFRESH_INTERVAL_MS = 4 * 60 * 1000;
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [sessionChecked, setSessionChecked] = useState(false);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [needsUnlock, setNeedsUnlock] = useState(false);
     const didInit = useRef(false);
+
+    // Re-checked every time isAuthenticated turns true, not just once on
+    // load - a real login (LoginPage) always calls sessionKeys.setIdentity()
+    // before setAuthenticated(true), so this correctly resolves to false
+    // right after one; it only stays true for the cookie-only auto-login
+    // path, which never touches sessionKeys at all.
+    useEffect(() => {
+        setNeedsUnlock(isAuthenticated && !sessionKeys.hasIdentity());
+    }, [isAuthenticated]);
 
     useEffect(() => {
         if (didInit.current) return;
@@ -69,7 +87,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return (
         <AuthContext.Provider
-            value={{ isAuthenticated, sessionChecked, setAuthenticated: setIsAuthenticated }}
+            value={{
+                isAuthenticated,
+                sessionChecked,
+                setAuthenticated: setIsAuthenticated,
+                needsUnlock,
+                confirmUnlocked: () => setNeedsUnlock(false),
+            }}
         >
             {children}
         </AuthContext.Provider>

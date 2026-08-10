@@ -34,6 +34,13 @@ public record DeleteAccountRequest(string AuthKey);
 
 public record KdfSaltResponse(string KdfSalt);
 
+// Lets an already-authenticated session (valid cookie, but this tab never
+// went through the password-entry login flow - e.g. a fresh tab opened
+// against a still-valid refresh token) re-derive its E2EE identity without
+// a full logout/login round-trip. WrappedEcdhPrivateKey is ciphertext,
+// same sensitivity as what's already returned by /api/login/complete.
+public record IdentityKeysResponse(string? EcdhPublicKey, string? WrappedEcdhPrivateKey);
+
 public record UpdateNotificationSettingsRequest(
     bool? NotificationsEnabled,
     bool? GroupNotifications,

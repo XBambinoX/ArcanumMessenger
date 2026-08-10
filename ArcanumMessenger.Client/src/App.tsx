@@ -5,12 +5,13 @@ import LoginPage from "./pages/LoginPage";
 import TotpSetupPage from "./pages/TotpSetupPage";
 import RecoveryPage from "./pages/RecoveryPage";
 import AppPage from "./pages/AppPage";
+import UnlockPage from "./pages/UnlockPage";
 import ErrorPage from "./pages/ErrorPage";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import NavigationSetter from "./lib/navigation";
 
 function AppRoutes() {
-    const { isAuthenticated, sessionChecked } = useAuth();
+    const { isAuthenticated, sessionChecked, needsUnlock } = useAuth();
 
     if (!sessionChecked) {
         return null;
@@ -47,7 +48,7 @@ function AppRoutes() {
                     path="/app"
                     element={
                         isAuthenticated ? (
-                            <AppPage />
+                            needsUnlock ? <UnlockPage /> : <AppPage />
                         ) : (
                             <Navigate to="/login" replace />
                         )
