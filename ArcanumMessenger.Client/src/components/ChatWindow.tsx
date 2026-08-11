@@ -1111,6 +1111,7 @@ export default function ChatWindow({
                                             trackClassName={styles.audioTrack}
                                             timeClassName={styles.audioTime}
                                             spinnerClassName={styles.audioSpinner}
+                                            skipButtonClassName={styles.audioSkipBtn}
                                         />
                                     )}
                                     {message.type === "videoNote" && message.media && (

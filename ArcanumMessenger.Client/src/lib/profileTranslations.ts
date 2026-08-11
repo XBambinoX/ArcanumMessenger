@@ -53,6 +53,10 @@ export interface ProfilePanelTranslation {
     showLinkPreviews: string;
     dataUsageHeading: string;
     autoDownloadMediaLabel: string;
+    micHeading: string;
+    micDefaultOption: string;
+    micPermissionHint: string;
+    micMobileLimitationNote: string;
     everyoneOption: string;
     myContactsOption: string;
     nobodyOption: string;
@@ -179,6 +183,10 @@ export const PROFILE_PANEL_TRANSLATIONS: Record<Language, ProfilePanelTranslatio
         showLinkPreviews: "Show link previews",
         dataUsageHeading: "Data Usage",
         autoDownloadMediaLabel: "Auto-download media",
+        micHeading: "Microphone",
+        micDefaultOption: "System default",
+        micPermissionHint: "Send a voice message once to see your microphones here",
+        micMobileLimitationNote: "On most phone browsers only one generic microphone entry is available here, not each physical device - this only really lets you pick between devices on desktop.",
         everyoneOption: "Everyone",
         myContactsOption: "My Contacts",
         nobodyOption: "Nobody",
@@ -236,6 +244,10 @@ export const PROFILE_PANEL_TRANSLATIONS: Record<Language, ProfilePanelTranslatio
         showLinkPreviews: "Показувати попередній перегляд посилань",
         dataUsageHeading: "Використання даних",
         autoDownloadMediaLabel: "Автозавантаження медіа",
+        micHeading: "Мікрофон",
+        micDefaultOption: "Системний за замовчуванням",
+        micPermissionHint: "Надішліть голосове повідомлення хоча б раз, щоб побачити тут ваші мікрофони",
+        micMobileLimitationNote: "У більшості мобільних браузерів тут доступний лише один загальний пункт мікрофона, а не кожен фізичний пристрій окремо - реальний вибір між пристроями працює тільки на комп'ютері.",
         everyoneOption: "Усі",
         myContactsOption: "Мої контакти",
         nobodyOption: "Ніхто",
@@ -293,6 +305,10 @@ export const PROFILE_PANEL_TRANSLATIONS: Record<Language, ProfilePanelTranslatio
         showLinkPreviews: "Linkvorschauen anzeigen",
         dataUsageHeading: "Datennutzung",
         autoDownloadMediaLabel: "Medien automatisch herunterladen",
+        micHeading: "Mikrofon",
+        micDefaultOption: "Systemstandard",
+        micPermissionHint: "Sende einmal eine Sprachnachricht, um deine Mikrofone hier zu sehen",
+        micMobileLimitationNote: "Auf den meisten Handy-Browsern gibt es hier nur einen allgemeinen Mikrofon-Eintrag statt jedes einzelnen Geräts - eine echte Auswahl zwischen Geräten funktioniert nur am Desktop.",
         everyoneOption: "Alle",
         myContactsOption: "Meine Kontakte",
         nobodyOption: "Niemand",

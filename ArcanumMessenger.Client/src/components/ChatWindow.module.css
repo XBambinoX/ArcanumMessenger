@@ -635,13 +635,13 @@
 .mediaAudio {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 6px;
     padding: 10px 12px;
     border-radius: 10px;
     background: rgba(var(--accent-rgb), 0.08);
     border: 1px solid rgba(var(--accent-rgb), 0.15);
     min-width: 220px;
-    max-width: 300px;
+    max-width: 340px;
 }
 
 .audioPlayBtn {
@@ -677,6 +677,31 @@
     min-width: 0;
     accent-color: rgb(var(--accent-rgb));
     cursor: pointer;
+}
+
+/* Relative +/-10s skip, next to the track it affects - see EncryptedMedia.tsx's
+   own comment on skip() for why this works now (voice messages record as
+   WAV, not compressed webm) where it didn't before. */
+.audioSkipBtn {
+    flex-shrink: 0;
+    padding: 3px 6px;
+    border-radius: 6px;
+    border: none;
+    background: rgba(var(--accent-rgb), 0.12);
+    color: rgba(var(--accent-light-rgb), 0.9);
+    font-size: 10.5px;
+    font-weight: 600;
+    line-height: 1.2;
+    cursor: pointer;
+}
+
+.audioSkipBtn:hover:not(:disabled) {
+    background: rgba(var(--accent-rgb), 0.2);
+}
+
+.audioSkipBtn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
 }
 
 .audioTime {

@@ -23,6 +23,10 @@ export interface ChatWindowTranslation {
     sendRecordingAria: string;
     micPermissionDenied: string;
     cameraPermissionDenied: string;
+    micNotFound: string;
+    cameraNotFound: string;
+    micInUse: string;
+    cameraInUse: string;
     flipCameraAria: string;
     sendAsGif: string;
     removeAttachmentAria: string;
@@ -172,8 +176,12 @@ export const CHAT_WINDOW_TRANSLATIONS: Record<Language, ChatWindowTranslation> =
         recordVideoNoteAria: "Record video message",
         cancelRecordingAria: "Cancel recording",
         sendRecordingAria: "Send voice message",
-        micPermissionDenied: "Couldn't access the microphone",
-        cameraPermissionDenied: "Couldn't access the camera",
+        micPermissionDenied: "Microphone access is blocked - check your browser's site settings, and on phones also your system Settings app's permissions for this browser",
+        cameraPermissionDenied: "Camera access is blocked - check your browser's site settings, and on phones also your system Settings app's permissions for this browser",
+        micNotFound: "No microphone found",
+        cameraNotFound: "No camera found",
+        micInUse: "The microphone is being used by another app",
+        cameraInUse: "The camera is being used by another app",
         flipCameraAria: "Flip camera",
         sendAsGif: "Send as GIF",
         removeAttachmentAria: "Remove attachment",
@@ -208,8 +216,12 @@ export const CHAT_WINDOW_TRANSLATIONS: Record<Language, ChatWindowTranslation> =
         recordVideoNoteAria: "Записати відеоповідомлення",
         cancelRecordingAria: "Скасувати запис",
         sendRecordingAria: "Надіслати голосове повідомлення",
-        micPermissionDenied: "Не вдалося отримати доступ до мікрофона",
-        cameraPermissionDenied: "Не вдалося отримати доступ до камери",
+        micPermissionDenied: "Доступ до мікрофона заблоковано - перевірте налаштування сайту в браузері, а на телефоні ще й дозволи браузера в системних налаштуваннях",
+        cameraPermissionDenied: "Доступ до камери заблоковано - перевірте налаштування сайту в браузері, а на телефоні ще й дозволи браузера в системних налаштуваннях",
+        micNotFound: "Мікрофон не знайдено",
+        cameraNotFound: "Камеру не знайдено",
+        micInUse: "Мікрофон використовується іншим застосунком",
+        cameraInUse: "Камера використовується іншим застосунком",
         flipCameraAria: "Перемкнути камеру",
         sendAsGif: "Надіслати як GIF",
         removeAttachmentAria: "Видалити вкладення",
@@ -244,8 +256,12 @@ export const CHAT_WINDOW_TRANSLATIONS: Record<Language, ChatWindowTranslation> =
         recordVideoNoteAria: "Videonachricht aufnehmen",
         cancelRecordingAria: "Aufnahme abbrechen",
         sendRecordingAria: "Sprachnachricht senden",
-        micPermissionDenied: "Zugriff auf das Mikrofon fehlgeschlagen",
-        cameraPermissionDenied: "Zugriff auf die Kamera fehlgeschlagen",
+        micPermissionDenied: "Mikrofonzugriff ist blockiert - prüfe die Website-Einstellungen deines Browsers und auf dem Handy zusätzlich die Berechtigungen des Browsers in den Systemeinstellungen",
+        cameraPermissionDenied: "Kamerazugriff ist blockiert - prüfe die Website-Einstellungen deines Browsers und auf dem Handy zusätzlich die Berechtigungen des Browsers in den Systemeinstellungen",
+        micNotFound: "Kein Mikrofon gefunden",
+        cameraNotFound: "Keine Kamera gefunden",
+        micInUse: "Das Mikrofon wird von einer anderen App verwendet",
+        cameraInUse: "Die Kamera wird von einer anderen App verwendet",
         flipCameraAria: "Kamera wechseln",
         sendAsGif: "Als GIF senden",
         removeAttachmentAria: "Anhang entfernen",

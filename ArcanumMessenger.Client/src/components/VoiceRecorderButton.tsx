@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLanguage } from "../lib/language";
-import { CHAT_WINDOW_TRANSLATIONS } from "../lib/chatWindowTranslations";
+import { CHAT_WINDOW_TRANSLATIONS, type ChatWindowTranslation } from "../lib/chatWindowTranslations";
 import { formatAudioTime } from "./EncryptedMedia";
+import { getUserMediaWithPreferredMic } from "../lib/micPreference";
+import { WavRecorder } from "../lib/wavRecorder";
 import styles from "./VoiceRecorderButton.module.css";
 
 const HOLD_THRESHOLD_MS = 250;
@@ -17,7 +19,6 @@ const VIDEO_NOTE_SIZE = 560;
 // it unambiguously not-landscape - invisible at this size, but enough to
 // land on the other side of that check.
 const VIDEO_NOTE_HEIGHT_PAD = 10;
-const AUDIO_MIME_CANDIDATES = ["audio/webm;codecs=opus", "audio/mp4", "audio/ogg;codecs=opus"];
 const VIDEO_MIME_CANDIDATES = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/mp4"];
 
 function pickSupportedMimeType(candidates: string[]): string | undefined {
@@ -25,16 +26,33 @@ function pickSupportedMimeType(candidates: string[]): string | undefined {
     return candidates.find((type) => MediaRecorder.isTypeSupported(type));
 }
 
-// Audio gets the more recognizable ".m4a" for an mp4 container - video just
-// wants a plain, correct ".mp4"/".webm".
-function audioExtensionFor(mimeType: string): string {
-    if (mimeType.includes("mp4")) return "m4a";
-    if (mimeType.includes("ogg")) return "ogg";
-    return "webm";
-}
-
 function videoExtensionFor(mimeType: string): string {
     return mimeType.includes("mp4") ? "mp4" : "webm";
+}
+
+// getUserMedia rejects for very different reasons that all used to show
+// the same "couldn't access" message - that's actively misleading for
+// anything that isn't actually a permission problem (checking browser
+// settings won't help if the mic is just busy in another app), and for a
+// truly-denied permission, no amount of retrying from here can force the
+// browser to re-prompt - only the user going into their own browser's
+// site settings can undo that. This at least tells them which situation
+// they're actually in.
+function describeMediaError(err: unknown, mode: "voice" | "video", tr: ChatWindowTranslation): string {
+    // OverconstrainedError isn't a DOMException (it's its own interface),
+    // so this can't just be `err instanceof DOMException ? err.name : ""`
+    // the way the others are checked - that silently dropped it into the
+    // permission-denied bucket below, which was actively misleading.
+    const name = err && typeof err === "object" && "name" in err ? String(err.name) : "";
+    if (name === "NotFoundError" || name === "DevicesNotFoundError" || name === "OverconstrainedError") {
+        return mode === "video" ? tr.cameraNotFound : tr.micNotFound;
+    }
+    if (name === "NotReadableError" || name === "TrackStartError") {
+        return mode === "video" ? tr.cameraInUse : tr.micInUse;
+    }
+    // NotAllowedError/SecurityError/PermissionDeniedError, or anything
+    // unrecognized - permission is by far the most common real cause.
+    return mode === "video" ? tr.cameraPermissionDenied : tr.micPermissionDenied;
 }
 
 interface VoiceRecorderButtonProps {
@@ -72,8 +90,11 @@ export default function VoiceRecorderButton({
     const tickIntervalRef = useRef<number | null>(null);
     const errorTimeoutRef = useRef<number | null>(null);
 
-    // Voice-only: the mic stream MediaRecorder records directly.
+    // Voice-only: the mic stream, and the WavRecorder capturing raw PCM
+    // from it (see wavRecorder.ts for why voice uses this instead of
+    // MediaRecorder).
     const streamRef = useRef<MediaStream | null>(null);
+    const wavRecorderRef = useRef<WavRecorder | null>(null);
 
     // Video-only: the camera feed driving the live preview, the stable
     // audio track (never touched by a flip), the canvas doing the actual
@@ -98,6 +119,7 @@ export default function VoiceRecorderButton({
     const cleanupStream = () => {
         streamRef.current?.getTracks().forEach((track) => track.stop());
         streamRef.current = null;
+        wavRecorderRef.current = null;
         if (tickIntervalRef.current !== null) {
             window.clearInterval(tickIntervalRef.current);
             tickIntervalRef.current = null;
@@ -129,6 +151,7 @@ export default function VoiceRecorderButton({
                 recorder.onstop = null;
                 recorder.stop();
             }
+            wavRecorderRef.current?.cancel();
             cleanupStream();
             cleanupCamera();
             setIsRecording(false);
@@ -138,16 +161,9 @@ export default function VoiceRecorderButton({
     }, [chatId]);
 
     const startVoiceRecording = async () => {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await getUserMediaWithPreferredMic();
         streamRef.current = stream;
-        const mimeType = pickSupportedMimeType(AUDIO_MIME_CANDIDATES);
-        const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-        chunksRef.current = [];
-        recorder.ondataavailable = (e) => {
-            if (e.data.size > 0) chunksRef.current.push(e.data);
-        };
-        recorder.start();
-        mediaRecorderRef.current = recorder;
+        wavRecorderRef.current = new WavRecorder(stream);
         startedAtRef.current = Date.now();
         setElapsedSeconds(0);
         setIsRecording(true);
@@ -168,10 +184,7 @@ export default function VoiceRecorderButton({
         const video = videoPreviewRef.current;
         if (!canvas || !video) return;
 
-        const cameraStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode },
-            audio: true,
-        });
+        const cameraStream = await getUserMediaWithPreferredMic({ facingMode });
         cameraStreamRef.current = cameraStream;
         audioTrackRef.current = cameraStream.getAudioTracks()[0] ?? null;
         video.srcObject = cameraStream;
@@ -254,10 +267,10 @@ export default function VoiceRecorderButton({
         try {
             if (mode === "video") await startVideoRecording();
             else await startVoiceRecording();
-        } catch {
-            setError(mode === "video" ? tr.cameraPermissionDenied : tr.micPermissionDenied);
+        } catch (err) {
+            setError(describeMediaError(err, mode, tr));
             if (errorTimeoutRef.current !== null) window.clearTimeout(errorTimeoutRef.current);
-            errorTimeoutRef.current = window.setTimeout(() => setError(null), 4000);
+            errorTimeoutRef.current = window.setTimeout(() => setError(null), 6000);
             cleanupStream();
             cleanupCamera();
             setIsRecording(false);
@@ -307,10 +320,14 @@ export default function VoiceRecorderButton({
     };
 
     const handleCancel = () => {
-        const recorder = mediaRecorderRef.current;
-        if (recorder && recorder.state !== "inactive") {
-            recorder.onstop = null;
-            recorder.stop();
+        if (mode === "video") {
+            const recorder = mediaRecorderRef.current;
+            if (recorder && recorder.state !== "inactive") {
+                recorder.onstop = null;
+                recorder.stop();
+            }
+        } else {
+            wavRecorderRef.current?.cancel();
         }
         cleanupStream();
         cleanupCamera();
@@ -319,34 +336,46 @@ export default function VoiceRecorderButton({
     };
 
     const handleConfirm = () => {
-        const recorder = mediaRecorderRef.current;
-        if (!recorder) return;
-        const recordedMode = mode;
         const elapsed = Math.floor((Date.now() - startedAtRef.current) / 1000);
-        const mimeType = recorder.mimeType;
-        // The codecs parameter (e.g. ";codecs=opus") is only needed to pick
-        // a codec while recording - keeping it on the uploaded file's own
-        // Content-Type breaks the server's S3 request signing, since that
-        // header ends up part of what gets signed vs. what's actually sent.
-        // A bare "audio/webm"/"video/webm" is all DeriveKind/playback ever
-        // need anyway.
-        const plainMimeType = mimeType.split(";")[0].trim();
-        recorder.onstop = () => {
-            const blob = new Blob(chunksRef.current, { type: plainMimeType });
-            cleanupStream();
-            cleanupCamera();
-            setIsRecording(false);
-            onRecordingChange(false);
-            if (elapsed < MIN_RECORDING_SECONDS) return; // a stray tap, not a real message
-            if (recordedMode === "video") {
+
+        if (mode === "video") {
+            const recorder = mediaRecorderRef.current;
+            if (!recorder) return;
+            const mimeType = recorder.mimeType;
+            // The codecs parameter (e.g. ";codecs=vp9,opus") is only needed
+            // to pick a codec while recording - keeping it on the uploaded
+            // file's own Content-Type breaks the server's S3 request
+            // signing, since that header ends up part of what gets signed
+            // vs. what's actually sent. A bare "video/webm" is all
+            // DeriveKind/playback ever need anyway.
+            const plainMimeType = mimeType.split(";")[0].trim();
+            recorder.onstop = () => {
+                const blob = new Blob(chunksRef.current, { type: plainMimeType });
+                cleanupStream();
+                cleanupCamera();
+                setIsRecording(false);
+                onRecordingChange(false);
+                if (elapsed < MIN_RECORDING_SECONDS) return; // a stray tap, not a real message
                 const file = new File([blob], `video-note-${Date.now()}.${videoExtensionFor(mimeType)}`, { type: plainMimeType });
                 onVideoRecorded(file, elapsed);
-            } else {
-                const file = new File([blob], `voice-${Date.now()}.${audioExtensionFor(mimeType)}`, { type: plainMimeType });
-                onRecorded(file, elapsed);
-            }
-        };
-        recorder.stop();
+            };
+            recorder.stop();
+            return;
+        }
+
+        // WavRecorder.stop() is synchronous (it's just encoding already-
+        // captured samples, no event to wait for), unlike MediaRecorder's
+        // async onstop above.
+        const wav = wavRecorderRef.current;
+        if (!wav) return;
+        const blob = wav.stop();
+        cleanupStream();
+        cleanupCamera();
+        setIsRecording(false);
+        onRecordingChange(false);
+        if (elapsed < MIN_RECORDING_SECONDS) return; // a stray tap, not a real message
+        const file = new File([blob], `voice-${Date.now()}.wav`, { type: "audio/wav" });
+        onRecorded(file, elapsed);
     };
 
     const showVideoPanel = isRecording && mode === "video";

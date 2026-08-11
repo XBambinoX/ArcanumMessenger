@@ -391,6 +391,7 @@ interface EncryptedAudioPlayerProps {
     trackClassName?: string;
     timeClassName?: string;
     spinnerClassName?: string;
+    skipButtonClassName?: string;
 }
 
 // Never auto-decrypts, same reasoning as EncryptedVideoPlayer - nothing
@@ -402,7 +403,7 @@ interface EncryptedAudioPlayerProps {
 // slow connection where that gap grows too long, the button just settles
 // on "play" and needs a second tap - a minor step down, not a dead end.
 export function EncryptedAudioPlayer({
-    chat, media, className, playButtonClassName, trackClassName, timeClassName, spinnerClassName,
+    chat, media, className, playButtonClassName, trackClassName, timeClassName, spinnerClassName, skipButtonClassName,
 }: EncryptedAudioPlayerProps) {
     const { url, status, start } = useDecryptedMediaUrl(chat, media, false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -430,6 +431,22 @@ export function EncryptedAudioPlayer({
         setCurrentTime(audio.currentTime);
     };
 
+    // Used to rely on the browser being able to seek to an arbitrary
+    // position, which didn't hold up for MediaRecorder's compressed webm
+    // output (no seek index in the container - Firefox in particular
+    // couldn't jump anywhere at all, the position just snapped back).
+    // Voice messages are recorded as plain WAV now instead (see
+    // wavRecorder.ts) specifically so this works everywhere - fixed-size
+    // frames mean any position is direct byte math, no index needed.
+    const skip = (deltaSeconds: number) => {
+        const audio = audioRef.current;
+        if (!audio) return;
+        const cap = duration || audio.duration || 0;
+        const next = Math.max(0, Math.min(cap, audio.currentTime + deltaSeconds));
+        audio.currentTime = next;
+        setCurrentTime(next);
+    };
+
     return (
         <div className={className}>
             <button type="button" className={playButtonClassName} onClick={handlePlayClick}>
@@ -452,6 +469,15 @@ export function EncryptedAudioPlayer({
                     </svg>
                 )}
             </button>
+            <button
+                type="button"
+                className={skipButtonClassName}
+                onClick={() => skip(-10)}
+                disabled={!url}
+                aria-label="-10s"
+            >
+                −10
+            </button>
             <input
                 type="range"
                 className={trackClassName}
@@ -463,6 +489,15 @@ export function EncryptedAudioPlayer({
                 disabled={!url}
                 aria-label="Seek"
             />
+            <button
+                type="button"
+                className={skipButtonClassName}
+                onClick={() => skip(10)}
+                disabled={!url}
+                aria-label="+10s"
+            >
+                +10
+            </button>
             <span className={timeClassName}>{formatAudioTime(playing || currentTime > 0 ? currentTime : duration)}</span>
             {url && (
                 <audio
@@ -473,6 +508,12 @@ export function EncryptedAudioPlayer({
                     onEnded={() => {
                         setPlaying(false);
                         setCurrentTime(0);
+                        // Reaching the end on its own doesn't reset the
+                        // element's own currentTime back to 0 - without
+                        // this, a second tap of play would silently do
+                        // nothing (already sitting at the end, nothing
+                        // left to play) instead of actually restarting.
+                        if (audioRef.current) audioRef.current.currentTime = 0;
                     }}
                     onLoadedMetadata={() => {
                         // Not "||" - a MediaRecorder-produced file (voice

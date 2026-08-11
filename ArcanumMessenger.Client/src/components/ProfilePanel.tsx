@@ -16,6 +16,7 @@ import AvatarImage from "./AvatarImage";
 import DeleteAccountModal from "./DeleteAccountModal";
 import { useLanguage, setLanguage, type Language } from "../lib/language";
 import { setTheme, type Theme } from "../lib/theme";
+import { getPreferredMicId, setPreferredMicId } from "../lib/micPreference";
 import { APP_COMMON } from "../lib/appTranslations";
 import { PROFILE_PANEL_TRANSLATIONS } from "../lib/profileTranslations";
 
@@ -263,6 +264,13 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
     const [kdfSalt, setKdfSalt] = useState<string | null>(null);
 
     const [blockedUsers, setBlockedUsers] = useState<UserSearchResult[]>([]);
+
+    // Local only, never synced to the server - a deviceId from
+    // enumerateDevices() is meaningless on a different browser/device, so
+    // this lives in localStorage via micPreference.ts like theme/language
+    // used to before those became account-synced settings.
+    const [micDevices, setMicDevices] = useState<MediaDeviceInfo[]>([]);
+    const [preferredMicId, setPreferredMicIdState] = useState(() => getPreferredMicId() ?? "");
 
     const saveTimer = useRef<number | null>(null);
     const pendingFields = useRef<Partial<{ username: string; bio: string; phone: string; email: string }>>({});
@@ -563,6 +571,37 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
 
     useEffect(() => {
         getBlockedUsers().then(setBlockedUsers);
+    }, []);
+
+    // enumerateDevices() never prompts for permission itself - labels just
+    // come back blank until mic access has been granted. On Chrome/desktop,
+    // "granted at some point in the past" is already enough. Several mobile
+    // browsers (Safari/WebKit, Firefox) are stricter and only reveal labels
+    // while a stream from this origin is actually active - past permission
+    // alone isn't enough there, which is what left the list empty on phones
+    // that had already recorded a voice message before. Re-runs on
+    // devicechange too, so plugging/unplugging a headset while this panel
+    // is open updates the list live instead of needing a reopen.
+    useEffect(() => {
+        const refreshMicDevices = async () => {
+            const initial = await navigator.mediaDevices.enumerateDevices().catch(() => []);
+            const initialAudio = initial.filter((d) => d.kind === "audioinput");
+            if (initialAudio.some((d) => d.label)) {
+                setMicDevices(initialAudio);
+                return;
+            }
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                stream.getTracks().forEach((t) => t.stop());
+                const after = await navigator.mediaDevices.enumerateDevices();
+                setMicDevices(after.filter((d) => d.kind === "audioinput"));
+            } catch {
+                setMicDevices(initialAudio); // permission not available yet - shows the "record once" hint
+            }
+        };
+        void refreshMicDevices();
+        navigator.mediaDevices.addEventListener("devicechange", refreshMicDevices);
+        return () => navigator.mediaDevices.removeEventListener("devicechange", refreshMicDevices);
     }, []);
 
     const handleUnblock = async (id: string) => {
@@ -1022,6 +1061,27 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                                 onChange={(e) => handleChatSettingChange("autoDownloadMedia", e.target.checked)}
                             />
                         </label>
+
+                        <span className={styles.subGroupTitle}>{tr.micHeading}</span>
+                        {micDevices.some((d) => d.label) ? (
+                            <select
+                                className={styles.select}
+                                value={preferredMicId}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    setPreferredMicIdState(value);
+                                    setPreferredMicId(value || null);
+                                }}
+                            >
+                                <option value="">{tr.micDefaultOption}</option>
+                                {micDevices.map((d) => (
+                                    <option key={d.deviceId} value={d.deviceId}>{d.label}</option>
+                                ))}
+                            </select>
+                        ) : (
+                            <p className={styles.note}>{tr.micPermissionHint}</p>
+                        )}
+                        <p className={styles.note}>{tr.micMobileLimitationNote}</p>
                     </div>
                 );
 
