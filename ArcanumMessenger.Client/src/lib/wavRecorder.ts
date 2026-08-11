@@ -14,7 +14,16 @@ export class WavRecorder {
     private chunks: Float32Array[] = [];
 
     constructor(stream: MediaStream) {
-        this.audioContext = new AudioContext();
+        // Voice doesn't need the browser's native 44.1/48kHz, but 16kHz
+        // (tried first) cuts everything above 8kHz - noticeably dulls
+        // sibilance/"presence" in a voice, not just inaudible extra
+        // headroom. 24kHz keeps content up to 12kHz instead, sounds
+        // clearly better, and still cuts the original file size roughly in
+        // half. encodeWav reads the real audioContext.sampleRate back out
+        // below rather than assuming this was honored, so a browser that
+        // ignores/clamps the request just loses the size win, nothing
+        // breaks.
+        this.audioContext = new AudioContext({ sampleRate: 24000 });
         this.source = this.audioContext.createMediaStreamSource(stream);
         // Mono - a single mic input is mono content anyway, and the Web
         // Audio API downmixes for us just by asking for 1 output channel
