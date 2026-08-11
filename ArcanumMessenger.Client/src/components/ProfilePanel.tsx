@@ -32,7 +32,7 @@ interface ProfilePanelProps {
 type Section = "main" | "account" | "notifications" | "privacy" | "chats" | "language" | "blocked";
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 type PrivacyField = "showLastSeen" | "showOnlineStatus" | "readReceipts" | "showPhoneNumber" | "showBio" | "showAvatar" | "showEmail" | "whoCanAddMe" | "totpEnabled";
-type ChatField = "theme" | "language" | "wallpaper" | "linkPreviews" | "autoDownloadMedia";
+type ChatField = "theme" | "language";
 
 // Mirrors Entities.UserSettings, plus a few visual-only extras below.
 // Not persisted yet — wiring to GET/PUT /api/users/me/settings is next.
@@ -56,9 +56,6 @@ interface SettingsState {
     readReceipts: boolean;
     theme: "system" | "dark" | "light";
     language: "en" | "uk" | "de";
-    wallpaper: string;
-    linkPreviews: boolean;
-    autoDownloadMedia: boolean;
 }
 
 const defaultSettings: SettingsState = {
@@ -81,9 +78,6 @@ const defaultSettings: SettingsState = {
     readReceipts: true,
     theme: "system",
     language: "en",
-    wallpaper: "Default",
-    linkPreviews: true,
-    autoDownloadMedia: true,
 };
 
 type IconProps = { color: string };
@@ -296,9 +290,6 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
     const chatsApiFieldMap: Record<ChatField, keyof UpdateChatSettingsRequest> = {
         theme: "theme",
         language: "language",
-        wallpaper: "wallpaper",
-        linkPreviews: "linkPreviewsEnabled",
-        autoDownloadMedia: "autoDownloadMedia",
     };
 
 
@@ -554,9 +545,6 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                     whoCanAddMe: data.whoCanAddMe,
                     theme: data.theme,
                     language: data.language,
-                    wallpaper: data.wallpaper,
-                    linkPreviews: data.linkPreviewsEnabled,
-                    autoDownloadMedia: data.autoDownloadMedia,
                 }));
                 setSettingsLoaded(true);
             })
@@ -1033,34 +1021,6 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                                 </button>
                             ))}
                         </div>
-
-                        <span className={styles.subGroupTitle}>{tr.appearanceHeading}</span>
-                        <div className={styles.row}>
-                            <span>{tr.chatWallpaper}</span>
-                            <span className={styles.menuValue}>{settings.wallpaper}</span>
-                        </div>
-                        <label className={styles.row}>
-                            <span>{tr.showLinkPreviews}</span>
-                            <input
-                                className={styles.switch}
-                                type="checkbox"
-                                checked={settings.linkPreviews}
-                                disabled={!settingsLoaded}
-                                onChange={(e) => handleChatSettingChange("linkPreviews", e.target.checked)}
-                            />
-                        </label>
-
-                        <span className={styles.subGroupTitle}>{tr.dataUsageHeading}</span>
-                        <label className={styles.row}>
-                            <span>{tr.autoDownloadMediaLabel}</span>
-                            <input
-                                className={styles.switch}
-                                type="checkbox"
-                                checked={settings.autoDownloadMedia}
-                                disabled={!settingsLoaded}
-                                onChange={(e) => handleChatSettingChange("autoDownloadMedia", e.target.checked)}
-                            />
-                        </label>
 
                         <span className={styles.subGroupTitle}>{tr.micHeading}</span>
                         {micDevices.some((d) => d.label) ? (

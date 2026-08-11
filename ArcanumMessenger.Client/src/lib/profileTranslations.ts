@@ -48,11 +48,6 @@ export interface ProfilePanelTranslation {
     themeSystem: string;
     themeDark: string;
     themeLight: string;
-    appearanceHeading: string;
-    chatWallpaper: string;
-    showLinkPreviews: string;
-    dataUsageHeading: string;
-    autoDownloadMediaLabel: string;
     micHeading: string;
     micDefaultOption: string;
     micPermissionHint: string;
@@ -178,11 +173,6 @@ export const PROFILE_PANEL_TRANSLATIONS: Record<Language, ProfilePanelTranslatio
         themeSystem: "System",
         themeDark: "Dark",
         themeLight: "Light",
-        appearanceHeading: "Appearance",
-        chatWallpaper: "Chat wallpaper",
-        showLinkPreviews: "Show link previews",
-        dataUsageHeading: "Data Usage",
-        autoDownloadMediaLabel: "Auto-download media",
         micHeading: "Microphone",
         micDefaultOption: "System default",
         micPermissionHint: "Send a voice message once to see your microphones here",
@@ -239,11 +229,6 @@ export const PROFILE_PANEL_TRANSLATIONS: Record<Language, ProfilePanelTranslatio
         themeSystem: "Системна",
         themeDark: "Темна",
         themeLight: "Світла",
-        appearanceHeading: "Вигляд",
-        chatWallpaper: "Фон чату",
-        showLinkPreviews: "Показувати попередній перегляд посилань",
-        dataUsageHeading: "Використання даних",
-        autoDownloadMediaLabel: "Автозавантаження медіа",
         micHeading: "Мікрофон",
         micDefaultOption: "Системний за замовчуванням",
         micPermissionHint: "Надішліть голосове повідомлення хоча б раз, щоб побачити тут ваші мікрофони",
@@ -300,11 +285,6 @@ export const PROFILE_PANEL_TRANSLATIONS: Record<Language, ProfilePanelTranslatio
         themeSystem: "System",
         themeDark: "Dunkel",
         themeLight: "Hell",
-        appearanceHeading: "Erscheinungsbild",
-        chatWallpaper: "Chat-Hintergrund",
-        showLinkPreviews: "Linkvorschauen anzeigen",
-        dataUsageHeading: "Datennutzung",
-        autoDownloadMediaLabel: "Medien automatisch herunterladen",
         micHeading: "Mikrofon",
         micDefaultOption: "Systemstandard",
         micPermissionHint: "Sende einmal eine Sprachnachricht, um deine Mikrofone hier zu sehen",

@@ -39,9 +39,6 @@ public class UserSettings
     // Chat appearance
     public string Theme { get; set; } = "system";
     public string Language { get; set; } = "en";
-    public string Wallpaper { get; set; } = "default";
-    public bool LinkPreviewsEnabled { get; set; } = true;
-    public bool AutoDownloadMedia { get; set; } = true;
 
     public DateTime UpdatedAt { get; set; }
 

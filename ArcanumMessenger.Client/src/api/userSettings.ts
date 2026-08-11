@@ -20,9 +20,6 @@ export interface UserSettingsResponse {
     whoCanAddMe: "everyone" | "contacts";
     theme: "system" | "dark" | "light";
     language: "en" | "uk" | "de";
-    wallpaper: string;
-    linkPreviewsEnabled: boolean;
-    autoDownloadMedia: boolean;
 }
 
 export interface UpdateAccountFieldsRequest {
@@ -127,9 +124,6 @@ export async function updatePrivacySettings(
 export interface UpdateChatSettingsRequest {
     theme?: "system" | "dark" | "light";
     language?: "en" | "uk" | "de";
-    wallpaper?: string;
-    linkPreviewsEnabled?: boolean;
-    autoDownloadMedia?: boolean;
 }
 
 export async function updateChatSettings(
