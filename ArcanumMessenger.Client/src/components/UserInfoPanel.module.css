@@ -127,6 +127,11 @@
 }
 
 .blockBtn {
+    /* .actionBtn's flex:1 is meant for splitting .actionRow with a
+       sibling button - this one stands alone directly in .panel's own
+       flex column, where flex:1 instead stretches it to fill all
+       leftover height once .panel goes full-screen on mobile. */
+    flex: none;
     width: 100%;
     margin-bottom: 14px;
     color: rgb(var(--danger-rgb));
