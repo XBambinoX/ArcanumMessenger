@@ -2,6 +2,8 @@ using ArcanumMessenger.Contracts.Messenger.Media;
 
 namespace ArcanumMessenger.Contracts.Messenger.Messages;
 
+public record MessageReactionDto(string Emoji, int Count, bool ReactedByMe);
+
 public record ChatMessageDto(
     Guid Id,
     Guid ChatId,
@@ -15,7 +17,8 @@ public record ChatMessageDto(
     DateTime CreatedAt,
     bool IsOwn,
     Guid? ForwardedFromSenderId = null,
-    string? ForwardedFromSenderName = null);
+    string? ForwardedFromSenderName = null,
+    IReadOnlyList<MessageReactionDto>? Reactions = null);
 
 public record ChatReadStateDto(Guid UserId, DateTime LastReadAt);
 
@@ -55,3 +58,10 @@ public record ChatMediaResponse(
     bool Success, IReadOnlyList<ChatMediaItemDto>? Items = null, bool HasMore = false, string? Reason = null);
 
 public record ChatStatsResponse(bool Success, int MessageCount = 0, int MediaCount = 0, string? Reason = null);
+
+// Toggle, not add/remove separately - reacting with an emoji the caller
+// already put on this message removes it, any other emoji adds it
+// (capped per-user in MessageService).
+public record ToggleReactionRequest(string Emoji);
+
+public record ToggleReactionResponse(bool Success, IReadOnlyList<MessageReactionDto>? Reactions = null, string? Reason = null);

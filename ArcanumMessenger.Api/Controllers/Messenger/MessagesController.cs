@@ -106,6 +106,23 @@ public class MessagesController(MessageService messageService, ChatAccessService
             : Ok(new EditMessageResponse(true, message));
     }
 
+    [HttpPut("{messageId:guid}/reactions")]
+    public async Task<ActionResult<ToggleReactionResponse>> ToggleReaction(
+        Guid chatId, Guid messageId, [FromBody] ToggleReactionRequest request, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var membership = await chatAccess.GetMembershipAsync(chatId, userId, ct);
+        if (membership is null)
+            return NotFound(new ToggleReactionResponse(false, null, "not_found"));
+
+        var (success, reactions, reason) = await messageService.ToggleReactionAsync(chatId, messageId, userId, request.Emoji, ct);
+        return success
+            ? Ok(new ToggleReactionResponse(true, reactions))
+            : BadRequest(new ToggleReactionResponse(false, null, reason));
+    }
+
     [HttpPost("forward")]
     public async Task<ActionResult<ForwardMessagesResponse>> Forward(
         Guid chatId, [FromBody] ForwardMessagesRequest request, CancellationToken ct)

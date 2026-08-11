@@ -19,15 +19,53 @@ public class MessageService(
     // on that blob's length, generous enough to cover the base64/AES-GCM
     // overhead over what used to be a 4000-character plaintext cap.
     private const int MaxContentLength = 20000;
+    private const int MaxReactionsPerUserPerMessage = 7;
+    // Generous upper bound, not a strict "is this really one emoji" check -
+    // a ZWJ family/skin-tone sequence can span several UTF-16 code units.
+    // The client only ever sends picks from its own emoji list anyway; this
+    // is just a sanity cap against a malformed or hostile request.
+    private const int MaxEmojiLength = 32;
 
-    private static ChatMessageDto BuildDto(Message message, string senderName, MediaAsset? media, Guid callerId) =>
+    private static ChatMessageDto BuildDto(
+        Message message, string senderName, MediaAsset? media, Guid callerId, IReadOnlyList<MessageReactionDto> reactions) =>
         new(
             message.Id, message.ChatId, message.SenderId, senderName,
             message.ReplyToId, message.Content ?? "", message.Type,
             media is not null ? MediaAssetDto.FromEntity(media) : null,
             message.IsEdited, message.CreatedAt, message.SenderId == callerId,
-            message.ForwardedFromSenderId, message.ForwardedFromSenderName
+            message.ForwardedFromSenderId, message.ForwardedFromSenderName,
+            reactions
         );
+
+    // Raw (emoji -> reacting user ids) groups for a batch of messages, kept
+    // as user-id sets rather than a pre-built DTO since "ReactedByMe" is
+    // relative to whoever is viewing - one query serves every viewer.
+    private async Task<Dictionary<Guid, List<(string Emoji, HashSet<Guid> UserIds)>>> LoadReactionGroupsAsync(
+        List<Guid> messageIds, CancellationToken ct)
+    {
+        if (messageIds.Count == 0)
+            return [];
+
+        var rows = await db.MessageReactions.AsNoTracking()
+            .Where(r => messageIds.Contains(r.MessageId))
+            .Select(r => new { r.MessageId, r.UserId, r.Emoji, r.CreatedAt })
+            .ToListAsync(ct);
+
+        return rows
+            .GroupBy(r => r.MessageId)
+            .ToDictionary(
+                mg => mg.Key,
+                mg => mg.GroupBy(r => r.Emoji)
+                    .OrderBy(eg => eg.Min(r => r.CreatedAt))
+                    .Select(eg => (eg.Key, eg.Select(r => r.UserId).ToHashSet()))
+                    .ToList());
+    }
+
+    private static List<MessageReactionDto> BuildReactionDtos(
+        List<(string Emoji, HashSet<Guid> UserIds)>? groups, Guid viewerId) =>
+        groups is null
+            ? []
+            : groups.Select(g => new MessageReactionDto(g.Emoji, g.UserIds.Count, g.UserIds.Contains(viewerId))).ToList();
 
     public async Task<(List<ChatMessageDto> Messages, bool HasMore, List<ChatReadStateDto> ReadStates, string? Reason)> GetHistoryAsync(
         Guid chatId, Guid callerId, Guid? beforeMessageId, int take, CancellationToken ct)
@@ -69,12 +107,15 @@ public class MessageService(
             .Where(m => mediaIds.Contains(m.Id))
             .ToDictionaryAsync(m => m.Id, ct);
 
+        var reactionGroups = await LoadReactionGroupsAsync(trimmed.Select(m => m.Id).ToList(), ct);
+
         var messages = trimmed.Select(m => new ChatMessageDto(
             m.Id, m.ChatId, m.SenderId, names.GetValueOrDefault(m.SenderId, "Unknown user"),
             m.ReplyToId, m.Content ?? "", m.Type,
             m.MediaId is { } mid && mediaById.TryGetValue(mid, out var asset) ? MediaAssetDto.FromEntity(asset) : null,
             m.IsEdited, m.CreatedAt, m.SenderId == callerId,
-            m.ForwardedFromSenderId, m.ForwardedFromSenderName
+            m.ForwardedFromSenderId, m.ForwardedFromSenderName,
+            BuildReactionDtos(reactionGroups.GetValueOrDefault(m.Id), callerId)
         )).ToList();
 
         //Read states
@@ -227,7 +268,7 @@ public class MessageService(
         await db.SaveChangesAsync(ct);
 
         var names = await displayNames.GetDisplayNamesAsync([membership.UserId], ct);
-        var dto = BuildDto(message, names.GetValueOrDefault(membership.UserId, "Unknown user"), media, membership.UserId);
+        var dto = BuildDto(message, names.GetValueOrDefault(membership.UserId, "Unknown user"), media, membership.UserId, []);
 
         var otherMemberIds = await db.ChatMembers.AsNoTracking()
             .Where(cm => cm.ChatId == membership.ChatId && cm.UserId != membership.UserId)
@@ -311,7 +352,9 @@ public class MessageService(
             : null;
 
         var names = await displayNames.GetDisplayNamesAsync([callerId], ct);
-        var dto = BuildDto(message, names.GetValueOrDefault(callerId, "Unknown user"), media, callerId);
+        var reactionGroups = await LoadReactionGroupsAsync([messageId], ct);
+        var reactions = BuildReactionDtos(reactionGroups.GetValueOrDefault(messageId), callerId);
+        var dto = BuildDto(message, names.GetValueOrDefault(callerId, "Unknown user"), media, callerId, reactions);
 
         var otherMemberIds = await db.ChatMembers.AsNoTracking()
             .Where(cm => cm.ChatId == chatId && cm.UserId != callerId)
@@ -321,9 +364,17 @@ public class MessageService(
         // The caller gets their own copy too - same reasoning as SendMessageAsync,
         // the sidebar's chat list needs this event even for your own edits.
         await hub.Clients.User(callerId.ToString()).MessageEdited(dto);
-        var dtoForOthers = dto with { IsOwn = false };
         foreach (var id in otherMemberIds)
-            await hub.Clients.User(id.ToString()).MessageEdited(dtoForOthers);
+        {
+            // Reactions carry a per-viewer ReactedByMe flag, same as IsOwn -
+            // can't reuse the caller's copy for other recipients.
+            var dtoForOther = dto with
+            {
+                IsOwn = false,
+                Reactions = BuildReactionDtos(reactionGroups.GetValueOrDefault(messageId), id),
+            };
+            await hub.Clients.User(id.ToString()).MessageEdited(dtoForOther);
+        }
 
         return (dto, null);
     }
@@ -422,7 +473,7 @@ public class MessageService(
         var dtos = newMessages.Select(m => BuildDto(
             m, forwarderName,
             m.MediaId is { } mid && mediaById.TryGetValue(mid, out var asset) ? asset : null,
-            targetMembership.UserId
+            targetMembership.UserId, []
         )).ToList();
 
         var otherMemberIds = await db.ChatMembers.AsNoTracking()
@@ -441,5 +492,56 @@ public class MessageService(
         }
 
         return (dtos, null);
+    }
+
+    public async Task<(bool Success, IReadOnlyList<MessageReactionDto>? Reactions, string? Reason)> ToggleReactionAsync(
+        Guid chatId, Guid messageId, Guid callerId, string emoji, CancellationToken ct)
+    {
+        var trimmedEmoji = emoji.Trim();
+        if (trimmedEmoji.Length == 0 || trimmedEmoji.Length > MaxEmojiLength)
+            return (false, null, "invalid_emoji");
+
+        var messageExists = await db.Messages.AsNoTracking()
+            .AnyAsync(m => m.Id == messageId && m.ChatId == chatId && !m.IsDeleted, ct);
+        if (!messageExists)
+            return (false, null, "not_found");
+
+        var existing = await db.MessageReactions
+            .FirstOrDefaultAsync(r => r.MessageId == messageId && r.UserId == callerId && r.Emoji == trimmedEmoji, ct);
+
+        if (existing is not null)
+        {
+            db.MessageReactions.Remove(existing);
+        }
+        else
+        {
+            var myReactionCount = await db.MessageReactions
+                .CountAsync(r => r.MessageId == messageId && r.UserId == callerId, ct);
+            if (myReactionCount >= MaxReactionsPerUserPerMessage)
+                return (false, null, "too_many_reactions");
+
+            db.MessageReactions.Add(new MessageReaction
+            {
+                MessageId = messageId,
+                UserId = callerId,
+                Emoji = trimmedEmoji,
+                CreatedAt = DateTime.UtcNow,
+            });
+        }
+
+        await db.SaveChangesAsync(ct);
+
+        var reactionGroups = await LoadReactionGroupsAsync([messageId], ct);
+        var groups = reactionGroups.GetValueOrDefault(messageId);
+
+        var memberIds = await db.ChatMembers.AsNoTracking()
+            .Where(cm => cm.ChatId == chatId)
+            .Select(cm => cm.UserId)
+            .ToListAsync(ct);
+
+        foreach (var memberId in memberIds)
+            await hub.Clients.User(memberId.ToString()).ReactionsChanged(chatId, messageId, BuildReactionDtos(groups, memberId));
+
+        return (true, BuildReactionDtos(groups, callerId), null);
     }
 }
