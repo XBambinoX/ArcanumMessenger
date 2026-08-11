@@ -148,55 +148,46 @@ function WelcomeCard({
    Animated chat
 ══════════════════════════════════════ */
 const MSG_FROM = ["A", "S", "A", "S"] as const;
+const MSG_TIMES = ["10:24", "10:24", "10:26", "10:27"] as const;
+
+// Matches ChatWindow.tsx's own MessageStatusIcon exactly - same paths,
+// same double-check-for-read shape - so a real user recognizes the read
+// receipt instead of it looking like a different, invented icon.
+function DemoReadIcon() {
+    return (
+        <svg
+            className={styles.chatCheck}
+            width="16" height="10" viewBox="0 0 16 10" fill="none"
+            stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
+        >
+            <path d="M1 5L4.5 8.5L9.5 2" />
+            <path d="M6 5L9.5 8.5L14.5 2" />
+        </svg>
+    );
+}
 
 function AnimatedChat({ tr }: { tr: WelcomeTranslation }) {
     const [shown, setShown] = useState<number[]>([]);
-    const [typing, setTyping] = useState<"A" | "S" | null>(null);
 
+    // The real app has no "user is typing" indicator yet (that needs a
+    // realtime channel, still a roadmap item) - a demo bubble for a
+    // feature that doesn't exist would break the "identical to the real
+    // app" goal, so messages just appear on a timer instead.
     useEffect(() => {
         const T: ReturnType<typeof setTimeout>[] = [];
         const run = () => {
             setShown([]);
-            setTyping(null);
             const steps: [number, () => void][] = [
-                [500, () => setTyping("A")],
-                [
-                    1900,
-                    () => {
-                        setTyping(null);
-                        setShown([0]);
-                    },
-                ],
-                [3100, () => setTyping("S")],
-                [
-                    4700,
-                    () => {
-                        setTyping(null);
-                        setShown([0, 1]);
-                    },
-                ],
-                [5900, () => setTyping("A")],
-                [
-                    7400,
-                    () => {
-                        setTyping(null);
-                        setShown([0, 1, 2]);
-                    },
-                ],
-                [8600, () => setTyping("S")],
-                [
-                    10300,
-                    () => {
-                        setTyping(null);
-                        setShown([0, 1, 2, 3]);
-                    },
-                ],
+                [800, () => setShown([0])],
+                [2400, () => setShown([0, 1])],
+                [4000, () => setShown([0, 1, 2])],
+                [5600, () => setShown([0, 1, 2, 3])],
             ];
             steps.forEach(([d, fn]) => T.push(setTimeout(fn, d)));
             T.push(
                 setTimeout(() => {
-                    T.push(setTimeout(run, 600));
-                }, 13500),
+                    T.push(setTimeout(run, 1400));
+                }, 8200),
             );
         };
         T.push(setTimeout(run, 300));
@@ -209,74 +200,65 @@ function AnimatedChat({ tr }: { tr: WelcomeTranslation }) {
                 <div className={`${styles.av} ${styles.avS}`}>S</div>
                 <div className={styles.chatHeadInfo}>
                     <div className={styles.chatName}>{tr.chat.samName}</div>
-                    <div className={styles.chatStatus}>
-                        <span className={styles.onlineDot} />
-                        {tr.chat.online}
-                    </div>
+                    <div className={styles.chatStatus}>{tr.chat.online}</div>
                 </div>
-                <span className={styles.chatMenuDots}>···</span>
+                {/* Same info-circle icon as the real header's .infoBtn -
+                    the real app has no "···" menu button there at all. */}
+                <span className={styles.chatInfoBtn}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 16v-4M12 8h.01" />
+                    </svg>
+                </span>
             </div>
 
             <div className={styles.chatBody}>
+                {/* No per-message avatar - the real ChatWindow doesn't
+                    render one either (only .bubbleRow + .own for
+                    alignment, see its own :974), just its own header
+                    avatar above, kept here for "S". */}
                 {MSG_FROM.map((from, i) =>
                     shown.includes(i) ? (
                         <div
                             key={i}
                             className={`${styles.chatRow} ${from === "A" ? styles.chatRowOwn : ""}`}
                         >
-                            {from !== "A" && (
-                                <div
-                                    className={`${styles.av} ${styles.avSm} ${styles.avS}`}
-                                >
-                                    S
-                                </div>
-                            )}
                             <div
                                 className={`${styles.bubble} ${from === "A" ? styles.bubbleOwn : styles.bubbleOther}`}
                             >
                                 {tr.chat.msgs[i]}
+                                {from === "A" && (
+                                    <span className={styles.chatMeta}>
+                                        {MSG_TIMES[i]}
+                                        <DemoReadIcon />
+                                    </span>
+                                )}
                             </div>
-                            {from === "A" && (
-                                <div
-                                    className={`${styles.av} ${styles.avSm} ${styles.avA}`}
-                                >
-                                    A
-                                </div>
-                            )}
                         </div>
                     ) : null,
-                )}
-                {typing && (
-                    <div
-                        className={`${styles.chatRow} ${typing === "A" ? styles.chatRowOwn : ""}`}
-                    >
-                        {typing !== "A" && (
-                            <div
-                                className={`${styles.av} ${styles.avSm} ${styles.avS}`}
-                            >
-                                S
-                            </div>
-                        )}
-                        <div
-                            className={`${styles.bubble} ${typing === "A" ? styles.bubbleOwn : styles.bubbleOther} ${styles.bubbleTyping}`}
-                        >
-                            <span className={styles.tDot} />
-                            <span className={styles.tDot} />
-                            <span className={styles.tDot} />
-                        </div>
-                        {typing === "A" && (
-                            <div
-                                className={`${styles.av} ${styles.avSm} ${styles.avA}`}
-                            >
-                                A
-                            </div>
-                        )}
-                    </div>
                 )}
             </div>
 
             <div className={styles.chatFoot}>
+                <span className={styles.chatIconBtn}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                        <path d="M9 9h.01M15 9h.01" />
+                    </svg>
+                </span>
                 <div className={styles.chatInput}>{tr.chat.typeMessage}</div>
+                <span className={styles.chatIconBtn}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                        <line x1="12" y1="19" x2="12" y2="23" />
+                        <line x1="8" y1="23" x2="16" y2="23" />
+                    </svg>
+                </span>
+                {/* Same envelope path as the real send button
+                    (ChatWindow.tsx's own, ~:1470) - not a paper plane,
+                    matches the app's mail-themed branding throughout. */}
                 <button className={styles.chatSend} aria-label={tr.common.send}>
                     <svg
                         width="13"
@@ -284,11 +266,12 @@ function AnimatedChat({ tr }: { tr: WelcomeTranslation }) {
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
-                        strokeWidth="2.5"
+                        strokeWidth="2"
                         strokeLinecap="round"
                         strokeLinejoin="round"
                     >
-                        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+                        <rect x="2" y="4" width="20" height="16" rx="3" />
+                        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
                     </svg>
                 </button>
             </div>
