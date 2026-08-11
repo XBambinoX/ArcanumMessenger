@@ -12,12 +12,13 @@ interface StickerPickerProps {
     onClose: () => void;
     onSelectEmoji: (emoji: string) => void;
     onSelectGif: (entry: SavedGifEntry) => void;
+    onAttachFile: () => void;
 }
 
-// One button/panel for both emoji and GIFs, switched by a top-level tab -
-// two separate buttons crowded the compose row enough to push the send
-// button off narrow screens.
-export default function StickerPicker({ savedChat, onClose, onSelectEmoji, onSelectGif }: StickerPickerProps) {
+// One button/panel for emoji, GIFs, and now plain file attachments too,
+// switched by a top-level tab - separate buttons for each crowded the
+// compose row enough to push the send button off narrow screens.
+export default function StickerPicker({ savedChat, onClose, onSelectEmoji, onSelectGif, onAttachFile }: StickerPickerProps) {
     const language = useLanguage();
     const tr = CHAT_WINDOW_TRANSLATIONS[language];
     const closeAria = GIF_PICKER_TRANSLATIONS[language].closeAria;
@@ -27,6 +28,16 @@ export default function StickerPicker({ savedChat, onClose, onSelectEmoji, onSel
         <aside className={styles.panel}>
             <div className={styles.topBar}>
                 <div className={styles.topTabs}>
+                    <button
+                        className={styles.topTab}
+                        onClick={onAttachFile}
+                        aria-label={tr.attachFileAria}
+                        title={tr.attachFileAria}
+                    >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.33 3.33 0 0 1 4.71 4.71l-9.2 9.19a1.67 1.67 0 0 1-2.36-2.36l8.49-8.48" />
+                        </svg>
+                    </button>
                     <button
                         className={`${styles.topTab} ${tab === "emoji" ? styles.topTabActive : ""}`}
                         onClick={() => setTab("emoji")}

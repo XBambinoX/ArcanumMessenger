@@ -17,6 +17,10 @@ export interface ChatWindowTranslation {
     cancelReplyAria: string;
     uploading: string;
     cancelUploadAria: string;
+    recordVoiceAria: string;
+    cancelRecordingAria: string;
+    sendRecordingAria: string;
+    micPermissionDenied: string;
     sendAsGif: string;
     removeAttachmentAria: string;
     attachFileAria: string;
@@ -161,6 +165,10 @@ export const CHAT_WINDOW_TRANSLATIONS: Record<Language, ChatWindowTranslation> =
         cancelReplyAria: "Cancel reply",
         uploading: "Uploading…",
         cancelUploadAria: "Cancel upload",
+        recordVoiceAria: "Record voice message",
+        cancelRecordingAria: "Cancel recording",
+        sendRecordingAria: "Send voice message",
+        micPermissionDenied: "Couldn't access the microphone",
         sendAsGif: "Send as GIF",
         removeAttachmentAria: "Remove attachment",
         attachFileAria: "Attach file",
@@ -190,6 +198,10 @@ export const CHAT_WINDOW_TRANSLATIONS: Record<Language, ChatWindowTranslation> =
         cancelReplyAria: "Скасувати відповідь",
         uploading: "Завантаження…",
         cancelUploadAria: "Скасувати завантаження",
+        recordVoiceAria: "Записати голосове повідомлення",
+        cancelRecordingAria: "Скасувати запис",
+        sendRecordingAria: "Надіслати голосове повідомлення",
+        micPermissionDenied: "Не вдалося отримати доступ до мікрофона",
         sendAsGif: "Надіслати як GIF",
         removeAttachmentAria: "Видалити вкладення",
         attachFileAria: "Прикріпити файл",
@@ -219,6 +231,10 @@ export const CHAT_WINDOW_TRANSLATIONS: Record<Language, ChatWindowTranslation> =
         cancelReplyAria: "Antwort abbrechen",
         uploading: "Wird hochgeladen…",
         cancelUploadAria: "Upload abbrechen",
+        recordVoiceAria: "Sprachnachricht aufnehmen",
+        cancelRecordingAria: "Aufnahme abbrechen",
+        sendRecordingAria: "Sprachnachricht senden",
+        micPermissionDenied: "Zugriff auf das Mikrofon fehlgeschlagen",
         sendAsGif: "Als GIF senden",
         removeAttachmentAria: "Anhang entfernen",
         attachFileAria: "Datei anhängen",

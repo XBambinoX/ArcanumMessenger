@@ -48,20 +48,34 @@ export async function readMediaMetadata(file: File): Promise<MediaDimensions> {
             audio.preload = "metadata";
             const url = URL.createObjectURL(file);
             audio.src = url;
-            audio.onloadedmetadata = () => {
-                // Some containers report a real duration late, or not at
-                // all until more data loads - same caveat as the video
-                // first-frame extraction below dealt with for its own
-                // duration read. An unusable value here just means no
-                // duration gets shown, not a broken upload.
-                const result = Number.isFinite(audio.duration) ? { durationSeconds: audio.duration } : {};
+
+            let settled = false;
+            const finish = (result: MediaDimensions) => {
+                if (settled) return;
+                settled = true;
+                window.clearTimeout(timeoutId);
                 URL.revokeObjectURL(url);
                 resolve(result);
             };
-            audio.onerror = () => {
-                URL.revokeObjectURL(url);
-                resolve({});
+            const timeoutId = window.setTimeout(() => finish({}), 6000);
+
+            audio.onloadedmetadata = () => {
+                if (Number.isFinite(audio.duration)) {
+                    finish({ durationSeconds: audio.duration });
+                    return;
+                }
+                // A MediaRecorder-produced file (voice messages) has no
+                // duration in its container, so Chrome reports Infinity
+                // here - a known quirk, not a broken recording. Seeking
+                // past the end forces the browser to actually probe the
+                // file and discover the real duration, which then shows up
+                // once that seek settles.
+                audio.currentTime = Number.MAX_SAFE_INTEGER;
+                audio.ontimeupdate = () => {
+                    finish(Number.isFinite(audio.duration) ? { durationSeconds: audio.duration } : {});
+                };
             };
+            audio.onerror = () => finish({});
         });
     }
 

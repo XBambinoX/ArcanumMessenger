@@ -329,7 +329,7 @@ export function EncryptedVideoPlayer({
     );
 }
 
-function formatAudioTime(seconds: number): string {
+export function formatAudioTime(seconds: number): string {
     const total = Math.max(0, Math.round(seconds));
     const m = Math.floor(total / 60);
     const s = total % 60;
@@ -427,7 +427,15 @@ export function EncryptedAudioPlayer({
                         setPlaying(false);
                         setCurrentTime(0);
                     }}
-                    onLoadedMetadata={() => setDuration(audioRef.current?.duration || media.durationSeconds || 0)}
+                    onLoadedMetadata={() => {
+                        // Not "||" - a MediaRecorder-produced file (voice
+                        // messages) reports Infinity here, and Infinity is
+                        // truthy, so "||" would keep it instead of falling
+                        // through to the real duration mediaMetadata.ts
+                        // already resolved at record time.
+                        const live = audioRef.current?.duration;
+                        setDuration(Number.isFinite(live) ? live! : (media.durationSeconds ?? 0));
+                    }}
                     onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime ?? 0)}
                 />
             )}

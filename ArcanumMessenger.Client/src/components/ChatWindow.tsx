@@ -16,6 +16,7 @@ import UserInfoPanel from "./UserInfoPanel";
 import ChatInfoPanel from "./ChatInfoPanel";
 import EmojiPicker from "./EmojiPicker";
 import StickerPicker from "./StickerPicker";
+import VoiceRecorderButton from "./VoiceRecorderButton";
 import ForwardPanel from "./ForwardPanel";
 import AvatarImage from "./AvatarImage";
 import MessageContextMenu, { type MessageContextMenuItem } from "./MessageContextMenu";
@@ -160,6 +161,7 @@ export default function ChatWindow({
     const [sendAsGif, setSendAsGif] = useState(false);
     const [uploadingFile, setUploadingFile] = useState(false);
     const [uploadProgress, setUploadProgress] = useState<{ loaded: number; total: number } | null>(null);
+    const [voiceRecording, setVoiceRecording] = useState(false);
     // The merged emoji+GIF picker (StickerPicker) shown in the normal
     // compose state; editing a message falls back to a plain emoji-only
     // button below (attaching a new GIF while editing isn't supported).
@@ -507,6 +509,55 @@ export default function ChatWindow({
             setSendAsGif(false);
         } catch (err) {
             // A deliberate cancel (handleCancelUpload) - already cleaned up there.
+            if (!(err instanceof DOMException && err.name === "AbortError")) throw err;
+        } finally {
+            setUploadingFile(false);
+            setUploadProgress(null);
+            uploadAbortRef.current = null;
+            uploadFileRef.current = null;
+            uploadSessionIdRef.current = null;
+        }
+    };
+
+    // Voice messages skip the pendingMedia review step entirely - stopping
+    // the recording is the send action, same as Telegram/WhatsApp.
+    const handleVoiceRecorded = async (file: File, durationSeconds: number) => {
+        const chatKey = await getChatKey({ id: chat.id, wrappedChatKey: chat.wrappedChatKey });
+        if (!chatKey) return;
+
+        const controller = new AbortController();
+        uploadAbortRef.current = controller;
+        uploadFileRef.current = file;
+        uploadSessionIdRef.current = null;
+
+        try {
+            let media: MediaAsset | null;
+            if (file.size >= CHUNK_THRESHOLD) {
+                setUploadProgress({ loaded: 0, total: file.size });
+                media = await uploadMediaChunked(
+                    file,
+                    chatKey,
+                    chat.id,
+                    (loaded, total) => setUploadProgress({ loaded, total }),
+                    controller.signal,
+                    (sessionId) => { uploadSessionIdRef.current = sessionId; },
+                    durationSeconds,
+                );
+            } else {
+                setUploadingFile(true);
+                media = await uploadMedia(file, chatKey, chat.id, controller.signal, durationSeconds);
+            }
+
+            if (media) {
+                const replyToId = replyTarget?.id ?? null;
+                setReplyTarget(null);
+                const sent = await sendMessage(chat.id, "", media.id, false, replyToId);
+                if (sent) {
+                    setMessages((prev) => appendUnique(prev, [{ ...sent, content: "" }]));
+                    markAnimated(sent.id);
+                }
+            }
+        } catch (err) {
             if (!(err instanceof DOMException && err.name === "AbortError")) throw err;
         } finally {
             setUploadingFile(false);
@@ -1237,48 +1288,41 @@ export default function ChatWindow({
                             </div>
                         )}
                         <div className={styles.inputRow}>
-                            {!editTarget ? (
-                                <>
-                                    <input
-                                        type="file"
-                                        ref={fileInputRef}
-                                        className={styles.hiddenFileInput}
-                                        onChange={handleFileSelected}
-                                    />
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                className={styles.hiddenFileInput}
+                                onChange={handleFileSelected}
+                            />
+                            {!editTarget && !voiceRecording && (
+                                <div className={styles.stickerButtonWrap} ref={stickerPanelRef}>
                                     <button
                                         className={styles.attachBtn}
-                                        onClick={handleAttachClick}
-                                        aria-label={tr.attachFileAria}
-                                        title={tr.attachFileAria}
+                                        onClick={() => setStickerPickerOpen((prev) => !prev)}
+                                        aria-label={tr.emojiAria}
+                                        title={tr.emojiAria}
                                     >
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.33 3.33 0 0 1 4.71 4.71l-9.2 9.19a1.67 1.67 0 0 1-2.36-2.36l8.49-8.48" />
+                                            <circle cx="12" cy="12" r="10" />
+                                            <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                                            <path d="M9 9h.01M15 9h.01" />
                                         </svg>
                                     </button>
-                                    <div className={styles.stickerButtonWrap} ref={stickerPanelRef}>
-                                        <button
-                                            className={styles.attachBtn}
-                                            onClick={() => setStickerPickerOpen((prev) => !prev)}
-                                            aria-label={tr.emojiAria}
-                                            title={tr.emojiAria}
-                                        >
-                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                <circle cx="12" cy="12" r="10" />
-                                                <path d="M8 14s1.5 2 4 2 4-2 4-2" />
-                                                <path d="M9 9h.01M15 9h.01" />
-                                            </svg>
-                                        </button>
-                                        {stickerPickerOpen && savedChat && (
-                                            <StickerPicker
-                                                savedChat={savedChat}
-                                                onClose={() => setStickerPickerOpen(false)}
-                                                onSelectEmoji={handleInsertEmoji}
-                                                onSelectGif={handleSendGif}
-                                            />
-                                        )}
-                                    </div>
-                                </>
-                            ) : (
+                                    {stickerPickerOpen && savedChat && (
+                                        <StickerPicker
+                                            savedChat={savedChat}
+                                            onClose={() => setStickerPickerOpen(false)}
+                                            onSelectEmoji={handleInsertEmoji}
+                                            onSelectGif={handleSendGif}
+                                            onAttachFile={() => {
+                                                handleAttachClick();
+                                                setStickerPickerOpen(false);
+                                            }}
+                                        />
+                                    )}
+                                </div>
+                            )}
+                            {editTarget && (
                                 <div className={styles.emojiButtonWrap} ref={emojiPanelRef}>
                                     <button
                                         className={styles.attachBtn}
@@ -1300,51 +1344,63 @@ export default function ChatWindow({
                                     )}
                                 </div>
                             )}
-                            <textarea
-                                ref={draftInputRef}
-                                className={styles.input}
-                                rows={1}
-                                placeholder={tr.messagePlaceholder}
-                                value={draft}
-                                onChange={(e) => setDraft(e.target.value)}
-                                onKeyDown={(e) => {
-                                    // Mobile: Enter always inserts a newline (there's no
-                                    // convenient Shift key) - sending is send-button-only.
-                                    // Desktop: Enter sends, Shift+Enter inserts a newline.
-                                    if (e.key !== "Enter" || e.shiftKey || isMobile) return;
-                                    e.preventDefault();
-                                    handleSend();
-                                }}
-                            />
-                            <button
-                                className={styles.sendBtn}
-                                // Tapping a button moves focus to it by default,
-                                // and away from the draft textarea - since a
-                                // button isn't a text field, that's what tells
-                                // the on-screen keyboard to close. Blocking just
-                                // that default (not the click itself) keeps the
-                                // textarea focused, so the keyboard stays open
-                                // through a send and only closes when the user
-                                // actually taps outside the input themselves.
-                                onMouseDown={(e) => e.preventDefault()}
-                                onClick={handleSend}
-                                disabled={!draft.trim() && !pendingMedia}
-                                aria-label={common.send}
-                            >
-                                <svg
-                                    width="18"
-                                    height="18"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
+                            {!voiceRecording && (
+                                <textarea
+                                    ref={draftInputRef}
+                                    className={styles.input}
+                                    rows={1}
+                                    placeholder={tr.messagePlaceholder}
+                                    value={draft}
+                                    onChange={(e) => setDraft(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        // Mobile: Enter always inserts a newline (there's no
+                                        // convenient Shift key) - sending is send-button-only.
+                                        // Desktop: Enter sends, Shift+Enter inserts a newline.
+                                        if (e.key !== "Enter" || e.shiftKey || isMobile) return;
+                                        e.preventDefault();
+                                        handleSend();
+                                    }}
+                                />
+                            )}
+                            {!editTarget && (
+                                <VoiceRecorderButton
+                                    chatId={chat.id}
+                                    disabled={uploadingFile || !!uploadProgress || !!pendingMedia}
+                                    onRecorded={handleVoiceRecorded}
+                                    onRecordingChange={setVoiceRecording}
+                                />
+                            )}
+                            {!voiceRecording && (
+                                <button
+                                    className={styles.sendBtn}
+                                    // Tapping a button moves focus to it by default,
+                                    // and away from the draft textarea - since a
+                                    // button isn't a text field, that's what tells
+                                    // the on-screen keyboard to close. Blocking just
+                                    // that default (not the click itself) keeps the
+                                    // textarea focused, so the keyboard stays open
+                                    // through a send and only closes when the user
+                                    // actually taps outside the input themselves.
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={handleSend}
+                                    disabled={!draft.trim() && !pendingMedia}
+                                    aria-label={common.send}
                                 >
-                                    <rect x="2" y="4" width="20" height="16" rx="3" />
-                                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-                                </svg>
-                            </button>
+                                    <svg
+                                        width="18"
+                                        height="18"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    >
+                                        <rect x="2" y="4" width="20" height="16" rx="3" />
+                                        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                                    </svg>
+                                </button>
+                            )}
                         </div>
                     </>
                 )}

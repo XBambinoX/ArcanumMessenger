@@ -1,0 +1,120 @@
+.wrap {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.micBtn {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
+    background: rgba(var(--accent-rgb), 0.05);
+    color: rgba(var(--accent-light-rgb), 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.2s;
+    /* Without this, holding the button down on a touch screen can be read
+       as the start of a scroll/selection gesture instead of a hold. */
+    touch-action: none;
+}
+
+.micBtn:hover:not(:disabled) {
+    background: rgba(var(--accent-rgb), 0.12);
+    border-color: rgba(var(--accent-light-rgb), 0.4);
+}
+
+.micBtn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.error {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    right: 0;
+    white-space: nowrap;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: rgba(var(--danger-rgb), 0.15);
+    color: rgb(var(--danger-rgb));
+    font-size: 11.5px;
+}
+
+.recordingRow {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 4px;
+}
+
+.recordingDot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: rgb(var(--danger-rgb));
+    flex-shrink: 0;
+    animation: recordingPulse 1.1s ease-in-out infinite;
+}
+
+@keyframes recordingPulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.35;
+    }
+}
+
+.recordingTime {
+    flex-shrink: 0;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    color: rgba(var(--text-rgb), 0.85);
+}
+
+.recordingSpacer {
+    flex: 1;
+}
+
+.cancelBtn {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: rgba(var(--danger-rgb), 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.cancelBtn:hover {
+    background: rgba(var(--danger-rgb), 0.12);
+}
+
+.confirmBtn {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgb(var(--white-rgb));
+    cursor: pointer;
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
+    box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.3);
+    transition: transform 0.15s;
+}
+
+.confirmBtn:hover {
+    transform: scale(1.05);
+}

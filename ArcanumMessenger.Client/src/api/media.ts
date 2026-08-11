@@ -17,12 +17,19 @@ export async function uploadMedia(
     chatKey: Uint8Array,
     chatId: string,
     signal?: AbortSignal,
+    // Voice recordings already know their own real length (timed while
+    // recording) - MediaRecorder output has no duration in its container,
+    // so readMediaMetadata's browser-based detection is unreliable for it
+    // (varies by browser, sometimes never resolves at all). Passing the
+    // real value here skips that guesswork entirely.
+    durationSecondsOverride?: number,
 ): Promise<MediaAsset | null> {
     const encryptedChunks: Uint8Array[] = [];
     for await (const chunk of encryptChunked(chatKey, chatId, file)) {
         encryptedChunks.push(chunk);
     }
     const meta = await readMediaMetadata(file);
+    const durationSeconds = durationSecondsOverride ?? meta.durationSeconds;
     const encryptedFileName = await encryptContent(chatKey, chatId, file.name);
 
     const formData = new FormData();
@@ -34,7 +41,7 @@ export async function uploadMedia(
     formData.append("mimeType", file.type || "application/octet-stream");
     if (meta.width) formData.append("width", String(meta.width));
     if (meta.height) formData.append("height", String(meta.height));
-    if (meta.durationSeconds) formData.append("durationSeconds", String(meta.durationSeconds));
+    if (durationSeconds) formData.append("durationSeconds", String(durationSeconds));
 
     const res = await apiFetch("/api/media", {
         method: "POST",
