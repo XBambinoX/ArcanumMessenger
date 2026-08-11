@@ -43,6 +43,10 @@
     font-size: 11.5px;
 }
 
+.wrapRecording {
+    flex: 1;
+}
+
 .recordingRow {
     flex: 1;
     min-width: 0;
@@ -50,6 +54,93 @@
     align-items: center;
     gap: 10px;
     padding: 0 4px;
+}
+
+/* Positioning only - no border-radius/overflow/transform-for-mirroring here.
+   position: fixed + centered on the viewport itself (top/left 50% + a
+   translate, not an offset from one edge) - the button this recording
+   started from sits off to one side of the compose row, so anchoring to
+   it (like StickerPicker's own panel does) would leave this noticeably
+   off-center instead of dead center on screen, and guessing a "bottom"
+   offset that clears the compose bar on every device/browser chrome
+   combination isn't reliable either. */
+.videoPanel {
+    position: fixed;
+    left: 50%;
+    /* A bit above dead center - the compose bar's own visual weight at the
+       bottom of the screen made true 50% still read as too low. */
+    top: 43%;
+    transform: translate(-50%, -50%);
+    width: 260px;
+    height: 260px;
+    z-index: 10;
+}
+
+/* Always mounted (see the component's own comment on why) - this is the
+   "not currently recording video" state, taking no space and staying
+   fully inert. */
+.videoPanelHidden {
+    display: none;
+}
+
+/* The actual clip lives here, on an element with no transform of its own -
+   .videoPanel above already has one (centering), .previewMirrored below
+   sometimes has one too (the selfie mirror). border-radius + overflow:
+   hidden alone wasn't enough - Safari/WebKit has a long-standing bug where
+   a transformed child escapes its own direct parent's overflow-hidden
+   clip regardless of whether the parent is separately transformed too.
+   clip-path uses a completely different clipping mechanism that isn't
+   subject to that bug, so it's the one actually doing the clipping here;
+   border-radius/overflow stay as a harmless fallback for anything that
+   somehow doesn't support clip-path's round syntax. */
+.videoPanelClip {
+    width: 100%;
+    height: 100%;
+    border-radius: 24px;
+    overflow: hidden;
+    clip-path: inset(0 round 24px);
+    background: rgb(var(--black-rgb));
+    box-shadow: 0 20px 50px rgba(var(--black-rgb), 0.45);
+}
+
+.previewCanvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.flipBtn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(var(--black-rgb), 0.5);
+    color: rgb(var(--white-rgb));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.flipBtn:hover {
+    background: rgba(var(--black-rgb), 0.65);
+}
+
+/* Not display: none - some browsers throttle or fully stop decoding a
+   display:none video element, which left the canvas draw loop with no
+   real frames to read (videoWidth/videoHeight never left 0). Kept in the
+   render tree and just made invisible instead, so decoding keeps running
+   normally the whole time it's actually feeding the canvas. */
+.hiddenVideo {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
 }
 
 .recordingDot {

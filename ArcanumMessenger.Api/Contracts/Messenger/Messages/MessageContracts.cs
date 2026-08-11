@@ -26,7 +26,7 @@ public record MessageHistoryResponse(
     string? Reason = null,
     IReadOnlyList<ChatReadStateDto>? ReadStates = null);
 
-public record SendMessageRequest(string? Content, Guid? ReplyToId, Guid? MediaId, bool AsGif = false);
+public record SendMessageRequest(string? Content, Guid? ReplyToId, Guid? MediaId, bool AsGif = false, bool AsVideoNote = false);
 
 public record SendMessageResponse(bool Success, ChatMessageDto? Message, string? Reason = null);
 

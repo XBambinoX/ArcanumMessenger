@@ -60,6 +60,7 @@ function replySnippet(message: ChatMessage, common: AppCommonTranslation): strin
         case "video": return common.video;
         case "gif": return common.gif;
         case "audio": return common.audio;
+        case "videoNote": return common.videoNote;
         case "file": return message.media?.fileName ?? common.file;
         default: return "";
     }
@@ -568,6 +569,56 @@ export default function ChatWindow({
         }
     };
 
+    // Same shape as handleVoiceRecorded - the only difference is asVideoNote
+    // on the send call, which is what gets media.Kind reclassified from
+    // "video" to "videoNote" server-side (see MessageService.SendMessageAsync).
+    const handleVideoNoteRecorded = async (file: File, durationSeconds: number) => {
+        const chatKey = await getChatKey({ id: chat.id, wrappedChatKey: chat.wrappedChatKey });
+        if (!chatKey) return;
+
+        const controller = new AbortController();
+        uploadAbortRef.current = controller;
+        uploadFileRef.current = file;
+        uploadSessionIdRef.current = null;
+
+        try {
+            let media: MediaAsset | null;
+            if (file.size >= CHUNK_THRESHOLD) {
+                setUploadProgress({ loaded: 0, total: file.size });
+                media = await uploadMediaChunked(
+                    file,
+                    chatKey,
+                    chat.id,
+                    (loaded, total) => setUploadProgress({ loaded, total }),
+                    controller.signal,
+                    (sessionId) => { uploadSessionIdRef.current = sessionId; },
+                    durationSeconds,
+                );
+            } else {
+                setUploadingFile(true);
+                media = await uploadMedia(file, chatKey, chat.id, controller.signal, durationSeconds);
+            }
+
+            if (media) {
+                const replyToId = replyTarget?.id ?? null;
+                setReplyTarget(null);
+                const sent = await sendMessage(chat.id, "", media.id, false, replyToId, true);
+                if (sent) {
+                    setMessages((prev) => appendUnique(prev, [{ ...sent, content: "" }]));
+                    markAnimated(sent.id);
+                }
+            }
+        } catch (err) {
+            if (!(err instanceof DOMException && err.name === "AbortError")) throw err;
+        } finally {
+            setUploadingFile(false);
+            setUploadProgress(null);
+            uploadAbortRef.current = null;
+            uploadFileRef.current = null;
+            uploadSessionIdRef.current = null;
+        }
+    };
+
     const handleCancelUpload = () => {
         uploadAbortRef.current?.abort();
         if (uploadSessionIdRef.current) {
@@ -899,12 +950,12 @@ export default function ChatWindow({
                         new Date(prev.createdAt).toDateString() !==
                             new Date(message.createdAt).toDateString();
                     const replyTo = findMessage(message.replyToId);
-                    const isMediaKind = message.type === "image" || message.type === "gif" || message.type === "video";
+                    const isMediaKind = message.type === "image" || message.type === "gif" || message.type === "video" || message.type === "videoNote";
                     const hasCaption = isMediaKind && !!message.content;
                     const bareMedia = isMediaKind && !hasCaption;
                     const mediaWrapClass = `${styles.mediaWrap} ${hasCaption ? styles.mediaBleedTop : ""} ${
                         message.type === "video" ? styles.mediaWrapVideo : ""
-                    }`;
+                    } ${message.type === "videoNote" ? styles.mediaWrapVideoNote : ""}`;
 
                     return (
                         <div key={message.id}>
@@ -1061,6 +1112,27 @@ export default function ChatWindow({
                                             timeClassName={styles.audioTime}
                                             spinnerClassName={styles.audioSpinner}
                                         />
+                                    )}
+                                    {message.type === "videoNote" && message.media && (
+                                        <div className={mediaWrapClass}>
+                                            <EncryptedVideoPlayer
+                                                chat={{ id: chat.id, wrappedChatKey: chat.wrappedChatKey }}
+                                                media={message.media}
+                                                className={styles.mediaVideoNote}
+                                                placeholderClassName={styles.videoNotePlaceholder}
+                                                playIconClassName={styles.videoPlayIcon}
+                                                spinnerClassName={styles.videoSpinner}
+                                                preWarmMetadata
+                                            />
+                                            {bareMedia && (
+                                                <span className={styles.mediaTime}>
+                                                    {formatMessageTime(message.createdAt)}
+                                                    {message.isOwn && chat.type !== "saved" && (
+                                                        <MessageStatusIcon read={isMessageRead(message, readStates)} />
+                                                    )}
+                                                </span>
+                                            )}
+                                        </div>
                                     )}
                                     {message.type === "file" && message.media && (
                                         <button
@@ -1367,6 +1439,7 @@ export default function ChatWindow({
                                     chatId={chat.id}
                                     disabled={uploadingFile || !!uploadProgress || !!pendingMedia}
                                     onRecorded={handleVoiceRecorded}
+                                    onVideoRecorded={handleVideoNoteRecorded}
                                     onRecordingChange={setVoiceRecording}
                                 />
                             )}

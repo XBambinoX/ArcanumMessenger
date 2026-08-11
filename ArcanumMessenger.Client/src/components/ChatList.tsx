@@ -20,6 +20,7 @@ function lastMessagePreview(chat: ChatSummary, common: AppCommonTranslation, noM
         case "video": return common.video;
         case "gif": return common.gif;
         case "audio": return common.audio;
+        case "videoNote": return common.videoNote;
         case "file": return common.file;
         default: return noMessagesYet;
     }

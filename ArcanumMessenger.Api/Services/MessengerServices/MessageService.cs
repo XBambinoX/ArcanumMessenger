@@ -150,7 +150,7 @@ public class MessageService(
     }
 
     public async Task<(ChatMessageDto? Message, string? Reason)> SendMessageAsync(
-        ChatMember membership, string? content, Guid? replyToId, Guid? mediaId, bool asGif, CancellationToken ct)
+        ChatMember membership, string? content, Guid? replyToId, Guid? mediaId, bool asGif, bool asVideoNote, CancellationToken ct)
     {
         var trimmed = content?.Trim() ?? "";
         if (trimmed.Length > MaxContentLength)
@@ -182,6 +182,17 @@ public class MessageService(
                 await db.MediaAssets.Where(m => m.Id == media.Id)
                     .ExecuteUpdateAsync(s => s.SetProperty(m => m.Kind, "gif"), ct);
                 media.Kind = "gif";
+            }
+
+            // Same trick as "send as gif" above - a video note is just a
+            // normal video reclassified at send time, captured fresh each
+            // time rather than reused, so there's no need for an
+            // upload-time kind override.
+            if (asVideoNote && media.Kind == "video")
+            {
+                await db.MediaAssets.Where(m => m.Id == media.Id)
+                    .ExecuteUpdateAsync(s => s.SetProperty(m => m.Kind, "videoNote"), ct);
+                media.Kind = "videoNote";
             }
         }
 

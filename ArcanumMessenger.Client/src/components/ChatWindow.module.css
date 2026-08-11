@@ -418,6 +418,45 @@
     user-select: none;
 }
 
+/* A video note is always recorded as a real square (the canvas relay bakes
+   the crop into the file itself - see VoiceRecorderButton.tsx), so unlike
+   .mediaVideo this never needs --media-aspect - a fixed size is exactly
+   the actual shape, not a fallback for one that was never recorded. Same
+   24px radius as the live recording preview, for visual continuity between
+   what you record and what you send. */
+/* object-fit: contain, not cover - the recording is already a real square
+   (baked in at capture time, see VoiceRecorderButton.tsx), so at this
+   square 220x220 bubble size contain and cover look identical (nothing to
+   crop either way). The difference only shows up in fullscreen, where the
+   browser stretches this element to fill a *non-square* phone screen -
+   cover would then crop the recording edge to edge to fill it; contain
+   letterboxes it instead, so the whole thing stays visible either way. */
+.mediaVideoNote {
+    display: block;
+    width: 260px;
+    height: 260px;
+    max-width: 100%;
+    border-radius: 24px;
+    overflow: hidden;
+    object-fit: contain;
+}
+
+.videoNotePlaceholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 260px;
+    height: 260px;
+    max-width: 100%;
+    border-radius: 24px;
+    background-color: rgba(var(--accent-rgb), 0.16);
+    background-size: cover;
+    background-position: center;
+    color: rgb(var(--white-rgb));
+    cursor: pointer;
+    user-select: none;
+}
+
 .videoPlayIcon {
     display: flex;
     align-items: center;
@@ -475,6 +514,10 @@
     max-width: 380px;
 }
 
+.mediaWrapVideoNote {
+    max-width: 260px;
+}
+
 /* Keep in sync with useMediaQuery.ts's MOBILE_BREAKPOINT_QUERY. vw, not %:
    a percentage here would recreate the exact circular-reference problem
    the comment above exists to avoid, since it would once again depend on
@@ -503,6 +546,16 @@
     .mediaVideo,
     .videoPlaceholder {
         width: min(240px, 62vw);
+    }
+
+    .mediaWrapVideoNote {
+        max-width: min(210px, 54vw);
+    }
+
+    .mediaVideoNote,
+    .videoNotePlaceholder {
+        width: min(210px, 54vw);
+        height: min(210px, 54vw);
     }
 }
 

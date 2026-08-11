@@ -25,11 +25,18 @@ export async function sendMessage(
     mediaId?: string,
     asGif?: boolean,
     replyToId?: string | null,
+    asVideoNote?: boolean,
 ): Promise<ChatMessage | null> {
     const res = await apiFetch(`/api/chats/${chatId}/messages`, {
         method: "POST",
         credentials: "include",
-        body: JSON.stringify({ content, replyToId: replyToId ?? null, mediaId: mediaId ?? null, asGif: asGif ?? false }),
+        body: JSON.stringify({
+            content,
+            replyToId: replyToId ?? null,
+            mediaId: mediaId ?? null,
+            asGif: asGif ?? false,
+            asVideoNote: asVideoNote ?? false,
+        }),
     });
     const data = await res.json();
     return data.success ? data.message : null;

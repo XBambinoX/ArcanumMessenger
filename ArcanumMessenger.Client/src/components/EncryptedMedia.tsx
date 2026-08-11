@@ -261,6 +261,16 @@ interface EncryptedVideoPlayerProps {
     // this opens it in a new tab (same as a photo's openOnClick) instead of
     // decrypting inline and handing off to <video controls> in place.
     openInNewTab?: boolean;
+    // Video notes are MediaRecorder output, which (like the Infinity-
+    // duration quirk elsewhere in this file) doesn't expose its real
+    // dimensions/aspect ratio upfront the way a normally-authored video
+    // file does - only after enough of it has actually been read. Left
+    // alone, this showed up as fullscreen picking the wrong orientation
+    // for the first playthrough in a tab and only correcting itself once
+    // the video had played all the way through once. Set only for video
+    // notes - a normal video's metadata is already correct immediately,
+    // so forcing an extra seek before it would just add a pointless delay.
+    preWarmMetadata?: boolean;
 }
 
 // Never auto-decrypts - a full video can be large, so nothing downloads
@@ -271,10 +281,47 @@ interface EncryptedVideoPlayerProps {
 // <video controls> - seeking from there on is local, no further
 // network/decryption involved.
 export function EncryptedVideoPlayer({
-    chat, media, className, placeholderClassName, playIconClassName, spinnerClassName, openInNewTab,
+    chat, media, className, placeholderClassName, playIconClassName, spinnerClassName, openInNewTab, preWarmMetadata,
 }: EncryptedVideoPlayerProps) {
     const { url, status, start } = useDecryptedMediaUrl(chat, media, false);
     const thumbnailUrl = useDecryptedThumbnailUrl(chat, media.id, media.hasThumbnail);
+    const videoRef = useRef<HTMLVideoElement | null>(null);
+
+    // See preWarmMetadata's own comment - forces a full read of the file
+    // once, up front, by seeking to the end and back, so whatever the
+    // browser bases fullscreen orientation on is already correct the very
+    // first time this plays instead of only after playing through once.
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video || !preWarmMetadata) return;
+        const warm = () => {
+            video.currentTime = Number.MAX_SAFE_INTEGER;
+            video.addEventListener("seeked", () => { video.currentTime = 0; }, { once: true });
+        };
+        video.addEventListener("loadedmetadata", warm, { once: true });
+        return () => video.removeEventListener("loadedmetadata", warm);
+    }, [url, preWarmMetadata]);
+
+    // iOS Safari's <video> fullscreen button doesn't use the regular
+    // Fullscreen API at all - it opens a separate native player outside
+    // the page's DOM/CSS entirely, with its own "webkitbeginfullscreen"/
+    // "webkitendfullscreen" events instead of the standard ones. Setting
+    // an inline style (highest specificity there is) right as that native
+    // player opens is the only lever left to influence it from here, since
+    // no CSS rule on this page can reach inside it.
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video) return;
+        const enterFullscreen = () => { video.style.objectFit = "contain"; };
+        const exitFullscreen = () => { video.style.objectFit = ""; };
+        video.addEventListener("webkitbeginfullscreen", enterFullscreen);
+        video.addEventListener("webkitendfullscreen", exitFullscreen);
+        return () => {
+            video.removeEventListener("webkitbeginfullscreen", enterFullscreen);
+            video.removeEventListener("webkitendfullscreen", exitFullscreen);
+        };
+    }, [url]);
+
     // openInNewTab bypasses useDecryptedMediaUrl's own status entirely (see
     // the click handler below), so on a slow connection there was no
     // feedback at all between the click and the new tab actually opening -
@@ -305,7 +352,7 @@ export function EncryptedVideoPlayer({
             // browser's autoplay policy is concerned, so it either silently
             // blocks playback or starts it unpredictably later - neither is
             // what starting the video via <video controls> alone would give.
-            <video className={className} style={ratioVar} controls>
+            <video ref={videoRef} className={className} style={ratioVar} controls>
                 <source src={url} type={media.mimeType} />
             </video>
         );

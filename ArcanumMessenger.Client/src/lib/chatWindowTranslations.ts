@@ -18,9 +18,12 @@ export interface ChatWindowTranslation {
     uploading: string;
     cancelUploadAria: string;
     recordVoiceAria: string;
+    recordVideoNoteAria: string;
     cancelRecordingAria: string;
     sendRecordingAria: string;
     micPermissionDenied: string;
+    cameraPermissionDenied: string;
+    flipCameraAria: string;
     sendAsGif: string;
     removeAttachmentAria: string;
     attachFileAria: string;
@@ -166,9 +169,12 @@ export const CHAT_WINDOW_TRANSLATIONS: Record<Language, ChatWindowTranslation> =
         uploading: "Uploading…",
         cancelUploadAria: "Cancel upload",
         recordVoiceAria: "Record voice message",
+        recordVideoNoteAria: "Record video message",
         cancelRecordingAria: "Cancel recording",
         sendRecordingAria: "Send voice message",
         micPermissionDenied: "Couldn't access the microphone",
+        cameraPermissionDenied: "Couldn't access the camera",
+        flipCameraAria: "Flip camera",
         sendAsGif: "Send as GIF",
         removeAttachmentAria: "Remove attachment",
         attachFileAria: "Attach file",
@@ -199,9 +205,12 @@ export const CHAT_WINDOW_TRANSLATIONS: Record<Language, ChatWindowTranslation> =
         uploading: "Завантаження…",
         cancelUploadAria: "Скасувати завантаження",
         recordVoiceAria: "Записати голосове повідомлення",
+        recordVideoNoteAria: "Записати відеоповідомлення",
         cancelRecordingAria: "Скасувати запис",
         sendRecordingAria: "Надіслати голосове повідомлення",
         micPermissionDenied: "Не вдалося отримати доступ до мікрофона",
+        cameraPermissionDenied: "Не вдалося отримати доступ до камери",
+        flipCameraAria: "Перемкнути камеру",
         sendAsGif: "Надіслати як GIF",
         removeAttachmentAria: "Видалити вкладення",
         attachFileAria: "Прикріпити файл",
@@ -232,9 +241,12 @@ export const CHAT_WINDOW_TRANSLATIONS: Record<Language, ChatWindowTranslation> =
         uploading: "Wird hochgeladen…",
         cancelUploadAria: "Upload abbrechen",
         recordVoiceAria: "Sprachnachricht aufnehmen",
+        recordVideoNoteAria: "Videonachricht aufnehmen",
         cancelRecordingAria: "Aufnahme abbrechen",
         sendRecordingAria: "Sprachnachricht senden",
         micPermissionDenied: "Zugriff auf das Mikrofon fehlgeschlagen",
+        cameraPermissionDenied: "Zugriff auf die Kamera fehlgeschlagen",
+        flipCameraAria: "Kamera wechseln",
         sendAsGif: "Als GIF senden",
         removeAttachmentAria: "Anhang entfernen",
         attachFileAria: "Datei anhängen",
