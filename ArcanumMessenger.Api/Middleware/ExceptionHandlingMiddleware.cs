@@ -17,7 +17,7 @@ public class ExceptionHandlingMiddleware
         }
         catch(Exception ex)
         {
-            _logger.LogCritical($"Unhanled exception during request {context.Request.Path}");
+            _logger.LogCritical(ex, "Unhanled exception during request {Path}", context.Request.Path);
 
             var map = MapException(ex);
             context.Response.StatusCode = map.statusCode;

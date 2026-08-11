@@ -38,6 +38,15 @@ public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config, 
         _ => "file",
     };
 
+    // A Content-Type with parameters (e.g. "audio/webm;codecs=opus", which
+    // MediaRecorder-produced uploads can send) breaks S3 request signing -
+    // .NET's own header serialization reformats it before the request goes
+    // out, so what actually reaches MinIO differs from what got signed, and
+    // MinIO rejects the request with SignatureDoesNotMatch. Nothing here
+    // ever needs the parameters, so they're stripped before they can reach
+    // an S3 request.
+    private static string SanitizeContentType(string mimeType) => mimeType.Split(';')[0].Trim();
+
     private static long MaxBytesFor(string kind) => kind switch
     {
         "image" or "gif" => MaxImageOrGifBytes,
@@ -65,7 +74,7 @@ public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config, 
             BucketName = Bucket,
             Key = storageKey,
             InputStream = content,
-            ContentType = mimeType,
+            ContentType = SanitizeContentType(mimeType),
         }, ct);
 
         var asset = new MediaAsset
@@ -251,7 +260,7 @@ public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config, 
         {
             BucketName = Bucket,
             Key = storageKey,
-            ContentType = mimeType,
+            ContentType = SanitizeContentType(mimeType),
         }, ct);
 
         var session = new MediaUploadSession
