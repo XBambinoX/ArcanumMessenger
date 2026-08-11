@@ -23,6 +23,7 @@ public record MediaStream(Stream Content, string ContentType, long TotalLength, 
 public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config, MediaUploadSessionService uploadSessions)
 {
     private const long MaxImageOrGifBytes = 50L * 1024 * 1024;
+    private const long MaxAudioBytes = 100L * 1024 * 1024;
     private const long MaxOtherBytes = 200L * 1024 * 1024;
     private const long MaxChunkedTotalBytes = 5L * 1024 * 1024 * 1024; // 5 GB ceiling for the chunked path
 
@@ -33,10 +34,19 @@ public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config, 
         "image/gif" => "gif",
         _ when mimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase) => "image",
         _ when mimeType.StartsWith("video/", StringComparison.OrdinalIgnoreCase) => "video",
+        _ when mimeType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase) => "audio",
         _ => "file",
     };
 
-    private static long MaxBytesFor(string kind) => kind is "image" or "gif" ? MaxImageOrGifBytes : MaxOtherBytes;
+    private static long MaxBytesFor(string kind) => kind switch
+    {
+        "image" or "gif" => MaxImageOrGifBytes,
+        // A voice memo is tiny, but a full song attachment shouldn't be
+        // capped at photo-size limits either - splits the difference
+        // between the image/gif bucket and everything else.
+        "audio" => MaxAudioBytes,
+        _ => MaxOtherBytes,
+    };
 
     public async Task<(MediaAsset? Asset, string? Reason)> UploadAsync(
         Stream content, long length, string fileName, string mimeType, Guid uploaderId,

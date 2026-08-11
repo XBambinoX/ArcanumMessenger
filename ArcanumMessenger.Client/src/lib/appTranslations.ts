@@ -22,6 +22,7 @@ export interface AppCommonTranslation {
     video: string;
     file: string;
     gif: string;
+    audio: string;
     reply: string;
     forward: string;
     edit: string;
@@ -71,6 +72,7 @@ export const APP_COMMON: Record<Language, AppCommonTranslation> = {
         video: "Video",
         file: "File",
         gif: "GIF",
+        audio: "Audio",
         reply: "Reply",
         forward: "Forward",
         edit: "Edit",
@@ -101,6 +103,7 @@ export const APP_COMMON: Record<Language, AppCommonTranslation> = {
         video: "Відео",
         file: "Файл",
         gif: "GIF",
+        audio: "Аудіо",
         reply: "Відповісти",
         forward: "Переслати",
         edit: "Редагувати",
@@ -131,6 +134,7 @@ export const APP_COMMON: Record<Language, AppCommonTranslation> = {
         video: "Video",
         file: "Datei",
         gif: "GIF",
+        audio: "Audio",
         reply: "Antworten",
         forward: "Weiterleiten",
         edit: "Bearbeiten",

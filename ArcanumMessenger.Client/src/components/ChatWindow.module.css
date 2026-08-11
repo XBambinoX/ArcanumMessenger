@@ -579,6 +579,59 @@
     color: rgba(var(--text-muted-rgb), 0.6);
 }
 
+.mediaAudio {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(var(--accent-rgb), 0.08);
+    border: 1px solid rgba(var(--accent-rgb), 0.15);
+    min-width: 220px;
+    max-width: 300px;
+}
+
+.audioPlayBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(var(--accent-rgb), 0.15);
+    color: rgba(var(--accent-light-rgb), 0.9);
+    flex-shrink: 0;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+}
+
+/* Reuses .videoSpinner's own @keyframes videoSpin, just at a smaller size
+   to fit inside the round play button here. */
+.audioSpinner {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid rgba(var(--accent-light-rgb), 0.3);
+    border-top-color: rgba(var(--accent-light-rgb), 0.9);
+    animation: videoSpin 0.8s linear infinite;
+}
+
+.audioTrack {
+    flex: 1;
+    min-width: 0;
+    accent-color: rgb(var(--accent-rgb));
+    cursor: pointer;
+}
+
+.audioTime {
+    font-size: 11px;
+    color: rgba(var(--text-muted-rgb), 0.6);
+    flex-shrink: 0;
+}
+
 .meta {
     align-self: flex-end;
     display: flex;

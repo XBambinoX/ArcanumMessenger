@@ -329,6 +329,112 @@ export function EncryptedVideoPlayer({
     );
 }
 
+function formatAudioTime(seconds: number): string {
+    const total = Math.max(0, Math.round(seconds));
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+interface EncryptedAudioPlayerProps {
+    chat: KeyedChat;
+    media: DownloadableMedia & { durationSeconds: number | null };
+    className?: string;
+    playButtonClassName?: string;
+    trackClassName?: string;
+    timeClassName?: string;
+    spinnerClassName?: string;
+}
+
+// Never auto-decrypts, same reasoning as EncryptedVideoPlayer - nothing
+// downloads until someone actually presses play. Unlike video, playback
+// here starts automatically the moment decryption finishes instead of
+// waiting for a second tap: the file is small enough that the gap between
+// the original tap and "ready" is usually still short enough for the
+// browser's autoplay policy to treat it as the same user gesture. On a
+// slow connection where that gap grows too long, the button just settles
+// on "play" and needs a second tap - a minor step down, not a dead end.
+export function EncryptedAudioPlayer({
+    chat, media, className, playButtonClassName, trackClassName, timeClassName, spinnerClassName,
+}: EncryptedAudioPlayerProps) {
+    const { url, status, start } = useDecryptedMediaUrl(chat, media, false);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const [playing, setPlaying] = useState(false);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(media.durationSeconds ?? 0);
+
+    useEffect(() => {
+        if (status === "ready" && url) audioRef.current?.play().catch(() => { });
+    }, [status, url]);
+
+    const handlePlayClick = () => {
+        if (!url) {
+            start(); // covers idle, loading (no-op via the startedRef guard) and error (retries)
+            return;
+        }
+        if (playing) audioRef.current?.pause();
+        else audioRef.current?.play().catch(() => { });
+    };
+
+    const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const audio = audioRef.current;
+        if (!audio) return;
+        audio.currentTime = Number(e.target.value);
+        setCurrentTime(audio.currentTime);
+    };
+
+    return (
+        <div className={className}>
+            <button type="button" className={playButtonClassName} onClick={handlePlayClick}>
+                {status === "loading" ? (
+                    <span className={spinnerClassName} />
+                ) : status === "error" ? (
+                    "↻"
+                ) : playing ? (
+                    // Plain "⏸"/"▶" text glyphs render as colorful emoji on
+                    // some mobile keyboards/fonts (Android's Noto Color
+                    // Emoji draws "⏸" as an orange tile) instead of a plain
+                    // symbol - an inline SVG always renders the same way.
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                        <rect x="6" y="4" width="4" height="16" rx="1" />
+                        <rect x="14" y="4" width="4" height="16" rx="1" />
+                    </svg>
+                ) : (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                        <polygon points="5 3 19 12 5 21" />
+                    </svg>
+                )}
+            </button>
+            <input
+                type="range"
+                className={trackClassName}
+                min={0}
+                max={duration || 0}
+                step={0.1}
+                value={currentTime}
+                onChange={handleSeek}
+                disabled={!url}
+                aria-label="Seek"
+            />
+            <span className={timeClassName}>{formatAudioTime(playing || currentTime > 0 ? currentTime : duration)}</span>
+            {url && (
+                <audio
+                    ref={audioRef}
+                    src={url}
+                    onPlay={() => setPlaying(true)}
+                    onPause={() => setPlaying(false)}
+                    onEnded={() => {
+                        setPlaying(false);
+                        setCurrentTime(0);
+                    }}
+                    onLoadedMetadata={() => setDuration(audioRef.current?.duration || media.durationSeconds || 0)}
+                    onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime ?? 0)}
+                />
+            )}
+        </div>
+    );
+}
+
 // Decrypts a media asset fully and triggers a normal browser "save file"
 // download - used for the file-attachment card and the "Save as…" context
 // menu action, since a plain <a href> can no longer point straight at the

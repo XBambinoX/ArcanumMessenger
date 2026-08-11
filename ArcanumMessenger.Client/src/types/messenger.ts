@@ -28,11 +28,11 @@ export interface ChatSummary {
     lastMessageType: MessageType | null;
 }
 
-export type MessageType = "text" | "image" | "video" | "gif" | "file" | "system";
+export type MessageType = "text" | "image" | "video" | "gif" | "audio" | "file" | "system";
 
 export interface MediaAsset {
     id: string;
-    kind: "image" | "video" | "gif" | "file";
+    kind: "image" | "video" | "gif" | "audio" | "file";
     mimeType: string;
     fileName: string;
     sizeBytes: number;

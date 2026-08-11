@@ -5,7 +5,7 @@ import { getMessageHistory, sendMessage, deleteMessage, editMessage, forwardMess
 import { getUser, getUserAvatarUrl } from "../api/users";
 import { getChats, getChatAvatarUrl } from "../api/chats";
 import { uploadMedia, uploadMediaThumbnail, deleteMedia, getSavedGifs, saveGif, unsaveGif } from "../api/media";
-import { EncryptedImage, EncryptedGifVideo, EncryptedVideoPlayer, EncryptedThumbnail, downloadMediaToDisk } from "./EncryptedMedia";
+import { EncryptedImage, EncryptedGifVideo, EncryptedVideoPlayer, EncryptedAudioPlayer, EncryptedThumbnail, downloadMediaToDisk } from "./EncryptedMedia";
 import { uploadMediaChunked, abortChunkedUpload, clearChunkedUploadResumeState, CHUNK_THRESHOLD } from "../api/chunkedUpload";
 import { formatMessageTime, formatChatTime } from "../lib/time";
 import { extractVideoFirstFrame } from "../lib/mediaMetadata";
@@ -58,6 +58,7 @@ function replySnippet(message: ChatMessage, common: AppCommonTranslation): strin
         case "image": return common.photo;
         case "video": return common.video;
         case "gif": return common.gif;
+        case "audio": return common.audio;
         case "file": return message.media?.fileName ?? common.file;
         default: return "";
     }
@@ -998,6 +999,17 @@ export default function ChatWindow({
                                                 </span>
                                             )}
                                         </div>
+                                    )}
+                                    {message.type === "audio" && message.media && (
+                                        <EncryptedAudioPlayer
+                                            chat={{ id: chat.id, wrappedChatKey: chat.wrappedChatKey }}
+                                            media={message.media}
+                                            className={styles.mediaAudio}
+                                            playButtonClassName={styles.audioPlayBtn}
+                                            trackClassName={styles.audioTrack}
+                                            timeClassName={styles.audioTime}
+                                            spinnerClassName={styles.audioSpinner}
+                                        />
                                     )}
                                     {message.type === "file" && message.media && (
                                         <button
