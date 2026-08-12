@@ -1,0 +1,22 @@
+.wrap {
+    position: relative;
+    touch-action: pan-y;
+}
+
+.replyIcon {
+    position: absolute;
+    left: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(var(--accent-light-rgb), 0.85);
+    pointer-events: none;
+}
+
+.replyIconEnd {
+    left: auto;
+    right: 6px;
+}
+
+.slide {
+    transition: transform 0.2s ease;
+}

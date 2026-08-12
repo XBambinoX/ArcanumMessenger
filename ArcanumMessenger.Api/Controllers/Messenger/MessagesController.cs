@@ -68,7 +68,7 @@ public class MessagesController(MessageService messageService, ChatAccessService
         if (membership is null)
             return NotFound(new SendMessageResponse(false, null, "not_found"));
 
-        var (message, reason) = await messageService.SendMessageAsync(membership, request.Content, request.ReplyToId, request.MediaId, request.AsGif, ct);
+        var (message, reason) = await messageService.SendMessageAsync(membership, request.Content, request.ReplyToId, request.MediaId, request.AsGif, request.AsVideoNote, ct);
         if (message is null)
             return BadRequest(new SendMessageResponse(false, null, reason));
 
@@ -104,6 +104,40 @@ public class MessagesController(MessageService messageService, ChatAccessService
         return message is null
             ? BadRequest(new EditMessageResponse(false, null, reason))
             : Ok(new EditMessageResponse(true, message));
+    }
+
+    [HttpPost("{messageId:guid}/reactions")]
+    public async Task<ActionResult<ReactionMutationResponse>> AddReaction(
+        Guid chatId, Guid messageId, [FromBody] AddReactionRequest request, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var membership = await chatAccess.GetMembershipAsync(chatId, userId, ct);
+        if (membership is null)
+            return NotFound(new ReactionMutationResponse(false, null, "not_found"));
+
+        var (success, reactions, reason) = await messageService.AddReactionAsync(chatId, messageId, userId, request.Emoji, ct);
+        return success
+            ? Ok(new ReactionMutationResponse(true, reactions))
+            : BadRequest(new ReactionMutationResponse(false, null, reason));
+    }
+
+    [HttpDelete("{messageId:guid}/reactions/{emoji}")]
+    public async Task<ActionResult<ReactionMutationResponse>> RemoveReaction(
+        Guid chatId, Guid messageId, string emoji, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var membership = await chatAccess.GetMembershipAsync(chatId, userId, ct);
+        if (membership is null)
+            return NotFound(new ReactionMutationResponse(false, null, "not_found"));
+
+        var (success, reactions, reason) = await messageService.RemoveReactionAsync(chatId, messageId, userId, emoji, ct);
+        return success
+            ? Ok(new ReactionMutationResponse(true, reactions))
+            : BadRequest(new ReactionMutationResponse(false, null, reason));
     }
 
     [HttpPost("forward")]

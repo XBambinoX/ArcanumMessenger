@@ -4,8 +4,8 @@ public class MediaAsset
 {
     public Guid Id { get; set; }
     public Guid UploaderId { get; set; }
-    // "image" | "video" | "gif" | "file" - same free-form string convention
-    // as Chat.Type / ChatMember.Role, not a real enum.
+    // "image" | "video" | "gif" | "audio" | "file" - same free-form string
+    // convention as Chat.Type / ChatMember.Role, not a real enum.
     public string Kind { get; set; } = null!;
     public string MimeType { get; set; } = null!;
     public string FileName { get; set; } = null!;

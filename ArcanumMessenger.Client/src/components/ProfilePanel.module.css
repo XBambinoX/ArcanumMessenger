@@ -102,13 +102,13 @@
 }
 
 .profileAvatar {
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
+    width: 260px;
+    height: 260px;
+    border-radius: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
+    font-size: 84px;
     font-weight: 700;
     color: rgb(var(--white-rgb));
     background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
@@ -595,12 +595,6 @@
     display: flex;
     flex-direction: column;
     gap: 3px;
-}
-
-.avatarEditTitle {
-    font-size: 14px;
-    font-weight: 600;
-    color: #7c9bfa;
 }
 
 .avatarEditSub {

@@ -28,11 +28,11 @@ export interface ChatSummary {
     lastMessageType: MessageType | null;
 }
 
-export type MessageType = "text" | "image" | "video" | "gif" | "file" | "system";
+export type MessageType = "text" | "image" | "video" | "gif" | "audio" | "videoNote" | "file" | "system";
 
 export interface MediaAsset {
     id: string;
-    kind: "image" | "video" | "gif" | "file";
+    kind: "image" | "video" | "gif" | "audio" | "videoNote" | "file";
     mimeType: string;
     fileName: string;
     sizeBytes: number;
@@ -55,6 +55,12 @@ export interface ChatReadState {
     lastReadAt: string; // ISO timestamp
 }
 
+export interface MessageReaction {
+    emoji: string;
+    count: number;
+    reactedByMe: boolean;
+}
+
 export interface ChatMessage {
     id: string;
     chatId: string;
@@ -69,6 +75,7 @@ export interface ChatMessage {
     isOwn: boolean;
     forwardedFromSenderId: string | null;
     forwardedFromSenderName: string | null;
+    reactions: MessageReaction[];
 }
 
 export interface User {

@@ -13,7 +13,6 @@ export interface ProfilePanelTranslation {
     logOut: string;
     copyIdTitle: string;
     closeProfileAria: string;
-    setNewPhoto: string;
     removePhotoButton: string;
     usernameLabel: string;
     usernamePlaceholder: string;
@@ -48,11 +47,10 @@ export interface ProfilePanelTranslation {
     themeSystem: string;
     themeDark: string;
     themeLight: string;
-    appearanceHeading: string;
-    chatWallpaper: string;
-    showLinkPreviews: string;
-    dataUsageHeading: string;
-    autoDownloadMediaLabel: string;
+    micHeading: string;
+    micDefaultOption: string;
+    micPermissionHint: string;
+    micMobileLimitationNote: string;
     everyoneOption: string;
     myContactsOption: string;
     nobodyOption: string;
@@ -139,7 +137,6 @@ export const PROFILE_PANEL_TRANSLATIONS: Record<Language, ProfilePanelTranslatio
         logOut: "Log out",
         copyIdTitle: "Copy ID",
         closeProfileAria: "Close profile",
-        setNewPhoto: "Set New Photo",
         removePhotoButton: "Remove photo",
         usernameLabel: "Username",
         usernamePlaceholder: "Your username",
@@ -174,11 +171,10 @@ export const PROFILE_PANEL_TRANSLATIONS: Record<Language, ProfilePanelTranslatio
         themeSystem: "System",
         themeDark: "Dark",
         themeLight: "Light",
-        appearanceHeading: "Appearance",
-        chatWallpaper: "Chat wallpaper",
-        showLinkPreviews: "Show link previews",
-        dataUsageHeading: "Data Usage",
-        autoDownloadMediaLabel: "Auto-download media",
+        micHeading: "Microphone",
+        micDefaultOption: "System default",
+        micPermissionHint: "Send a voice message once to see your microphones here",
+        micMobileLimitationNote: "On most phone browsers only one generic microphone entry is available here, not each physical device - this only really lets you pick between devices on desktop.",
         everyoneOption: "Everyone",
         myContactsOption: "My Contacts",
         nobodyOption: "Nobody",
@@ -196,7 +192,6 @@ export const PROFILE_PANEL_TRANSLATIONS: Record<Language, ProfilePanelTranslatio
         logOut: "Вийти",
         copyIdTitle: "Скопіювати ID",
         closeProfileAria: "Закрити профіль",
-        setNewPhoto: "Встановити нове фото",
         removePhotoButton: "Видалити фото",
         usernameLabel: "Ім'я користувача",
         usernamePlaceholder: "Ваше ім'я користувача",
@@ -231,11 +226,10 @@ export const PROFILE_PANEL_TRANSLATIONS: Record<Language, ProfilePanelTranslatio
         themeSystem: "Системна",
         themeDark: "Темна",
         themeLight: "Світла",
-        appearanceHeading: "Вигляд",
-        chatWallpaper: "Фон чату",
-        showLinkPreviews: "Показувати попередній перегляд посилань",
-        dataUsageHeading: "Використання даних",
-        autoDownloadMediaLabel: "Автозавантаження медіа",
+        micHeading: "Мікрофон",
+        micDefaultOption: "Системний за замовчуванням",
+        micPermissionHint: "Надішліть голосове повідомлення хоча б раз, щоб побачити тут ваші мікрофони",
+        micMobileLimitationNote: "У більшості мобільних браузерів тут доступний лише один загальний пункт мікрофона, а не кожен фізичний пристрій окремо - реальний вибір між пристроями працює тільки на комп'ютері.",
         everyoneOption: "Усі",
         myContactsOption: "Мої контакти",
         nobodyOption: "Ніхто",
@@ -253,7 +247,6 @@ export const PROFILE_PANEL_TRANSLATIONS: Record<Language, ProfilePanelTranslatio
         logOut: "Abmelden",
         copyIdTitle: "ID kopieren",
         closeProfileAria: "Profil schließen",
-        setNewPhoto: "Neues Foto festlegen",
         removePhotoButton: "Foto entfernen",
         usernameLabel: "Benutzername",
         usernamePlaceholder: "Dein Benutzername",
@@ -288,11 +281,10 @@ export const PROFILE_PANEL_TRANSLATIONS: Record<Language, ProfilePanelTranslatio
         themeSystem: "System",
         themeDark: "Dunkel",
         themeLight: "Hell",
-        appearanceHeading: "Erscheinungsbild",
-        chatWallpaper: "Chat-Hintergrund",
-        showLinkPreviews: "Linkvorschauen anzeigen",
-        dataUsageHeading: "Datennutzung",
-        autoDownloadMediaLabel: "Medien automatisch herunterladen",
+        micHeading: "Mikrofon",
+        micDefaultOption: "Systemstandard",
+        micPermissionHint: "Sende einmal eine Sprachnachricht, um deine Mikrofone hier zu sehen",
+        micMobileLimitationNote: "Auf den meisten Handy-Browsern gibt es hier nur einen allgemeinen Mikrofon-Eintrag statt jedes einzelnen Geräts - eine echte Auswahl zwischen Geräten funktioniert nur am Desktop.",
         everyoneOption: "Alle",
         myContactsOption: "Meine Kontakte",
         nobodyOption: "Niemand",

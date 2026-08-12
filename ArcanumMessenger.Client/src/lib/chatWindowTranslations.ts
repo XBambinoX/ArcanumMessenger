@@ -17,6 +17,17 @@ export interface ChatWindowTranslation {
     cancelReplyAria: string;
     uploading: string;
     cancelUploadAria: string;
+    recordVoiceAria: string;
+    recordVideoNoteAria: string;
+    cancelRecordingAria: string;
+    sendRecordingAria: string;
+    micPermissionDenied: string;
+    cameraPermissionDenied: string;
+    micNotFound: string;
+    cameraNotFound: string;
+    micInUse: string;
+    cameraInUse: string;
+    flipCameraAria: string;
     sendAsGif: string;
     removeAttachmentAria: string;
     attachFileAria: string;
@@ -44,14 +55,16 @@ export interface ForwardPanelTranslation {
 }
 
 export interface EmojiCategoryLabels {
+    frequent: string;
     smileys: string;
-    gestures: string;
+    people: string;
     animals: string;
     food: string;
-    activities: string;
     travel: string;
+    activities: string;
     objects: string;
     symbols: string;
+    flags: string;
 }
 
 export interface EmojiPickerTranslation {
@@ -105,40 +118,46 @@ export const EMOJI_PICKER_TRANSLATIONS: Record<Language, EmojiPickerTranslation>
     en: {
         closeAria: "Close",
         categories: {
+            frequent: "Frequently Used",
             smileys: "Smileys",
-            gestures: "Gestures & People",
+            people: "People & Body",
             animals: "Animals & Nature",
             food: "Food & Drink",
-            activities: "Activities",
             travel: "Travel & Places",
+            activities: "Activities",
             objects: "Objects",
             symbols: "Symbols",
+            flags: "Flags",
         },
     },
     uk: {
         closeAria: "Закрити",
         categories: {
+            frequent: "Часто використовувані",
             smileys: "Смайли",
-            gestures: "Жести й люди",
+            people: "Люди",
             animals: "Тварини й природа",
             food: "Їжа й напої",
-            activities: "Активності",
             travel: "Подорожі й місця",
+            activities: "Активності",
             objects: "Предмети",
             symbols: "Символи",
+            flags: "Прапори",
         },
     },
     de: {
         closeAria: "Schließen",
         categories: {
+            frequent: "Häufig verwendet",
             smileys: "Smileys",
-            gestures: "Gesten & Menschen",
+            people: "Menschen",
             animals: "Tiere & Natur",
             food: "Essen & Trinken",
-            activities: "Aktivitäten",
             travel: "Reisen & Orte",
+            activities: "Aktivitäten",
             objects: "Objekte",
             symbols: "Symbole",
+            flags: "Flaggen",
         },
     },
 };
@@ -161,6 +180,17 @@ export const CHAT_WINDOW_TRANSLATIONS: Record<Language, ChatWindowTranslation> =
         cancelReplyAria: "Cancel reply",
         uploading: "Uploading…",
         cancelUploadAria: "Cancel upload",
+        recordVoiceAria: "Record voice message",
+        recordVideoNoteAria: "Record video message",
+        cancelRecordingAria: "Cancel recording",
+        sendRecordingAria: "Send voice message",
+        micPermissionDenied: "Microphone access is blocked - check your browser's site settings, and on phones also your system Settings app's permissions for this browser",
+        cameraPermissionDenied: "Camera access is blocked - check your browser's site settings, and on phones also your system Settings app's permissions for this browser",
+        micNotFound: "No microphone found",
+        cameraNotFound: "No camera found",
+        micInUse: "The microphone is being used by another app",
+        cameraInUse: "The camera is being used by another app",
+        flipCameraAria: "Flip camera",
         sendAsGif: "Send as GIF",
         removeAttachmentAria: "Remove attachment",
         attachFileAria: "Attach file",
@@ -190,6 +220,17 @@ export const CHAT_WINDOW_TRANSLATIONS: Record<Language, ChatWindowTranslation> =
         cancelReplyAria: "Скасувати відповідь",
         uploading: "Завантаження…",
         cancelUploadAria: "Скасувати завантаження",
+        recordVoiceAria: "Записати голосове повідомлення",
+        recordVideoNoteAria: "Записати відеоповідомлення",
+        cancelRecordingAria: "Скасувати запис",
+        sendRecordingAria: "Надіслати голосове повідомлення",
+        micPermissionDenied: "Доступ до мікрофона заблоковано - перевірте налаштування сайту в браузері, а на телефоні ще й дозволи браузера в системних налаштуваннях",
+        cameraPermissionDenied: "Доступ до камери заблоковано - перевірте налаштування сайту в браузері, а на телефоні ще й дозволи браузера в системних налаштуваннях",
+        micNotFound: "Мікрофон не знайдено",
+        cameraNotFound: "Камеру не знайдено",
+        micInUse: "Мікрофон використовується іншим застосунком",
+        cameraInUse: "Камера використовується іншим застосунком",
+        flipCameraAria: "Перемкнути камеру",
         sendAsGif: "Надіслати як GIF",
         removeAttachmentAria: "Видалити вкладення",
         attachFileAria: "Прикріпити файл",
@@ -219,6 +260,17 @@ export const CHAT_WINDOW_TRANSLATIONS: Record<Language, ChatWindowTranslation> =
         cancelReplyAria: "Antwort abbrechen",
         uploading: "Wird hochgeladen…",
         cancelUploadAria: "Upload abbrechen",
+        recordVoiceAria: "Sprachnachricht aufnehmen",
+        recordVideoNoteAria: "Videonachricht aufnehmen",
+        cancelRecordingAria: "Aufnahme abbrechen",
+        sendRecordingAria: "Sprachnachricht senden",
+        micPermissionDenied: "Mikrofonzugriff ist blockiert - prüfe die Website-Einstellungen deines Browsers und auf dem Handy zusätzlich die Berechtigungen des Browsers in den Systemeinstellungen",
+        cameraPermissionDenied: "Kamerazugriff ist blockiert - prüfe die Website-Einstellungen deines Browsers und auf dem Handy zusätzlich die Berechtigungen des Browsers in den Systemeinstellungen",
+        micNotFound: "Kein Mikrofon gefunden",
+        cameraNotFound: "Keine Kamera gefunden",
+        micInUse: "Das Mikrofon wird von einer anderen App verwendet",
+        cameraInUse: "Die Kamera wird von einer anderen App verwendet",
+        flipCameraAria: "Kamera wechseln",
         sendAsGif: "Als GIF senden",
         removeAttachmentAria: "Anhang entfernen",
         attachFileAria: "Datei anhängen",

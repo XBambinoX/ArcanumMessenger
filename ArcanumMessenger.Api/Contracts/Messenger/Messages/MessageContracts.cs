@@ -2,6 +2,8 @@ using ArcanumMessenger.Contracts.Messenger.Media;
 
 namespace ArcanumMessenger.Contracts.Messenger.Messages;
 
+public record MessageReactionDto(string Emoji, int Count, bool ReactedByMe);
+
 public record ChatMessageDto(
     Guid Id,
     Guid ChatId,
@@ -15,7 +17,8 @@ public record ChatMessageDto(
     DateTime CreatedAt,
     bool IsOwn,
     Guid? ForwardedFromSenderId = null,
-    string? ForwardedFromSenderName = null);
+    string? ForwardedFromSenderName = null,
+    IReadOnlyList<MessageReactionDto>? Reactions = null);
 
 public record ChatReadStateDto(Guid UserId, DateTime LastReadAt);
 
@@ -26,7 +29,7 @@ public record MessageHistoryResponse(
     string? Reason = null,
     IReadOnlyList<ChatReadStateDto>? ReadStates = null);
 
-public record SendMessageRequest(string? Content, Guid? ReplyToId, Guid? MediaId, bool AsGif = false);
+public record SendMessageRequest(string? Content, Guid? ReplyToId, Guid? MediaId, bool AsGif = false, bool AsVideoNote = false);
 
 public record SendMessageResponse(bool Success, ChatMessageDto? Message, string? Reason = null);
 
@@ -55,3 +58,10 @@ public record ChatMediaResponse(
     bool Success, IReadOnlyList<ChatMediaItemDto>? Items = null, bool HasMore = false, string? Reason = null);
 
 public record ChatStatsResponse(bool Success, int MessageCount = 0, int MediaCount = 0, string? Reason = null);
+
+// Add and remove are separate (not a toggle) - one person can stack the
+// same emoji on a message more than once, capped in total per person per
+// message in MessageService. Remove always drops exactly one copy.
+public record AddReactionRequest(string Emoji);
+
+public record ReactionMutationResponse(bool Success, IReadOnlyList<MessageReactionDto>? Reactions = null, string? Reason = null);

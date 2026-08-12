@@ -23,6 +23,7 @@ public record MediaStream(Stream Content, string ContentType, long TotalLength, 
 public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config, MediaUploadSessionService uploadSessions)
 {
     private const long MaxImageOrGifBytes = 50L * 1024 * 1024;
+    private const long MaxAudioBytes = 100L * 1024 * 1024;
     private const long MaxOtherBytes = 200L * 1024 * 1024;
     private const long MaxChunkedTotalBytes = 5L * 1024 * 1024 * 1024; // 5 GB ceiling for the chunked path
 
@@ -33,10 +34,28 @@ public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config, 
         "image/gif" => "gif",
         _ when mimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase) => "image",
         _ when mimeType.StartsWith("video/", StringComparison.OrdinalIgnoreCase) => "video",
+        _ when mimeType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase) => "audio",
         _ => "file",
     };
 
-    private static long MaxBytesFor(string kind) => kind is "image" or "gif" ? MaxImageOrGifBytes : MaxOtherBytes;
+    // A Content-Type with parameters (e.g. "audio/webm;codecs=opus", which
+    // MediaRecorder-produced uploads can send) breaks S3 request signing -
+    // .NET's own header serialization reformats it before the request goes
+    // out, so what actually reaches MinIO differs from what got signed, and
+    // MinIO rejects the request with SignatureDoesNotMatch. Nothing here
+    // ever needs the parameters, so they're stripped before they can reach
+    // an S3 request.
+    private static string SanitizeContentType(string mimeType) => mimeType.Split(';')[0].Trim();
+
+    private static long MaxBytesFor(string kind) => kind switch
+    {
+        "image" or "gif" => MaxImageOrGifBytes,
+        // A voice memo is tiny, but a full song attachment shouldn't be
+        // capped at photo-size limits either - splits the difference
+        // between the image/gif bucket and everything else.
+        "audio" => MaxAudioBytes,
+        _ => MaxOtherBytes,
+    };
 
     public async Task<(MediaAsset? Asset, string? Reason)> UploadAsync(
         Stream content, long length, string fileName, string mimeType, Guid uploaderId,
@@ -55,7 +74,7 @@ public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config, 
             BucketName = Bucket,
             Key = storageKey,
             InputStream = content,
-            ContentType = mimeType,
+            ContentType = SanitizeContentType(mimeType),
         }, ct);
 
         var asset = new MediaAsset
@@ -241,7 +260,7 @@ public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config, 
         {
             BucketName = Bucket,
             Key = storageKey,
-            ContentType = mimeType,
+            ContentType = SanitizeContentType(mimeType),
         }, ct);
 
         var session = new MediaUploadSession

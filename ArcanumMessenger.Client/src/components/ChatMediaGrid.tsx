@@ -164,7 +164,7 @@ export default function ChatMediaGrid({ chat, tr, onJumpToMessage, onDeleteMessa
                         );
                     }
 
-                    if (media.kind === "video") {
+                    if (media.kind === "video" || media.kind === "videoNote") {
                         return (
                             <div key={messageId} className={styles.tileWrap} {...tileContextHandlers(messageId)}>
                                 <EncryptedVideoPlayer

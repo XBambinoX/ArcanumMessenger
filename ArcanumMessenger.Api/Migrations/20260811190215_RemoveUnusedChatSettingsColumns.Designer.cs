@@ -3,6 +3,7 @@ using System;
 using ArcanumMessenger.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ArcanumMessenger.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260811190215_RemoveUnusedChatSettingsColumns")]
+    partial class RemoveUnusedChatSettingsColumns
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -234,29 +237,6 @@ namespace ArcanumMessenger.Migrations
                     b.ToTable("Messages");
                 });
 
-            modelBuilder.Entity("ArcanumMessenger.Entities.MessageReaction", b =>
-                {
-                    b.Property<Guid>("MessageId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Emoji")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("NOW()");
-
-                    b.HasKey("MessageId", "UserId", "Emoji");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("MessageReactions");
-                });
-
             modelBuilder.Entity("ArcanumMessenger.Entities.SavedGif", b =>
                 {
                     b.Property<Guid>("UserId")
@@ -310,9 +290,6 @@ namespace ArcanumMessenger.Migrations
                     b.Property<string>("RefreshTokenHash")
                         .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<Guid?>("ReplacedBySessionId")
-                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("RevokedAt")
                         .HasColumnType("timestamp with time zone");
@@ -574,25 +551,6 @@ namespace ArcanumMessenger.Migrations
                     b.Navigation("ReplyTo");
 
                     b.Navigation("Sender");
-                });
-
-            modelBuilder.Entity("ArcanumMessenger.Entities.MessageReaction", b =>
-                {
-                    b.HasOne("ArcanumMessenger.Entities.Message", "Message")
-                        .WithMany()
-                        .HasForeignKey("MessageId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("ArcanumMessenger.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Message");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("ArcanumMessenger.Entities.SavedGif", b =>

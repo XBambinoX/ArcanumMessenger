@@ -418,6 +418,45 @@
     user-select: none;
 }
 
+/* A video note is always recorded as a real square (the canvas relay bakes
+   the crop into the file itself - see VoiceRecorderButton.tsx), so unlike
+   .mediaVideo this never needs --media-aspect - a fixed size is exactly
+   the actual shape, not a fallback for one that was never recorded. Same
+   24px radius as the live recording preview, for visual continuity between
+   what you record and what you send. */
+/* object-fit: contain, not cover - the recording is already a real square
+   (baked in at capture time, see VoiceRecorderButton.tsx), so at this
+   square 220x220 bubble size contain and cover look identical (nothing to
+   crop either way). The difference only shows up in fullscreen, where the
+   browser stretches this element to fill a *non-square* phone screen -
+   cover would then crop the recording edge to edge to fill it; contain
+   letterboxes it instead, so the whole thing stays visible either way. */
+.mediaVideoNote {
+    display: block;
+    width: 260px;
+    height: 260px;
+    max-width: 100%;
+    border-radius: 24px;
+    overflow: hidden;
+    object-fit: contain;
+}
+
+.videoNotePlaceholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 260px;
+    height: 260px;
+    max-width: 100%;
+    border-radius: 24px;
+    background-color: rgba(var(--accent-rgb), 0.16);
+    background-size: cover;
+    background-position: center;
+    color: rgb(var(--white-rgb));
+    cursor: pointer;
+    user-select: none;
+}
+
 .videoPlayIcon {
     display: flex;
     align-items: center;
@@ -475,6 +514,10 @@
     max-width: 380px;
 }
 
+.mediaWrapVideoNote {
+    max-width: 260px;
+}
+
 /* Keep in sync with useMediaQuery.ts's MOBILE_BREAKPOINT_QUERY. vw, not %:
    a percentage here would recreate the exact circular-reference problem
    the comment above exists to avoid, since it would once again depend on
@@ -503,6 +546,16 @@
     .mediaVideo,
     .videoPlaceholder {
         width: min(240px, 62vw);
+    }
+
+    .mediaWrapVideoNote {
+        max-width: min(210px, 54vw);
+    }
+
+    .mediaVideoNote,
+    .videoNotePlaceholder {
+        width: min(210px, 54vw);
+        height: min(210px, 54vw);
     }
 }
 
@@ -577,6 +630,122 @@
 .fileSize {
     font-size: 11.5px;
     color: rgba(var(--text-muted-rgb), 0.6);
+}
+
+.mediaAudio {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(var(--accent-rgb), 0.08);
+    border: 1px solid rgba(var(--accent-rgb), 0.15);
+    min-width: 220px;
+    max-width: 340px;
+}
+
+.audioPlayBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(var(--accent-rgb), 0.15);
+    color: rgba(var(--accent-light-rgb), 0.9);
+    flex-shrink: 0;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+}
+
+/* Reuses .videoSpinner's own @keyframes videoSpin, just at a smaller size
+   to fit inside the round play button here. */
+.audioSpinner {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid rgba(var(--accent-light-rgb), 0.3);
+    border-top-color: rgba(var(--accent-light-rgb), 0.9);
+    animation: videoSpin 0.8s linear infinite;
+}
+
+.audioTrack {
+    flex: 1;
+    min-width: 0;
+    accent-color: rgb(var(--accent-rgb));
+    cursor: pointer;
+}
+
+/* Relative +/-10s skip, next to the track it affects - see EncryptedMedia.tsx's
+   own comment on skip() for why this works now (voice messages record as
+   WAV, not compressed webm) where it didn't before. */
+.audioSkipBtn {
+    flex-shrink: 0;
+    padding: 3px 6px;
+    border-radius: 6px;
+    border: none;
+    background: rgba(var(--accent-rgb), 0.12);
+    color: rgba(var(--accent-light-rgb), 0.9);
+    font-size: 10.5px;
+    font-weight: 600;
+    line-height: 1.2;
+    cursor: pointer;
+}
+
+.audioSkipBtn:hover:not(:disabled) {
+    background: rgba(var(--accent-rgb), 0.2);
+}
+
+.audioSkipBtn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.audioTime {
+    font-size: 11px;
+    color: rgba(var(--text-muted-rgb), 0.6);
+    flex-shrink: 0;
+}
+
+.reactions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 2px;
+}
+
+.reactionPill {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
+    border-radius: 11px;
+    background: rgba(var(--accent-rgb), 0.06);
+    font-size: 12.5px;
+    line-height: 1.5;
+    cursor: pointer;
+    transition:
+        background 0.15s,
+        border-color 0.15s,
+        transform 0.1s;
+}
+
+.reactionPill:hover {
+    transform: scale(1.06);
+}
+
+.reactionPillActive {
+    border-color: rgba(var(--accent-light-rgb), 0.55);
+    background: rgba(var(--accent-rgb), 0.22);
+}
+
+.reactionCount {
+    color: rgba(var(--text-muted-rgb), 0.75);
+    font-size: 11px;
 }
 
 .meta {
@@ -672,6 +841,15 @@
 .emojiButtonWrap {
     position: relative;
     flex-shrink: 0;
+}
+
+/* Zero-size anchor at the click point - EmojiPicker's own .panel is
+   position:absolute; bottom:calc(100% + 10px); left:0, meant to sit above
+   whatever wrapper holds it. This gives it one anywhere on screen instead
+   of only next to the compose bar's own emoji button. */
+.reactionPickerAnchor {
+    position: fixed;
+    z-index: 20;
 }
 
 .pendingAttachment {

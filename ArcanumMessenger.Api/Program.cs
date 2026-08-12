@@ -37,6 +37,14 @@ namespace ArcanumMessenger
             builder.Services.AddSingleton<IConnectionMultiplexer>(
                 _ => ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis")!));
 
+            // The AWS SDK auto-corrects its signing clock when a server response
+            // looks skewed, then keeps using that offset for every later request.
+            // Against MinIO this can misfire on a false positive and then poison
+            // every upload afterward with SignatureDoesNotMatch - API and MinIO
+            // are both local containers sharing the host clock, so there's never
+            // a real skew to correct for in the first place.
+            Amazon.AWSConfigs.CorrectForClockSkew = false;
+
             builder.Services.AddSingleton<IAmazonS3>(_ => new AmazonS3Client(
                 new BasicAWSCredentials(builder.Configuration["Media:AccessKey"], builder.Configuration["Media:SecretKey"]),
                 new AmazonS3Config

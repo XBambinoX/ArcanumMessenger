@@ -261,6 +261,16 @@ interface EncryptedVideoPlayerProps {
     // this opens it in a new tab (same as a photo's openOnClick) instead of
     // decrypting inline and handing off to <video controls> in place.
     openInNewTab?: boolean;
+    // Video notes are MediaRecorder output, which (like the Infinity-
+    // duration quirk elsewhere in this file) doesn't expose its real
+    // dimensions/aspect ratio upfront the way a normally-authored video
+    // file does - only after enough of it has actually been read. Left
+    // alone, this showed up as fullscreen picking the wrong orientation
+    // for the first playthrough in a tab and only correcting itself once
+    // the video had played all the way through once. Set only for video
+    // notes - a normal video's metadata is already correct immediately,
+    // so forcing an extra seek before it would just add a pointless delay.
+    preWarmMetadata?: boolean;
 }
 
 // Never auto-decrypts - a full video can be large, so nothing downloads
@@ -271,10 +281,47 @@ interface EncryptedVideoPlayerProps {
 // <video controls> - seeking from there on is local, no further
 // network/decryption involved.
 export function EncryptedVideoPlayer({
-    chat, media, className, placeholderClassName, playIconClassName, spinnerClassName, openInNewTab,
+    chat, media, className, placeholderClassName, playIconClassName, spinnerClassName, openInNewTab, preWarmMetadata,
 }: EncryptedVideoPlayerProps) {
     const { url, status, start } = useDecryptedMediaUrl(chat, media, false);
     const thumbnailUrl = useDecryptedThumbnailUrl(chat, media.id, media.hasThumbnail);
+    const videoRef = useRef<HTMLVideoElement | null>(null);
+
+    // See preWarmMetadata's own comment - forces a full read of the file
+    // once, up front, by seeking to the end and back, so whatever the
+    // browser bases fullscreen orientation on is already correct the very
+    // first time this plays instead of only after playing through once.
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video || !preWarmMetadata) return;
+        const warm = () => {
+            video.currentTime = Number.MAX_SAFE_INTEGER;
+            video.addEventListener("seeked", () => { video.currentTime = 0; }, { once: true });
+        };
+        video.addEventListener("loadedmetadata", warm, { once: true });
+        return () => video.removeEventListener("loadedmetadata", warm);
+    }, [url, preWarmMetadata]);
+
+    // iOS Safari's <video> fullscreen button doesn't use the regular
+    // Fullscreen API at all - it opens a separate native player outside
+    // the page's DOM/CSS entirely, with its own "webkitbeginfullscreen"/
+    // "webkitendfullscreen" events instead of the standard ones. Setting
+    // an inline style (highest specificity there is) right as that native
+    // player opens is the only lever left to influence it from here, since
+    // no CSS rule on this page can reach inside it.
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video) return;
+        const enterFullscreen = () => { video.style.objectFit = "contain"; };
+        const exitFullscreen = () => { video.style.objectFit = ""; };
+        video.addEventListener("webkitbeginfullscreen", enterFullscreen);
+        video.addEventListener("webkitendfullscreen", exitFullscreen);
+        return () => {
+            video.removeEventListener("webkitbeginfullscreen", enterFullscreen);
+            video.removeEventListener("webkitendfullscreen", exitFullscreen);
+        };
+    }, [url]);
+
     // openInNewTab bypasses useDecryptedMediaUrl's own status entirely (see
     // the click handler below), so on a slow connection there was no
     // feedback at all between the click and the new tab actually opening -
@@ -305,7 +352,7 @@ export function EncryptedVideoPlayer({
             // browser's autoplay policy is concerned, so it either silently
             // blocks playback or starts it unpredictably later - neither is
             // what starting the video via <video controls> alone would give.
-            <video className={className} style={ratioVar} controls>
+            <video ref={videoRef} className={className} style={ratioVar} controls>
                 <source src={url} type={media.mimeType} />
             </video>
         );
@@ -324,6 +371,161 @@ export function EncryptedVideoPlayer({
                 <span className={spinnerClassName} />
             ) : (
                 <span className={playIconClassName}>{status === "error" && !openInNewTab ? "!" : "▶"}</span>
+            )}
+        </div>
+    );
+}
+
+export function formatAudioTime(seconds: number): string {
+    const total = Math.max(0, Math.round(seconds));
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+interface EncryptedAudioPlayerProps {
+    chat: KeyedChat;
+    media: DownloadableMedia & { durationSeconds: number | null };
+    className?: string;
+    playButtonClassName?: string;
+    trackClassName?: string;
+    timeClassName?: string;
+    spinnerClassName?: string;
+    skipButtonClassName?: string;
+}
+
+// Never auto-decrypts, same reasoning as EncryptedVideoPlayer - nothing
+// downloads until someone actually presses play. Unlike video, playback
+// here starts automatically the moment decryption finishes instead of
+// waiting for a second tap: the file is small enough that the gap between
+// the original tap and "ready" is usually still short enough for the
+// browser's autoplay policy to treat it as the same user gesture. On a
+// slow connection where that gap grows too long, the button just settles
+// on "play" and needs a second tap - a minor step down, not a dead end.
+export function EncryptedAudioPlayer({
+    chat, media, className, playButtonClassName, trackClassName, timeClassName, spinnerClassName, skipButtonClassName,
+}: EncryptedAudioPlayerProps) {
+    const { url, status, start } = useDecryptedMediaUrl(chat, media, false);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const [playing, setPlaying] = useState(false);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(media.durationSeconds ?? 0);
+
+    useEffect(() => {
+        if (status === "ready" && url) audioRef.current?.play().catch(() => { });
+    }, [status, url]);
+
+    const handlePlayClick = () => {
+        if (!url) {
+            start(); // covers idle, loading (no-op via the startedRef guard) and error (retries)
+            return;
+        }
+        if (playing) audioRef.current?.pause();
+        else audioRef.current?.play().catch(() => { });
+    };
+
+    const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const audio = audioRef.current;
+        if (!audio) return;
+        audio.currentTime = Number(e.target.value);
+        setCurrentTime(audio.currentTime);
+    };
+
+    // Used to rely on the browser being able to seek to an arbitrary
+    // position, which didn't hold up for MediaRecorder's compressed webm
+    // output (no seek index in the container - Firefox in particular
+    // couldn't jump anywhere at all, the position just snapped back).
+    // Voice messages are recorded as plain WAV now instead (see
+    // wavRecorder.ts) specifically so this works everywhere - fixed-size
+    // frames mean any position is direct byte math, no index needed.
+    const skip = (deltaSeconds: number) => {
+        const audio = audioRef.current;
+        if (!audio) return;
+        const cap = duration || audio.duration || 0;
+        const next = Math.max(0, Math.min(cap, audio.currentTime + deltaSeconds));
+        audio.currentTime = next;
+        setCurrentTime(next);
+    };
+
+    return (
+        <div className={className}>
+            <button type="button" className={playButtonClassName} onClick={handlePlayClick}>
+                {status === "loading" ? (
+                    <span className={spinnerClassName} />
+                ) : status === "error" ? (
+                    "↻"
+                ) : playing ? (
+                    // Plain "⏸"/"▶" text glyphs render as colorful emoji on
+                    // some mobile keyboards/fonts (Android's Noto Color
+                    // Emoji draws "⏸" as an orange tile) instead of a plain
+                    // symbol - an inline SVG always renders the same way.
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                        <rect x="6" y="4" width="4" height="16" rx="1" />
+                        <rect x="14" y="4" width="4" height="16" rx="1" />
+                    </svg>
+                ) : (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                        <polygon points="5 3 19 12 5 21" />
+                    </svg>
+                )}
+            </button>
+            <button
+                type="button"
+                className={skipButtonClassName}
+                onClick={() => skip(-10)}
+                disabled={!url}
+                aria-label="-10s"
+            >
+                −10
+            </button>
+            <input
+                type="range"
+                className={trackClassName}
+                min={0}
+                max={duration || 0}
+                step={0.1}
+                value={currentTime}
+                onChange={handleSeek}
+                disabled={!url}
+                aria-label="Seek"
+            />
+            <button
+                type="button"
+                className={skipButtonClassName}
+                onClick={() => skip(10)}
+                disabled={!url}
+                aria-label="+10s"
+            >
+                +10
+            </button>
+            <span className={timeClassName}>{formatAudioTime(playing || currentTime > 0 ? currentTime : duration)}</span>
+            {url && (
+                <audio
+                    ref={audioRef}
+                    src={url}
+                    onPlay={() => setPlaying(true)}
+                    onPause={() => setPlaying(false)}
+                    onEnded={() => {
+                        setPlaying(false);
+                        setCurrentTime(0);
+                        // Reaching the end on its own doesn't reset the
+                        // element's own currentTime back to 0 - without
+                        // this, a second tap of play would silently do
+                        // nothing (already sitting at the end, nothing
+                        // left to play) instead of actually restarting.
+                        if (audioRef.current) audioRef.current.currentTime = 0;
+                    }}
+                    onLoadedMetadata={() => {
+                        // Not "||" - a MediaRecorder-produced file (voice
+                        // messages) reports Infinity here, and Infinity is
+                        // truthy, so "||" would keep it instead of falling
+                        // through to the real duration mediaMetadata.ts
+                        // already resolved at record time.
+                        const live = audioRef.current?.duration;
+                        setDuration(Number.isFinite(live) ? live! : (media.durationSeconds ?? 0));
+                    }}
+                    onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime ?? 0)}
+                />
             )}
         </div>
     );

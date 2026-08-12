@@ -17,6 +17,13 @@
     animation: panelPop 0.14s ease-out;
 }
 
+/* Opens downward instead - used when there isn't enough room above the
+   anchor point (e.g. reacting to a message near the top of the chat). */
+.panelDown {
+    bottom: auto;
+    top: calc(100% + 10px);
+}
+
 @keyframes panelPop {
     from {
         opacity: 0;
@@ -41,6 +48,24 @@
     display: flex;
     gap: 2px;
     overflow-x: auto;
+    /* Extra room below the icons so the scrollbar (now visible now that
+       there are enough categories to overflow) doesn't sit flush against
+       them - and a thin custom one instead of the default OS-width bar. */
+    padding-bottom: 6px;
+    scrollbar-width: thin;
+}
+
+.tabs::-webkit-scrollbar {
+    height: 4px;
+}
+
+.tabs::-webkit-scrollbar-thumb {
+    background: rgba(var(--accent-rgb), 0.3);
+    border-radius: 2px;
+}
+
+.tabs::-webkit-scrollbar-track {
+    background: transparent;
 }
 
 .tab {

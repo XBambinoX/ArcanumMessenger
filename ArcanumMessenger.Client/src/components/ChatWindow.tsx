@@ -1,24 +1,28 @@
 import { useEffect, useRef, useState } from "react";
 import type { HubConnection } from "@microsoft/signalr";
-import type { ChatMessage, ChatReadState, ChatSummary, MediaAsset, SavedGifEntry, User } from "../types/messenger";
-import { getMessageHistory, sendMessage, deleteMessage, editMessage, forwardMessages, type ForwardItem } from "../api/messages";
+import type { ChatMessage, ChatReadState, ChatSummary, MediaAsset, MessageReaction, SavedGifEntry, User } from "../types/messenger";
+import { getMessageHistory, sendMessage, deleteMessage, editMessage, forwardMessages, addReaction, removeReaction, type ForwardItem } from "../api/messages";
 import { getUser, getUserAvatarUrl } from "../api/users";
 import { getChats, getChatAvatarUrl } from "../api/chats";
 import { uploadMedia, uploadMediaThumbnail, deleteMedia, getSavedGifs, saveGif, unsaveGif } from "../api/media";
-import { EncryptedImage, EncryptedGifVideo, EncryptedVideoPlayer, EncryptedThumbnail, downloadMediaToDisk } from "./EncryptedMedia";
+import { EncryptedImage, EncryptedGifVideo, EncryptedVideoPlayer, EncryptedAudioPlayer, EncryptedThumbnail, downloadMediaToDisk } from "./EncryptedMedia";
 import { uploadMediaChunked, abortChunkedUpload, clearChunkedUploadResumeState, CHUNK_THRESHOLD } from "../api/chunkedUpload";
 import { formatMessageTime, formatChatTime } from "../lib/time";
 import { extractVideoFirstFrame } from "../lib/mediaMetadata";
 import { reencryptMediaAcrossChats } from "../lib/mediaReencrypt";
 import { encryptOutgoing, decryptIncoming, decryptIncomingList, getChatKey } from "../lib/chatCrypto";
 import { selfHealChatKeys } from "../lib/chatKeySelfHeal";
+import { recordReactionEmojiUse } from "../lib/emojiUsage";
+import { isRegionalIndicator, isBlankDraft, ZERO_WIDTH_SPACE } from "../lib/regionalIndicator";
 import UserInfoPanel from "./UserInfoPanel";
 import ChatInfoPanel from "./ChatInfoPanel";
 import EmojiPicker from "./EmojiPicker";
 import StickerPicker from "./StickerPicker";
+import VoiceRecorderButton from "./VoiceRecorderButton";
 import ForwardPanel from "./ForwardPanel";
 import AvatarImage from "./AvatarImage";
 import MessageContextMenu, { type MessageContextMenuItem } from "./MessageContextMenu";
+import SwipeToReply from "./SwipeToReply";
 import styles from "./ChatWindow.module.css";
 import mediaStyles from "./EncryptedMedia.module.css";
 import { useLanguage } from "../lib/language";
@@ -58,6 +62,8 @@ function replySnippet(message: ChatMessage, common: AppCommonTranslation): strin
         case "image": return common.photo;
         case "video": return common.video;
         case "gif": return common.gif;
+        case "audio": return common.audio;
+        case "videoNote": return common.videoNote;
         case "file": return message.media?.fileName ?? common.file;
         default: return "";
     }
@@ -127,6 +133,9 @@ interface ChatWindowProps {
 
 const ANIMATE_MS = 260;
 const MAX_COMPOSE_HEIGHT = 120;
+// Same default set WhatsApp shows on a long-press - familiar enough that
+// most people already know what this row means without an explanation.
+const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
 function dayLabel(iso: string, common: AppCommonTranslation): string {
     const date = new Date(iso);
@@ -159,6 +168,7 @@ export default function ChatWindow({
     const [sendAsGif, setSendAsGif] = useState(false);
     const [uploadingFile, setUploadingFile] = useState(false);
     const [uploadProgress, setUploadProgress] = useState<{ loaded: number; total: number } | null>(null);
+    const [voiceRecording, setVoiceRecording] = useState(false);
     // The merged emoji+GIF picker (StickerPicker) shown in the normal
     // compose state; editing a message falls back to a plain emoji-only
     // button below (attaching a new GIF while editing isn't supported).
@@ -171,6 +181,7 @@ export default function ChatWindow({
     // of the tap appearing to do nothing.
     const [pendingGifSends, setPendingGifSends] = useState<{ tempId: string; media: MediaAsset }[]>([]);
     const [contextMenu, setContextMenu] = useState<{ message: ChatMessage; x: number; y: number } | null>(null);
+    const [reactionPicker, setReactionPicker] = useState<{ messageId: string; x: number; y: number; placement: "up" | "down" } | null>(null);
     const [replyTarget, setReplyTarget] = useState<ChatMessage | null>(null);
     const [editTarget, setEditTarget] = useState<ChatMessage | null>(null);
     const [selectMode, setSelectMode] = useState(false);
@@ -181,6 +192,7 @@ export default function ChatWindow({
     const messagesRef = useRef<HTMLDivElement | null>(null);
     const stickerPanelRef = useRef<HTMLDivElement | null>(null);
     const emojiPanelRef = useRef<HTMLDivElement | null>(null);
+    const reactionPickerRef = useRef<HTMLDivElement | null>(null);
     const draftInputRef = useRef<HTMLTextAreaElement | null>(null);
     const prependingRef = useRef(false);
     const uploadAbortRef = useRef<AbortController | null>(null);
@@ -216,6 +228,36 @@ export default function ChatWindow({
                 return next;
             });
         }, 900);
+    };
+
+    // Telegram desktop's own Up/Down-to-reply, triggered from the compose
+    // box while it's empty (see the textarea's onKeyDown below). Up with no
+    // reply active starts from the most recent message; Down past the most
+    // recent one backs out of reply mode entirely. System messages aren't
+    // repliable, so they're skipped over rather than ever becoming a target.
+    const handleReplyCycle = (direction: "up" | "down") => {
+        const repliable = messages.filter((m) => m.type !== "system");
+        if (repliable.length === 0) return;
+
+        const currentIndex = replyTarget ? repliable.findIndex((m) => m.id === replyTarget.id) : -1;
+
+        if (direction === "up") {
+            const nextIndex = currentIndex === -1 ? repliable.length - 1 : Math.max(0, currentIndex - 1);
+            const next = repliable[nextIndex];
+            setReplyTarget(next);
+            setEditTarget(null);
+            handleJumpToMessage(next.id);
+            return;
+        }
+
+        if (currentIndex === -1) return;
+        if (currentIndex >= repliable.length - 1) {
+            setReplyTarget(null);
+            return;
+        }
+        const next = repliable[currentIndex + 1];
+        setReplyTarget(next);
+        handleJumpToMessage(next.id);
     };
 
     useEffect(() => {
@@ -283,6 +325,19 @@ export default function ChatWindow({
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [emojiPickerOpen]);
+
+    useEffect(() => {
+        if (!reactionPicker) return;
+
+        const handleClickOutside = (e: MouseEvent) => {
+            if (reactionPickerRef.current && !reactionPickerRef.current.contains(e.target as Node)) {
+                setReactionPicker(null);
+            }
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [reactionPicker]);
 
     useEffect(() => {
         let cancelled = false;
@@ -365,15 +420,22 @@ export default function ChatWindow({
             });
         };
 
+        const handleReactionsChanged = (reactChatId: string, messageId: string, reactions: MessageReaction[]) => {
+            if (reactChatId !== chat.id) return;
+            setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, reactions } : m)));
+        };
+
         connection.on("ReceiveMessage", handleReceiveMessage);
         connection.on("MessageDeleted", handleMessageDeleted);
         connection.on("MessageEdited", handleMessageEdited);
         connection.on("ChatRead", handleChatRead);
+        connection.on("ReactionsChanged", handleReactionsChanged);
         return () => {
             connection.off("ReceiveMessage", handleReceiveMessage);
             connection.off("MessageDeleted", handleMessageDeleted);
             connection.off("MessageEdited", handleMessageEdited);
             connection.off("ChatRead", handleChatRead);
+            connection.off("ReactionsChanged", handleReactionsChanged);
         };
     }, [connection, chat.id, chat.wrappedChatKey]);
 
@@ -413,7 +475,7 @@ export default function ChatWindow({
         const content = draft.trim();
 
         if (editTarget) {
-            if (!content) return;
+            if (isBlankDraft(content)) return;
             // Bails without clearing anything if there's genuinely no chat
             // key to encrypt under yet - there's nothing safe to send.
             const encrypted = await encryptOutgoing(chat, content);
@@ -426,7 +488,7 @@ export default function ChatWindow({
             return;
         }
 
-        if (!content && !pendingMedia) return;
+        if (isBlankDraft(content) && !pendingMedia) return;
 
         // An empty caption needs no key at all - only real content does.
         const encrypted = content ? await encryptOutgoing(chat, content) : "";
@@ -460,6 +522,33 @@ export default function ChatWindow({
             input?.focus();
             input?.setSelectionRange(pos, pos);
         });
+    };
+
+    // A regional-indicator letter picked from the emoji picker always
+    // comes with a trailing zero-width space (see EmojiPicker.tsx) so it
+    // doesn't get merged into a flag - without this, backspace would
+    // delete that invisible character first and need a second press to
+    // remove the letter itself. Array.from walks by code point, not
+    // UTF-16 code unit, since the letter itself is a surrogate pair.
+    const handleBackspaceOverRegionalIndicator = (): boolean => {
+        const input = draftInputRef.current;
+        if (!input || input.selectionStart !== input.selectionEnd || input.selectionStart == null) return false;
+
+        const pos = input.selectionStart;
+        const before = Array.from(draft.slice(0, pos));
+        const last = before[before.length - 1];
+        const secondLast = before[before.length - 2];
+        if (last !== ZERO_WIDTH_SPACE || !secondLast || !isRegionalIndicator(secondLast)) return false;
+
+        const removedLength = last.length + secondLast.length;
+        const next = draft.slice(0, pos - removedLength) + draft.slice(pos);
+        setDraft(next);
+
+        requestAnimationFrame(() => {
+            input.focus();
+            input.setSelectionRange(pos - removedLength, pos - removedLength);
+        });
+        return true;
     };
 
     const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -506,6 +595,105 @@ export default function ChatWindow({
             setSendAsGif(false);
         } catch (err) {
             // A deliberate cancel (handleCancelUpload) - already cleaned up there.
+            if (!(err instanceof DOMException && err.name === "AbortError")) throw err;
+        } finally {
+            setUploadingFile(false);
+            setUploadProgress(null);
+            uploadAbortRef.current = null;
+            uploadFileRef.current = null;
+            uploadSessionIdRef.current = null;
+        }
+    };
+
+    // Voice messages skip the pendingMedia review step entirely - stopping
+    // the recording is the send action, same as Telegram/WhatsApp.
+    const handleVoiceRecorded = async (file: File, durationSeconds: number) => {
+        const chatKey = await getChatKey({ id: chat.id, wrappedChatKey: chat.wrappedChatKey });
+        if (!chatKey) return;
+
+        const controller = new AbortController();
+        uploadAbortRef.current = controller;
+        uploadFileRef.current = file;
+        uploadSessionIdRef.current = null;
+
+        try {
+            let media: MediaAsset | null;
+            if (file.size >= CHUNK_THRESHOLD) {
+                setUploadProgress({ loaded: 0, total: file.size });
+                media = await uploadMediaChunked(
+                    file,
+                    chatKey,
+                    chat.id,
+                    (loaded, total) => setUploadProgress({ loaded, total }),
+                    controller.signal,
+                    (sessionId) => { uploadSessionIdRef.current = sessionId; },
+                    durationSeconds,
+                );
+            } else {
+                setUploadingFile(true);
+                media = await uploadMedia(file, chatKey, chat.id, controller.signal, durationSeconds);
+            }
+
+            if (media) {
+                const replyToId = replyTarget?.id ?? null;
+                setReplyTarget(null);
+                const sent = await sendMessage(chat.id, "", media.id, false, replyToId);
+                if (sent) {
+                    setMessages((prev) => appendUnique(prev, [{ ...sent, content: "" }]));
+                    markAnimated(sent.id);
+                }
+            }
+        } catch (err) {
+            if (!(err instanceof DOMException && err.name === "AbortError")) throw err;
+        } finally {
+            setUploadingFile(false);
+            setUploadProgress(null);
+            uploadAbortRef.current = null;
+            uploadFileRef.current = null;
+            uploadSessionIdRef.current = null;
+        }
+    };
+
+    // Same shape as handleVoiceRecorded - the only difference is asVideoNote
+    // on the send call, which is what gets media.Kind reclassified from
+    // "video" to "videoNote" server-side (see MessageService.SendMessageAsync).
+    const handleVideoNoteRecorded = async (file: File, durationSeconds: number) => {
+        const chatKey = await getChatKey({ id: chat.id, wrappedChatKey: chat.wrappedChatKey });
+        if (!chatKey) return;
+
+        const controller = new AbortController();
+        uploadAbortRef.current = controller;
+        uploadFileRef.current = file;
+        uploadSessionIdRef.current = null;
+
+        try {
+            let media: MediaAsset | null;
+            if (file.size >= CHUNK_THRESHOLD) {
+                setUploadProgress({ loaded: 0, total: file.size });
+                media = await uploadMediaChunked(
+                    file,
+                    chatKey,
+                    chat.id,
+                    (loaded, total) => setUploadProgress({ loaded, total }),
+                    controller.signal,
+                    (sessionId) => { uploadSessionIdRef.current = sessionId; },
+                    durationSeconds,
+                );
+            } else {
+                setUploadingFile(true);
+                media = await uploadMedia(file, chatKey, chat.id, controller.signal, durationSeconds);
+            }
+
+            if (media) {
+                const replyToId = replyTarget?.id ?? null;
+                setReplyTarget(null);
+                const sent = await sendMessage(chat.id, "", media.id, false, replyToId, true);
+                if (sent) {
+                    setMessages((prev) => appendUnique(prev, [{ ...sent, content: "" }]));
+                    markAnimated(sent.id);
+                }
+            }
+        } catch (err) {
             if (!(err instanceof DOMException && err.name === "AbortError")) throw err;
         } finally {
             setUploadingFile(false);
@@ -600,6 +788,28 @@ export default function ChatWindow({
         e.preventDefault();
         if (selectMode) return;
         setContextMenu({ message, x: e.clientX, y: e.clientY });
+    };
+
+    // Used by the reaction pill on a message itself - always removes one
+    // copy of your own reaction (a person can have stacked several of the
+    // same emoji, see handleAddReaction below).
+    const handleRemoveReaction = async (messageId: string, emoji: string) => {
+        const reactions = await removeReaction(chat.id, messageId, emoji);
+        if (reactions) {
+            setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, reactions } : m)));
+        }
+    };
+
+    // Used by the reaction picker (quick strip + full emoji picker) -
+    // always adds one more, so picking the same emoji twice in a row (or
+    // leaving the picker open while adding several) stacks rather than
+    // undoing the first pick. Only the pill on the message itself removes.
+    const handleAddReaction = async (messageId: string, emoji: string) => {
+        recordReactionEmojiUse(emoji);
+        const reactions = await addReaction(chat.id, messageId, emoji);
+        if (reactions) {
+            setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, reactions } : m)));
+        }
     };
 
     const toggleSelected = (messageId: string) => {
@@ -847,12 +1057,12 @@ export default function ChatWindow({
                         new Date(prev.createdAt).toDateString() !==
                             new Date(message.createdAt).toDateString();
                     const replyTo = findMessage(message.replyToId);
-                    const isMediaKind = message.type === "image" || message.type === "gif" || message.type === "video";
+                    const isMediaKind = message.type === "image" || message.type === "gif" || message.type === "video" || message.type === "videoNote";
                     const hasCaption = isMediaKind && !!message.content;
                     const bareMedia = isMediaKind && !hasCaption;
                     const mediaWrapClass = `${styles.mediaWrap} ${hasCaption ? styles.mediaBleedTop : ""} ${
                         message.type === "video" ? styles.mediaWrapVideo : ""
-                    }`;
+                    } ${message.type === "videoNote" ? styles.mediaWrapVideoNote : ""}`;
 
                     return (
                         <div key={message.id}>
@@ -866,6 +1076,14 @@ export default function ChatWindow({
                                     <span>{message.content}</span>
                                 </div>
                             ) : (
+                            <SwipeToReply
+                                disabled={!isMobile || selectMode}
+                                reverse={message.isOwn}
+                                onReply={() => {
+                                    setReplyTarget(message);
+                                    setEditTarget(null);
+                                }}
+                            >
                             <div
                                 id={`msg-${message.id}`}
                                 className={`${styles.bubbleRow} ${message.isOwn ? styles.own : ""} ${
@@ -999,6 +1217,39 @@ export default function ChatWindow({
                                             )}
                                         </div>
                                     )}
+                                    {message.type === "audio" && message.media && (
+                                        <EncryptedAudioPlayer
+                                            chat={{ id: chat.id, wrappedChatKey: chat.wrappedChatKey }}
+                                            media={message.media}
+                                            className={styles.mediaAudio}
+                                            playButtonClassName={styles.audioPlayBtn}
+                                            trackClassName={styles.audioTrack}
+                                            timeClassName={styles.audioTime}
+                                            spinnerClassName={styles.audioSpinner}
+                                            skipButtonClassName={styles.audioSkipBtn}
+                                        />
+                                    )}
+                                    {message.type === "videoNote" && message.media && (
+                                        <div className={mediaWrapClass}>
+                                            <EncryptedVideoPlayer
+                                                chat={{ id: chat.id, wrappedChatKey: chat.wrappedChatKey }}
+                                                media={message.media}
+                                                className={styles.mediaVideoNote}
+                                                placeholderClassName={styles.videoNotePlaceholder}
+                                                playIconClassName={styles.videoPlayIcon}
+                                                spinnerClassName={styles.videoSpinner}
+                                                preWarmMetadata
+                                            />
+                                            {bareMedia && (
+                                                <span className={styles.mediaTime}>
+                                                    {formatMessageTime(message.createdAt)}
+                                                    {message.isOwn && chat.type !== "saved" && (
+                                                        <MessageStatusIcon read={isMessageRead(message, readStates)} />
+                                                    )}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
                                     {message.type === "file" && message.media && (
                                         <button
                                             type="button"
@@ -1025,6 +1276,20 @@ export default function ChatWindow({
                                             {message.content}
                                         </span>
                                     )}
+                                    {message.reactions.length > 0 && (
+                                        <div className={styles.reactions}>
+                                            {message.reactions.map((r) => (
+                                                <button
+                                                    key={r.emoji}
+                                                    className={`${styles.reactionPill} ${r.reactedByMe ? styles.reactionPillActive : ""}`}
+                                                    onClick={() => handleRemoveReaction(message.id, r.emoji)}
+                                                >
+                                                    <span>{r.emoji}</span>
+                                                    <span className={styles.reactionCount}>{r.count}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
                                     {!bareMedia && (
                                         <span className={styles.meta}>
                                             {message.isEdited && (
@@ -1040,6 +1305,7 @@ export default function ChatWindow({
                                     )}
                                 </div>
                             </div>
+                            </SwipeToReply>
                             )}
                         </div>
                     );
@@ -1225,48 +1491,41 @@ export default function ChatWindow({
                             </div>
                         )}
                         <div className={styles.inputRow}>
-                            {!editTarget ? (
-                                <>
-                                    <input
-                                        type="file"
-                                        ref={fileInputRef}
-                                        className={styles.hiddenFileInput}
-                                        onChange={handleFileSelected}
-                                    />
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                className={styles.hiddenFileInput}
+                                onChange={handleFileSelected}
+                            />
+                            {!editTarget && !voiceRecording && (
+                                <div className={styles.stickerButtonWrap} ref={stickerPanelRef}>
                                     <button
                                         className={styles.attachBtn}
-                                        onClick={handleAttachClick}
-                                        aria-label={tr.attachFileAria}
-                                        title={tr.attachFileAria}
+                                        onClick={() => setStickerPickerOpen((prev) => !prev)}
+                                        aria-label={tr.emojiAria}
+                                        title={tr.emojiAria}
                                     >
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.33 3.33 0 0 1 4.71 4.71l-9.2 9.19a1.67 1.67 0 0 1-2.36-2.36l8.49-8.48" />
+                                            <circle cx="12" cy="12" r="10" />
+                                            <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                                            <path d="M9 9h.01M15 9h.01" />
                                         </svg>
                                     </button>
-                                    <div className={styles.stickerButtonWrap} ref={stickerPanelRef}>
-                                        <button
-                                            className={styles.attachBtn}
-                                            onClick={() => setStickerPickerOpen((prev) => !prev)}
-                                            aria-label={tr.emojiAria}
-                                            title={tr.emojiAria}
-                                        >
-                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                <circle cx="12" cy="12" r="10" />
-                                                <path d="M8 14s1.5 2 4 2 4-2 4-2" />
-                                                <path d="M9 9h.01M15 9h.01" />
-                                            </svg>
-                                        </button>
-                                        {stickerPickerOpen && savedChat && (
-                                            <StickerPicker
-                                                savedChat={savedChat}
-                                                onClose={() => setStickerPickerOpen(false)}
-                                                onSelectEmoji={handleInsertEmoji}
-                                                onSelectGif={handleSendGif}
-                                            />
-                                        )}
-                                    </div>
-                                </>
-                            ) : (
+                                    {stickerPickerOpen && savedChat && (
+                                        <StickerPicker
+                                            savedChat={savedChat}
+                                            onClose={() => setStickerPickerOpen(false)}
+                                            onSelectEmoji={handleInsertEmoji}
+                                            onSelectGif={handleSendGif}
+                                            onAttachFile={() => {
+                                                handleAttachClick();
+                                                setStickerPickerOpen(false);
+                                            }}
+                                        />
+                                    )}
+                                </div>
+                            )}
+                            {editTarget && (
                                 <div className={styles.emojiButtonWrap} ref={emojiPanelRef}>
                                     <button
                                         className={styles.attachBtn}
@@ -1288,51 +1547,76 @@ export default function ChatWindow({
                                     )}
                                 </div>
                             )}
-                            <textarea
-                                ref={draftInputRef}
-                                className={styles.input}
-                                rows={1}
-                                placeholder={tr.messagePlaceholder}
-                                value={draft}
-                                onChange={(e) => setDraft(e.target.value)}
-                                onKeyDown={(e) => {
-                                    // Mobile: Enter always inserts a newline (there's no
-                                    // convenient Shift key) - sending is send-button-only.
-                                    // Desktop: Enter sends, Shift+Enter inserts a newline.
-                                    if (e.key !== "Enter" || e.shiftKey || isMobile) return;
-                                    e.preventDefault();
-                                    handleSend();
-                                }}
-                            />
-                            <button
-                                className={styles.sendBtn}
-                                // Tapping a button moves focus to it by default,
-                                // and away from the draft textarea - since a
-                                // button isn't a text field, that's what tells
-                                // the on-screen keyboard to close. Blocking just
-                                // that default (not the click itself) keeps the
-                                // textarea focused, so the keyboard stays open
-                                // through a send and only closes when the user
-                                // actually taps outside the input themselves.
-                                onMouseDown={(e) => e.preventDefault()}
-                                onClick={handleSend}
-                                disabled={!draft.trim() && !pendingMedia}
-                                aria-label={common.send}
-                            >
-                                <svg
-                                    width="18"
-                                    height="18"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
+                            {!voiceRecording && (
+                                <textarea
+                                    ref={draftInputRef}
+                                    className={styles.input}
+                                    rows={1}
+                                    placeholder={tr.messagePlaceholder}
+                                    value={draft}
+                                    onChange={(e) => setDraft(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Backspace" && handleBackspaceOverRegionalIndicator()) {
+                                            e.preventDefault();
+                                            return;
+                                        }
+                                        // Telegram desktop's own shortcut - only while there's
+                                        // nothing typed yet, so it never fights with actually
+                                        // moving the cursor through real draft text.
+                                        if ((e.key === "ArrowUp" || e.key === "ArrowDown") && !editTarget && isBlankDraft(draft)) {
+                                            e.preventDefault();
+                                            handleReplyCycle(e.key === "ArrowUp" ? "up" : "down");
+                                            return;
+                                        }
+                                        // Mobile: Enter always inserts a newline (there's no
+                                        // convenient Shift key) - sending is send-button-only.
+                                        // Desktop: Enter sends, Shift+Enter inserts a newline.
+                                        if (e.key !== "Enter" || e.shiftKey || isMobile) return;
+                                        e.preventDefault();
+                                        handleSend();
+                                    }}
+                                />
+                            )}
+                            {!editTarget && (
+                                <VoiceRecorderButton
+                                    chatId={chat.id}
+                                    disabled={uploadingFile || !!uploadProgress || !!pendingMedia}
+                                    onRecorded={handleVoiceRecorded}
+                                    onVideoRecorded={handleVideoNoteRecorded}
+                                    onRecordingChange={setVoiceRecording}
+                                />
+                            )}
+                            {!voiceRecording && (
+                                <button
+                                    className={styles.sendBtn}
+                                    // Tapping a button moves focus to it by default,
+                                    // and away from the draft textarea - since a
+                                    // button isn't a text field, that's what tells
+                                    // the on-screen keyboard to close. Blocking just
+                                    // that default (not the click itself) keeps the
+                                    // textarea focused, so the keyboard stays open
+                                    // through a send and only closes when the user
+                                    // actually taps outside the input themselves.
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={handleSend}
+                                    disabled={isBlankDraft(draft) && !pendingMedia}
+                                    aria-label={common.send}
                                 >
-                                    <rect x="2" y="4" width="20" height="16" rx="3" />
-                                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-                                </svg>
-                            </button>
+                                    <svg
+                                        width="18"
+                                        height="18"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    >
+                                        <rect x="2" y="4" width="20" height="16" rx="3" />
+                                        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                                    </svg>
+                                </button>
+                            )}
                         </div>
                     </>
                 )}
@@ -1369,8 +1653,34 @@ export default function ChatWindow({
                     x={contextMenu.x}
                     y={contextMenu.y}
                     items={buildMenuItems(contextMenu.message)}
+                    quickReactions={QUICK_REACTIONS}
+                    onReact={(emoji) => handleAddReaction(contextMenu.message.id, emoji)}
+                    onMoreReactions={() => {
+                        // Not enough headroom above a message near the top
+                        // of the chat to open the full picker upward -
+                        // flips down instead, same threshold as its own
+                        // max-height (min(360px, 55vh) + the 10px gap).
+                        const placement = contextMenu.y < 380 ? "down" : "up";
+                        setReactionPicker({ messageId: contextMenu.message.id, x: contextMenu.x, y: contextMenu.y, placement });
+                        setContextMenu(null);
+                    }}
                     onClose={() => setContextMenu(null)}
                 />
+            )}
+
+            {reactionPicker && (
+                <div
+                    ref={reactionPickerRef}
+                    className={styles.reactionPickerAnchor}
+                    style={{ left: Math.min(reactionPicker.x, window.innerWidth - 328), top: reactionPicker.y }}
+                >
+                    <EmojiPicker
+                        placement={reactionPicker.placement}
+                        showFrequent
+                        onClose={() => setReactionPicker(null)}
+                        onSelect={(emoji) => handleAddReaction(reactionPicker.messageId, emoji)}
+                    />
+                </div>
             )}
 
             {forwardIds && (

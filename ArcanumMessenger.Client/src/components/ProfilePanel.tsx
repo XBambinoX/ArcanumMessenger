@@ -16,6 +16,7 @@ import AvatarImage from "./AvatarImage";
 import DeleteAccountModal from "./DeleteAccountModal";
 import { useLanguage, setLanguage, type Language } from "../lib/language";
 import { setTheme, type Theme } from "../lib/theme";
+import { getPreferredMicId, setPreferredMicId } from "../lib/micPreference";
 import { APP_COMMON } from "../lib/appTranslations";
 import { PROFILE_PANEL_TRANSLATIONS } from "../lib/profileTranslations";
 
@@ -31,7 +32,7 @@ interface ProfilePanelProps {
 type Section = "main" | "account" | "notifications" | "privacy" | "chats" | "language" | "blocked";
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 type PrivacyField = "showLastSeen" | "showOnlineStatus" | "readReceipts" | "showPhoneNumber" | "showBio" | "showAvatar" | "showEmail" | "whoCanAddMe" | "totpEnabled";
-type ChatField = "theme" | "language" | "wallpaper" | "linkPreviews" | "autoDownloadMedia";
+type ChatField = "theme" | "language";
 
 // Mirrors Entities.UserSettings, plus a few visual-only extras below.
 // Not persisted yet — wiring to GET/PUT /api/users/me/settings is next.
@@ -55,9 +56,6 @@ interface SettingsState {
     readReceipts: boolean;
     theme: "system" | "dark" | "light";
     language: "en" | "uk" | "de";
-    wallpaper: string;
-    linkPreviews: boolean;
-    autoDownloadMedia: boolean;
 }
 
 const defaultSettings: SettingsState = {
@@ -80,9 +78,6 @@ const defaultSettings: SettingsState = {
     readReceipts: true,
     theme: "system",
     language: "en",
-    wallpaper: "Default",
-    linkPreviews: true,
-    autoDownloadMedia: true,
 };
 
 type IconProps = { color: string };
@@ -264,6 +259,13 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
 
     const [blockedUsers, setBlockedUsers] = useState<UserSearchResult[]>([]);
 
+    // Local only, never synced to the server - a deviceId from
+    // enumerateDevices() is meaningless on a different browser/device, so
+    // this lives in localStorage via micPreference.ts like theme/language
+    // used to before those became account-synced settings.
+    const [micDevices, setMicDevices] = useState<MediaDeviceInfo[]>([]);
+    const [preferredMicId, setPreferredMicIdState] = useState(() => getPreferredMicId() ?? "");
+
     const saveTimer = useRef<number | null>(null);
     const pendingFields = useRef<Partial<{ username: string; bio: string; phone: string; email: string }>>({});
 
@@ -288,9 +290,6 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
     const chatsApiFieldMap: Record<ChatField, keyof UpdateChatSettingsRequest> = {
         theme: "theme",
         language: "language",
-        wallpaper: "wallpaper",
-        linkPreviews: "linkPreviewsEnabled",
-        autoDownloadMedia: "autoDownloadMedia",
     };
 
 
@@ -546,9 +545,6 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                     whoCanAddMe: data.whoCanAddMe,
                     theme: data.theme,
                     language: data.language,
-                    wallpaper: data.wallpaper,
-                    linkPreviews: data.linkPreviewsEnabled,
-                    autoDownloadMedia: data.autoDownloadMedia,
                 }));
                 setSettingsLoaded(true);
             })
@@ -563,6 +559,37 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
 
     useEffect(() => {
         getBlockedUsers().then(setBlockedUsers);
+    }, []);
+
+    // enumerateDevices() never prompts for permission itself - labels just
+    // come back blank until mic access has been granted. On Chrome/desktop,
+    // "granted at some point in the past" is already enough. Several mobile
+    // browsers (Safari/WebKit, Firefox) are stricter and only reveal labels
+    // while a stream from this origin is actually active - past permission
+    // alone isn't enough there, which is what left the list empty on phones
+    // that had already recorded a voice message before. Re-runs on
+    // devicechange too, so plugging/unplugging a headset while this panel
+    // is open updates the list live instead of needing a reopen.
+    useEffect(() => {
+        const refreshMicDevices = async () => {
+            const initial = await navigator.mediaDevices.enumerateDevices().catch(() => []);
+            const initialAudio = initial.filter((d) => d.kind === "audioinput");
+            if (initialAudio.some((d) => d.label)) {
+                setMicDevices(initialAudio);
+                return;
+            }
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                stream.getTracks().forEach((t) => t.stop());
+                const after = await navigator.mediaDevices.enumerateDevices();
+                setMicDevices(after.filter((d) => d.kind === "audioinput"));
+            } catch {
+                setMicDevices(initialAudio); // permission not available yet - shows the "record once" hint
+            }
+        };
+        void refreshMicDevices();
+        navigator.mediaDevices.addEventListener("devicechange", refreshMicDevices);
+        return () => navigator.mediaDevices.removeEventListener("devicechange", refreshMicDevices);
     }, []);
 
     const handleUnblock = async (id: string) => {
@@ -610,6 +637,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                                 <AvatarImage
                                     src={myAvatarSrc}
                                     fallback={(settingsLoaded ? (settings.username || profile.name) : profile.name).charAt(0).toUpperCase()}
+                                    onImageClick={() => window.open(myAvatarSrc, "_blank")}
                                 />
                             </div>
 
@@ -683,7 +711,6 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                                 </span>
                             </div>
                             <div className={styles.avatarEditHint}>
-                                <span className={styles.avatarEditTitle}>{tr.setNewPhoto}</span>
                                 <button className={styles.avatarEditSub} onClick={handleRemoveAvatar}>
                                     {tr.removePhotoButton}
                                 </button>
@@ -995,33 +1022,26 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                             ))}
                         </div>
 
-                        <span className={styles.subGroupTitle}>{tr.appearanceHeading}</span>
-                        <div className={styles.row}>
-                            <span>{tr.chatWallpaper}</span>
-                            <span className={styles.menuValue}>{settings.wallpaper}</span>
-                        </div>
-                        <label className={styles.row}>
-                            <span>{tr.showLinkPreviews}</span>
-                            <input
-                                className={styles.switch}
-                                type="checkbox"
-                                checked={settings.linkPreviews}
-                                disabled={!settingsLoaded}
-                                onChange={(e) => handleChatSettingChange("linkPreviews", e.target.checked)}
-                            />
-                        </label>
-
-                        <span className={styles.subGroupTitle}>{tr.dataUsageHeading}</span>
-                        <label className={styles.row}>
-                            <span>{tr.autoDownloadMediaLabel}</span>
-                            <input
-                                className={styles.switch}
-                                type="checkbox"
-                                checked={settings.autoDownloadMedia}
-                                disabled={!settingsLoaded}
-                                onChange={(e) => handleChatSettingChange("autoDownloadMedia", e.target.checked)}
-                            />
-                        </label>
+                        <span className={styles.subGroupTitle}>{tr.micHeading}</span>
+                        {micDevices.some((d) => d.label) ? (
+                            <select
+                                className={styles.select}
+                                value={preferredMicId}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    setPreferredMicIdState(value);
+                                    setPreferredMicId(value || null);
+                                }}
+                            >
+                                <option value="">{tr.micDefaultOption}</option>
+                                {micDevices.map((d) => (
+                                    <option key={d.deviceId} value={d.deviceId}>{d.label}</option>
+                                ))}
+                            </select>
+                        ) : (
+                            <p className={styles.note}>{tr.micPermissionHint}</p>
+                        )}
+                        <p className={styles.note}>{tr.micMobileLimitationNote}</p>
                     </div>
                 );
 

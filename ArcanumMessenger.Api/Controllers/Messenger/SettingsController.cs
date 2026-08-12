@@ -49,10 +49,7 @@ public class SettingsController(AppDbContext db, EncryptionService encryption, T
             ShowEmail: settings.ShowEmail.ToApiString(),
             WhoCanAddMe: settings.WhoCanAddMe.ToApiString(),
             Theme: settings.Theme,
-            Language: settings.Language,
-            Wallpaper: settings.Wallpaper,
-            LinkPreviewsEnabled: settings.LinkPreviewsEnabled,
-            AutoDownloadMedia: settings.AutoDownloadMedia
+            Language: settings.Language
         );
 
         logger.LogInformation("User settings fetched successfully for user {UserId}", userId);
@@ -321,15 +318,6 @@ public class SettingsController(AppDbContext db, EncryptionService encryption, T
                 return BadRequest(new { reason = "invalid_language" });
             settings.Language = request.Language;
         }
-
-        if (request.Wallpaper is not null)
-            settings.Wallpaper = request.Wallpaper;
-
-        if (request.LinkPreviewsEnabled is not null)
-            settings.LinkPreviewsEnabled = request.LinkPreviewsEnabled.Value;
-
-        if (request.AutoDownloadMedia is not null)
-            settings.AutoDownloadMedia = request.AutoDownloadMedia.Value;
 
         settings.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);

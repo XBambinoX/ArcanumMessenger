@@ -44,6 +44,15 @@ export function primeChatKey(chatId: string, key: Uint8Array): void {
     keyCache.set(chatId, key);
 }
 
+// Called right after unlocking (see AuthContext's confirmUnlocked) -
+// nothing should normally cache a chat as keyless while there's genuinely
+// no E2EE identity yet to unwrap it with, but this is the recovery path
+// if something manages to anyway: every entry gets a fresh, real attempt
+// at unwrapping instead of trusting a stale cached null forever.
+export function clearChatKeyCache(): void {
+    keyCache.clear();
+}
+
 // Returns null if this chat has no usable key yet - callers must not send
 // unencrypted content as a fallback; there's simply nothing safe to send.
 export async function encryptOutgoing(chat: KeyedChat, plaintext: string): Promise<string | null> {

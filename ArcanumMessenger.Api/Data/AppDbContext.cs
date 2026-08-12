@@ -14,6 +14,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<UserSettings> UserSettings => Set<UserSettings>();
     public DbSet<MediaAsset> MediaAssets => Set<MediaAsset>();
     public DbSet<SavedGif> SavedGifs => Set<SavedGif>();
+    public DbSet<MessageReaction> MessageReactions => Set<MessageReaction>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -128,6 +129,20 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany()
                 .HasForeignKey(m => m.UploaderId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<MessageReaction>(e =>
+        {
+            e.HasKey(r => new { r.MessageId, r.UserId, r.Emoji });
+            e.Property(r => r.CreatedAt).HasDefaultValueSql("NOW()");
+            e.HasOne(r => r.Message)
+                .WithMany()
+                .HasForeignKey(r => r.MessageId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(r => r.User)
+                .WithMany()
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<SavedGif>(e =>

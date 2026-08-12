@@ -1,4 +1,5 @@
 import { navigateTo } from "./navigation";
+import { notifySessionExpired } from "./authEvents";
 
 export class ApiError extends Error {
     status: number;
@@ -14,11 +15,21 @@ export class ApiError extends Error {
 
 let refreshPromise: Promise<Response> | null = null;
 
-async function refreshOnce(): Promise<Response> {
+// The one shared refresh gateway for the whole app - every caller
+// (this file's own 401 retry below, api/session.ts's proactive
+// keepalive timer, and its visibilitychange catch-up) goes through this
+// same in-flight guard, so two of them racing to redeem the same
+// single-use refresh-token cookie can never both fire a real request.
+// Whichever caller's request actually reaches the network decides the
+// outcome for everyone waiting on it.
+export async function refreshOnce(): Promise<Response> {
     if (!refreshPromise) {
         refreshPromise = fetch("/api/auth/refresh", {
             method: "POST",
             credentials: "include",
+        }).then((res) => {
+            if (!res.ok) notifySessionExpired();
+            return res;
         }).finally(() => {
             refreshPromise = null;
         });

@@ -167,6 +167,10 @@ export async function uploadMediaChunked(
     onProgress: (loadedBytes: number, totalBytes: number) => void,
     signal?: AbortSignal,
     onSessionStart?: (sessionId: string) => void,
+    // See uploadMedia's own copy of this param for why - same MediaRecorder
+    // duration unreliability applies to a long voice recording going
+    // through the chunked path.
+    durationSecondsOverride?: number,
 ): Promise<MediaAsset | null> {
     const key = fingerprintKey(file);
     let sessionId = localStorage.getItem(key);
@@ -188,6 +192,7 @@ export async function uploadMediaChunked(
 
     if (!sessionId) {
         const meta = await readMediaMetadata(file);
+        if (durationSecondsOverride !== undefined) meta.durationSeconds = durationSecondsOverride;
         const encryptedFileName = await encryptContent(chatKey, chatId, file.name);
         sessionId = await startSession(file, encryptedFileName, encryptedTotalSize, meta, signal);
         if (!sessionId) return null;

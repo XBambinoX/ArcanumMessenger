@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { HubConnection } from "@microsoft/signalr";
+import { HubConnectionState, type HubConnection } from "@microsoft/signalr";
 import { useNavigate } from "react-router";
 import { logout } from "../api/session";
 import { getChats, markChatRead, setChatArchived } from "../api/chats";
@@ -189,6 +189,26 @@ export default function AppPage() {
             conn.stop();
         };
     }, []);
+
+    // withAutomaticReconnect() (see chatHub.ts) retries with backoff and
+    // then permanently gives up, with no recovery and no UI sign anything
+    // is wrong - a tab backgrounded long enough on mobile to exhaust that
+    // retry budget just stops receiving realtime updates silently.
+    // Catching up the moment the tab is visible again (same trigger
+    // AuthContext already uses to catch up the access-token cookie)
+    // restarts it - the SignalR client supports calling start() again on
+    // a connection that's gone fully Disconnected.
+    useEffect(() => {
+        if (!connection) return;
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === "visible" && connection.state === HubConnectionState.Disconnected) {
+                connection.start().catch(() => {});
+            }
+        };
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+    }, [connection]);
 
     useEffect(() => {
         if (!connection) return;

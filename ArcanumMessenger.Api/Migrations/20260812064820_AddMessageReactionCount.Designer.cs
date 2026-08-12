@@ -3,6 +3,7 @@ using System;
 using ArcanumMessenger.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ArcanumMessenger.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260812064820_AddMessageReactionCount")]
+    partial class AddMessageReactionCount
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -245,6 +248,9 @@ namespace ArcanumMessenger.Migrations
                     b.Property<string>("Emoji")
                         .HasColumnType("text");
 
+                    b.Property<int>("Count")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -310,9 +316,6 @@ namespace ArcanumMessenger.Migrations
                     b.Property<string>("RefreshTokenHash")
                         .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<Guid?>("ReplacedBySessionId")
-                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("RevokedAt")
                         .HasColumnType("timestamp with time zone");

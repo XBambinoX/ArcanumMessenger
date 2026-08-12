@@ -91,7 +91,11 @@ export default function UserInfoPanel({
 
                 <div className={styles.profileHeader}>
                     <div className={styles.profileAvatar}>
-                        <AvatarImage src={getUserAvatarUrl(userId)} fallback={user.name.charAt(0).toUpperCase()} />
+                        <AvatarImage
+                            src={getUserAvatarUrl(userId)}
+                            fallback={user.name.charAt(0).toUpperCase()}
+                            onImageClick={() => window.open(getUserAvatarUrl(userId), "_blank")}
+                        />
                     </div>
                     <span className={styles.profileName}>{user.name}</span>
                     <span

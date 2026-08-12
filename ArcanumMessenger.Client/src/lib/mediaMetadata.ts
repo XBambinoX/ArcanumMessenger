@@ -42,6 +42,43 @@ export async function readMediaMetadata(file: File): Promise<MediaDimensions> {
         });
     }
 
+    if (file.type.startsWith("audio/")) {
+        return new Promise((resolve) => {
+            const audio = document.createElement("audio");
+            audio.preload = "metadata";
+            const url = URL.createObjectURL(file);
+            audio.src = url;
+
+            let settled = false;
+            const finish = (result: MediaDimensions) => {
+                if (settled) return;
+                settled = true;
+                window.clearTimeout(timeoutId);
+                URL.revokeObjectURL(url);
+                resolve(result);
+            };
+            const timeoutId = window.setTimeout(() => finish({}), 6000);
+
+            audio.onloadedmetadata = () => {
+                if (Number.isFinite(audio.duration)) {
+                    finish({ durationSeconds: audio.duration });
+                    return;
+                }
+                // A MediaRecorder-produced file (voice messages) has no
+                // duration in its container, so Chrome reports Infinity
+                // here - a known quirk, not a broken recording. Seeking
+                // past the end forces the browser to actually probe the
+                // file and discover the real duration, which then shows up
+                // once that seek settles.
+                audio.currentTime = Number.MAX_SAFE_INTEGER;
+                audio.ontimeupdate = () => {
+                    finish(Number.isFinite(audio.duration) ? { durationSeconds: audio.duration } : {});
+                };
+            };
+            audio.onerror = () => finish({});
+        });
+    }
+
     return {};
 }
 
