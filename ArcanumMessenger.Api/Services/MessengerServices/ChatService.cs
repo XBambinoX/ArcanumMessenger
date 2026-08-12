@@ -547,6 +547,7 @@ public class ChatService(
                 return "forbidden";
 
             membership.Chat.IsDeleted = true;
+            membership.Chat.DeletedAt = DateTime.UtcNow;
             await db.SaveChangesAsync(ct);
 
             var groupMemberIds = await db.ChatMembers.AsNoTracking()
@@ -562,6 +563,7 @@ public class ChatService(
         if (forEveryone)
         {
             membership.Chat.IsDeleted = true;
+            membership.Chat.DeletedAt = DateTime.UtcNow;
             await db.SaveChangesAsync(ct);
 
             var allMemberIds = await db.ChatMembers.AsNoTracking()
@@ -610,7 +612,8 @@ public class ChatService(
 
         if (remainingMemberIds.Count == 0)
         {
-            await db.Chats.Where(c => c.Id == chatId).ExecuteUpdateAsync(s => s.SetProperty(c => c.IsDeleted, true), ct);
+            await db.Chats.Where(c => c.Id == chatId).ExecuteUpdateAsync(
+                s => s.SetProperty(c => c.IsDeleted, true).SetProperty(c => c.DeletedAt, DateTime.UtcNow), ct);
         }
         else
         {

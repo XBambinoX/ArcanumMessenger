@@ -300,6 +300,7 @@ public class MessageService(
             return (false, "forbidden");
 
         message.IsDeleted = true;
+        message.DeletedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
 
         // The chat list's preview only knows about a chat's "last message" as

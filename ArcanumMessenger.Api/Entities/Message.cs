@@ -13,6 +13,7 @@ public class Message
     public bool IsDeleted { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? EditedAt { get; set; }
+    public DateTime? DeletedAt { get; set; }
 
     // A snapshot, not a live join - the original sender may later leave, get
     // purged, or (once real E2E lands) have their display name re-keyed, and
