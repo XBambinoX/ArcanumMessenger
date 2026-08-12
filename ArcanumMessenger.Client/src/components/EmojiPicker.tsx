@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { emojiCategories, type EmojiCategory } from "../lib/emoji";
 import { getFrequentReactionEmojis } from "../lib/emojiUsage";
+import { isRegionalIndicator, ZERO_WIDTH_SPACE } from "../lib/regionalIndicator";
 import styles from "./EmojiPicker.module.css";
 import { useLanguage } from "../lib/language";
 import { EMOJI_PICKER_TRANSLATIONS } from "../lib/chatWindowTranslations";
@@ -65,7 +66,11 @@ export default function EmojiPicker({
 
             <div className={styles.grid}>
                 {categories[activeCategory].emojis.map((emoji, i) => (
-                    <button key={i} className={styles.emojiBtn} onClick={() => onSelect(emoji)}>
+                    <button
+                        key={i}
+                        className={styles.emojiBtn}
+                        onClick={() => onSelect(isRegionalIndicator(emoji) ? emoji + ZERO_WIDTH_SPACE : emoji)}
+                    >
                         {emoji}
                     </button>
                 ))}

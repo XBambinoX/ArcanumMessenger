@@ -13,6 +13,7 @@ import { reencryptMediaAcrossChats } from "../lib/mediaReencrypt";
 import { encryptOutgoing, decryptIncoming, decryptIncomingList, getChatKey } from "../lib/chatCrypto";
 import { selfHealChatKeys } from "../lib/chatKeySelfHeal";
 import { recordReactionEmojiUse } from "../lib/emojiUsage";
+import { isRegionalIndicator, isBlankDraft, ZERO_WIDTH_SPACE } from "../lib/regionalIndicator";
 import UserInfoPanel from "./UserInfoPanel";
 import ChatInfoPanel from "./ChatInfoPanel";
 import EmojiPicker from "./EmojiPicker";
@@ -474,7 +475,7 @@ export default function ChatWindow({
         const content = draft.trim();
 
         if (editTarget) {
-            if (!content) return;
+            if (isBlankDraft(content)) return;
             // Bails without clearing anything if there's genuinely no chat
             // key to encrypt under yet - there's nothing safe to send.
             const encrypted = await encryptOutgoing(chat, content);
@@ -487,7 +488,7 @@ export default function ChatWindow({
             return;
         }
 
-        if (!content && !pendingMedia) return;
+        if (isBlankDraft(content) && !pendingMedia) return;
 
         // An empty caption needs no key at all - only real content does.
         const encrypted = content ? await encryptOutgoing(chat, content) : "";
@@ -521,6 +522,33 @@ export default function ChatWindow({
             input?.focus();
             input?.setSelectionRange(pos, pos);
         });
+    };
+
+    // A regional-indicator letter picked from the emoji picker always
+    // comes with a trailing zero-width space (see EmojiPicker.tsx) so it
+    // doesn't get merged into a flag - without this, backspace would
+    // delete that invisible character first and need a second press to
+    // remove the letter itself. Array.from walks by code point, not
+    // UTF-16 code unit, since the letter itself is a surrogate pair.
+    const handleBackspaceOverRegionalIndicator = (): boolean => {
+        const input = draftInputRef.current;
+        if (!input || input.selectionStart !== input.selectionEnd || input.selectionStart == null) return false;
+
+        const pos = input.selectionStart;
+        const before = Array.from(draft.slice(0, pos));
+        const last = before[before.length - 1];
+        const secondLast = before[before.length - 2];
+        if (last !== ZERO_WIDTH_SPACE || !secondLast || !isRegionalIndicator(secondLast)) return false;
+
+        const removedLength = last.length + secondLast.length;
+        const next = draft.slice(0, pos - removedLength) + draft.slice(pos);
+        setDraft(next);
+
+        requestAnimationFrame(() => {
+            input.focus();
+            input.setSelectionRange(pos - removedLength, pos - removedLength);
+        });
+        return true;
     };
 
     const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1528,10 +1556,14 @@ export default function ChatWindow({
                                     value={draft}
                                     onChange={(e) => setDraft(e.target.value)}
                                     onKeyDown={(e) => {
+                                        if (e.key === "Backspace" && handleBackspaceOverRegionalIndicator()) {
+                                            e.preventDefault();
+                                            return;
+                                        }
                                         // Telegram desktop's own shortcut - only while there's
                                         // nothing typed yet, so it never fights with actually
                                         // moving the cursor through real draft text.
-                                        if ((e.key === "ArrowUp" || e.key === "ArrowDown") && !editTarget && draft.trim() === "") {
+                                        if ((e.key === "ArrowUp" || e.key === "ArrowDown") && !editTarget && isBlankDraft(draft)) {
                                             e.preventDefault();
                                             handleReplyCycle(e.key === "ArrowUp" ? "up" : "down");
                                             return;
@@ -1567,7 +1599,7 @@ export default function ChatWindow({
                                     // actually taps outside the input themselves.
                                     onMouseDown={(e) => e.preventDefault()}
                                     onClick={handleSend}
-                                    disabled={!draft.trim() && !pendingMedia}
+                                    disabled={isBlankDraft(draft) && !pendingMedia}
                                     aria-label={common.send}
                                 >
                                     <svg
