@@ -21,6 +21,7 @@ import VoiceRecorderButton from "./VoiceRecorderButton";
 import ForwardPanel from "./ForwardPanel";
 import AvatarImage from "./AvatarImage";
 import MessageContextMenu, { type MessageContextMenuItem } from "./MessageContextMenu";
+import SwipeToReply from "./SwipeToReply";
 import styles from "./ChatWindow.module.css";
 import mediaStyles from "./EncryptedMedia.module.css";
 import { useLanguage } from "../lib/language";
@@ -226,6 +227,36 @@ export default function ChatWindow({
                 return next;
             });
         }, 900);
+    };
+
+    // Telegram desktop's own Up/Down-to-reply, triggered from the compose
+    // box while it's empty (see the textarea's onKeyDown below). Up with no
+    // reply active starts from the most recent message; Down past the most
+    // recent one backs out of reply mode entirely. System messages aren't
+    // repliable, so they're skipped over rather than ever becoming a target.
+    const handleReplyCycle = (direction: "up" | "down") => {
+        const repliable = messages.filter((m) => m.type !== "system");
+        if (repliable.length === 0) return;
+
+        const currentIndex = replyTarget ? repliable.findIndex((m) => m.id === replyTarget.id) : -1;
+
+        if (direction === "up") {
+            const nextIndex = currentIndex === -1 ? repliable.length - 1 : Math.max(0, currentIndex - 1);
+            const next = repliable[nextIndex];
+            setReplyTarget(next);
+            setEditTarget(null);
+            handleJumpToMessage(next.id);
+            return;
+        }
+
+        if (currentIndex === -1) return;
+        if (currentIndex >= repliable.length - 1) {
+            setReplyTarget(null);
+            return;
+        }
+        const next = repliable[currentIndex + 1];
+        setReplyTarget(next);
+        handleJumpToMessage(next.id);
     };
 
     useEffect(() => {
@@ -1017,6 +1048,14 @@ export default function ChatWindow({
                                     <span>{message.content}</span>
                                 </div>
                             ) : (
+                            <SwipeToReply
+                                disabled={!isMobile || selectMode}
+                                reverse={message.isOwn}
+                                onReply={() => {
+                                    setReplyTarget(message);
+                                    setEditTarget(null);
+                                }}
+                            >
                             <div
                                 id={`msg-${message.id}`}
                                 className={`${styles.bubbleRow} ${message.isOwn ? styles.own : ""} ${
@@ -1238,6 +1277,7 @@ export default function ChatWindow({
                                     )}
                                 </div>
                             </div>
+                            </SwipeToReply>
                             )}
                         </div>
                     );
@@ -1488,6 +1528,14 @@ export default function ChatWindow({
                                     value={draft}
                                     onChange={(e) => setDraft(e.target.value)}
                                     onKeyDown={(e) => {
+                                        // Telegram desktop's own shortcut - only while there's
+                                        // nothing typed yet, so it never fights with actually
+                                        // moving the cursor through real draft text.
+                                        if ((e.key === "ArrowUp" || e.key === "ArrowDown") && !editTarget && draft.trim() === "") {
+                                            e.preventDefault();
+                                            handleReplyCycle(e.key === "ArrowUp" ? "up" : "down");
+                                            return;
+                                        }
                                         // Mobile: Enter always inserts a newline (there's no
                                         // convenient Shift key) - sending is send-button-only.
                                         // Desktop: Enter sends, Shift+Enter inserts a newline.
