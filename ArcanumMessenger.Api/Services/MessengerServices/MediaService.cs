@@ -147,6 +147,40 @@ public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config, 
         return (true, null);
     }
 
+    // Same "in use" check as DeleteUnusedAsync above, minus the per-caller
+    // ownership check - called from MediaCleanupService, not a user
+    // request, so there's no single caller to check against. minAge keeps
+    // this from touching a MediaAsset uploaded moments ago and not sent
+    // yet - a normal, temporary state (upload happens before the message
+    // that will reference it), not something to delete out from under
+    // someone still composing.
+    public async Task<int> PurgeOrphanedAsync(TimeSpan minAge, CancellationToken ct)
+    {
+        var cutoff = DateTime.UtcNow - minAge;
+
+        var orphaned = await db.MediaAssets
+            .Where(a => a.CreatedAt <= cutoff)
+            .Where(a => !db.Messages.Any(m => m.MediaId == a.Id) && !db.SavedGifs.Any(s => s.MediaId == a.Id))
+            .Select(a => new { a.Id, a.StorageKey, a.ThumbnailStorageKey })
+            .ToListAsync(ct);
+
+        foreach (var asset in orphaned)
+        {
+            await s3.DeleteObjectAsync(Bucket, asset.StorageKey, ct);
+            if (asset.ThumbnailStorageKey is { } thumbnailKey)
+                await s3.DeleteObjectAsync(Bucket, thumbnailKey, ct);
+        }
+
+        if (orphaned.Count > 0)
+        {
+            await db.MediaAssets
+                .Where(a => orphaned.Select(o => o.Id).Contains(a.Id))
+                .ExecuteDeleteAsync(ct);
+        }
+
+        return orphaned.Count;
+    }
+
     // The DB row can outlive the actual object in storage (e.g. it was
     // removed directly in the bucket) - that's a missing file, not a server
     // error, so it should surface as a clean 404 rather than a crash.
