@@ -1,4 +1,4 @@
-import { apiFetch } from "../lib/apiFetch";
+import { apiFetch, refreshOnce } from "../lib/apiFetch";
 import * as sessionKeys from "../lib/sessionKeys";
 
 export async function checkSession(): Promise<{ success: boolean; userId?: string }> {
@@ -6,11 +6,15 @@ export async function checkSession(): Promise<{ success: boolean; userId?: strin
     return res.json();
 }
 
+// Routed through apiFetch's own refreshOnce() rather than a separate
+// fetch - this is called proactively (a keepalive timer, and a
+// visibilitychange catch-up for when the timer got throttled in a
+// backgrounded tab), and used to fire its own independent request that
+// could race apiFetch's reactive 401-retry for the same single-use
+// refresh-token cookie. Sharing the one guard makes that race
+// impossible instead of just unlikely.
 export async function refreshSession(): Promise<{ success: boolean; reason?: string }> {
-    const res = await fetch("/api/auth/refresh", {
-        method: "POST",
-        credentials: "include",
-    });
+    const res = await refreshOnce();
     return res.json();
 }
 
