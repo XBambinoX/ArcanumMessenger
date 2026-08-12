@@ -1,0 +1,209 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    background: rgba(var(--overlay-rgb), 0.55);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.panel {
+    position: relative;
+    box-sizing: border-box;
+    width: 320px;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    background: rgb(var(--bg-elevated-rgb));
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(var(--black-rgb), 0.45);
+    padding: 18px;
+    animation: panelPop 0.16s ease-out;
+}
+
+@keyframes panelPop {
+    from {
+        opacity: 0;
+        transform: scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.closeBtn {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    background: rgba(var(--accent-rgb), 0.05);
+    color: rgba(var(--accent-light-rgb), 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.closeBtn:hover {
+    background: rgba(var(--accent-rgb), 0.12);
+    border-color: rgba(var(--accent-light-rgb), 0.4);
+}
+
+.profileHeader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 20px 0 20px;
+}
+
+.profileAvatar {
+    width: 260px;
+    height: 260px;
+    border-radius: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 84px;
+    font-weight: 700;
+    color: rgb(var(--white-rgb));
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
+    margin-bottom: 10px;
+}
+
+.profileName {
+    font-size: 16px;
+    font-weight: 700;
+    color: rgba(var(--text-rgb), 0.95);
+    margin-bottom: 6px;
+}
+
+.lastSeen {
+    font-size: 12.5px;
+    color: rgba(var(--text-muted-rgb), 0.6);
+}
+
+.actionRow {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.actionBtn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 9px;
+    border-radius: 10px;
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    background: rgba(var(--accent-rgb), 0.08);
+    color: rgba(var(--text-rgb), 0.95);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.actionBtn:hover {
+    background: rgba(var(--accent-rgb), 0.15);
+    border-color: rgba(var(--accent-light-rgb), 0.4);
+}
+
+.actionBtn:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.blockBtn {
+    /* .actionBtn's flex:1 is meant for splitting .actionRow with a
+       sibling button - this one stands alone directly in .panel's own
+       flex column, where flex:1 instead stretches it to fill all
+       leftover height once .panel goes full-screen on mobile. */
+    flex: none;
+    width: 100%;
+    margin-bottom: 14px;
+    color: rgb(var(--danger-rgb));
+    border-color: rgba(var(--danger-rgb), 0.3);
+    background: rgba(var(--danger-rgb), 0.08);
+}
+
+.blockBtn:hover {
+    background: rgba(var(--danger-rgb), 0.15);
+    border-color: rgba(var(--danger-rgb), 0.5);
+}
+
+.blockBtnActive {
+    color: rgba(var(--text-rgb), 0.95);
+    border-color: rgba(var(--accent-rgb), 0.25);
+    background: rgba(var(--accent-rgb), 0.08);
+}
+
+.blockBtnActive:hover {
+    background: rgba(var(--accent-rgb), 0.15);
+    border-color: rgba(var(--accent-light-rgb), 0.4);
+}
+
+.blockNote {
+    margin: -6px 0 14px;
+    font-size: 12.5px;
+    color: rgb(var(--danger-rgb));
+    text-align: center;
+}
+
+.infoSection {
+    border-top: 1px solid rgba(var(--accent-rgb), 0.12);
+    padding-top: 14px;
+}
+
+.infoRow {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 0;
+}
+
+.infoLabel {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(var(--accent-light-rgb), 0.6);
+}
+
+.infoValue {
+    font-size: 14px;
+    color: rgba(var(--text-rgb), 0.9);
+    word-break: break-word;
+}
+
+.lastSeenOnline {
+    color: rgb(var(--success-rgb));
+}
+
+/* Full-screen sheet instead of a centered card - keep in sync with
+   useMediaQuery.ts's MOBILE_BREAKPOINT_QUERY. */
+@media (max-width: 760px) {
+    .overlay {
+        padding: 0;
+    }
+
+    .panel {
+        width: 100%;
+        height: 100%;
+        max-width: 100%;
+        max-height: 100%;
+        border-radius: 0;
+    }
+}

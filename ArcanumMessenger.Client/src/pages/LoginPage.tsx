@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router";
 import styles from "./LoginPage.module.css";
 import { deriveKeys } from "../crypto/kdf";
 import { useAuth } from "../context/AuthContext";
@@ -24,12 +24,27 @@ import { useAuth } from "../context/AuthContext";
  *     Verifies the 6-digit TOTP code and completes the login.
  */
 import { startLogin, submitLoginPassword, submitLoginTotp, completeLogin } from "../api/login";
+import { setIdentityKey } from "../api/users";
+import {
+    generateIdentityKeyPair,
+    exportPrivateKeyPkcs8,
+    importPrivateKeyPkcs8,
+    unwrapPrivateKey,
+    wrapPrivateKey,
+} from "../crypto/ecdh";
+import { toBase64, fromBase64 } from "../crypto/encoding";
+import * as sessionKeys from "../lib/sessionKeys";
+import { useLanguage } from "../lib/language";
+import { AUTH_COMMON, LOGIN_TRANSLATIONS } from "../lib/authTranslations";
 
 type Step = 0 | 1 | 2;
 const CODE_LENGTH = 6;
 
 export default function LoginPage() {
     const navigate = useNavigate();
+    const language = useLanguage();
+    const common = AUTH_COMMON[language];
+    const tr = LOGIN_TRANSLATIONS[language];
     const [step, setStep] = useState<Step>(0);
     const [stepCount, setStepCount] = useState<2 | 3>(2);
 
@@ -44,6 +59,11 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
 
     const codeInputs = useRef<(HTMLInputElement | null)[]>([]);
+    // Derived alongside authKey at the password step and needed again once
+    // login completes (possibly after an intervening TOTP step) to unwrap
+    // this device's identity private key - kept in a ref rather than state
+    // since it's sensitive and never needs to trigger a re-render.
+    const encKeyRef = useRef<Uint8Array | null>(null);
 
     const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     const isCodeComplete = code.every((d) => d !== "");
@@ -55,9 +75,51 @@ export default function LoginPage() {
         setStep((s) => Math.max(s - 1, 0) as Step);
     };
 
+    // The carousel track lays every step out side by side, so its viewport
+    // has to be told each step's real height explicitly - a flex row
+    // otherwise stretches every slide to match the tallest one, leaving the
+    // shorter steps sitting in a needlessly tall card. Re-observing on every
+    // step change (rather than once) also keeps this correct if a step's own
+    // height changes later, e.g. an inline error appearing.
+    const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const [carouselHeight, setCarouselHeight] = useState<number | undefined>(undefined);
+
+    useEffect(() => {
+        const el = slideRefs.current[step];
+        if (!el) return;
+        const ro = new ResizeObserver(() => setCarouselHeight(el.offsetHeight));
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, [step]);
+
+    // Unwraps this device's identity private key with the encKey derived at
+    // the password step, or - for accounts that predate E2EE and have none
+    // yet - generates and uploads a fresh keypair. Either way, caches the
+    // result via sessionKeys for the rest of this tab's session.
+    const establishIdentity = async (
+        ecdhPublicKey: string | null | undefined,
+        wrappedEcdhPrivateKey: string | null | undefined,
+    ) => {
+        const encKey = encKeyRef.current;
+        if (!encKey) return;
+
+        if (ecdhPublicKey && wrappedEcdhPrivateKey) {
+            const privateKeyPkcs8 = await unwrapPrivateKey(encKey, wrappedEcdhPrivateKey);
+            const privateKey = await importPrivateKeyPkcs8(privateKeyPkcs8);
+            sessionKeys.setIdentity(privateKeyPkcs8, fromBase64(ecdhPublicKey), privateKey);
+            return;
+        }
+
+        const identity = await generateIdentityKeyPair();
+        const privateKeyPkcs8 = await exportPrivateKeyPkcs8(identity.privateKey);
+        const wrapped = await wrapPrivateKey(encKey, privateKeyPkcs8);
+        await setIdentityKey(toBase64(identity.publicKeyRaw), wrapped);
+        sessionKeys.setIdentity(privateKeyPkcs8, identity.publicKeyRaw, identity.privateKey);
+    };
+
     const handleEmailSubmit = async () => {
         if (!isEmailValid) {
-            setError("Enter a valid email address");
+            setError(common.invalidEmail);
             return;
         }
         setLoading(true);
@@ -67,10 +129,10 @@ export default function LoginPage() {
             if (!success || !sessionId || !kdfSalt) {
                 setError(
                     reason === "invalid_format"
-                        ? "Enter a valid email address"
+                        ? common.invalidEmail
                         : reason === "too_many_attempts"
-                          ? "Too many attempts, try again later"
-                          : "Something went wrong, try again",
+                          ? common.tooManyAttemptsLater
+                          : common.somethingWrongTryAgain,
                 );
                 return;
             }
@@ -79,7 +141,7 @@ export default function LoginPage() {
             setError("");
             setStep(1);
         } catch {
-            setError("Something went wrong, try again");
+            setError(common.somethingWrongTryAgain);
         } finally {
             setLoading(false);
         }
@@ -87,12 +149,13 @@ export default function LoginPage() {
 
     const handlePasswordSubmit = async () => {
         if (!password) {
-            setError("Enter your password");
+            setError(tr.enterPassword);
             return;
         }
         setLoading(true);
         try {
-            const { authKey } = await deriveKeys(password, kdfSalt!);
+            const { authKey, encKey } = await deriveKeys(password, kdfSalt!);
+            encKeyRef.current = encKey;
             const { success, requiresTotp, reason } = await submitLoginPassword(
                 sessionId!,
                 authKey,
@@ -100,10 +163,10 @@ export default function LoginPage() {
             if (!success) {
                 setError(
                     reason === "session_expired"
-                        ? "Session expired, please start over"
+                        ? common.sessionExpired
                         : reason === "too_many_attempts"
-                          ? "Too many attempts, try again later"
-                          : "Incorrect email or password",
+                          ? common.tooManyAttemptsLater
+                          : tr.incorrectEmailOrPassword,
                 );
                 return;
             }
@@ -116,14 +179,15 @@ export default function LoginPage() {
 
             const completeRes = await completeLogin(sessionId!);
             if (!completeRes.success) {
-                setError("Something went wrong with login completion, try again");
+                setError(tr.completeLoginFailed);
                 return;
             }
 
+            await establishIdentity(completeRes.ecdhPublicKey, completeRes.wrappedEcdhPrivateKey);
             setAuthenticated(true);
             navigate("/app");
         } catch {
-            setError("Something went wrong, try again");
+            setError(common.somethingWrongTryAgain);
         } finally {
             setLoading(false);
         }
@@ -131,7 +195,7 @@ export default function LoginPage() {
 
     const handleTotpSubmit = async () => {
         if (!isCodeComplete) {
-            setError("Enter the full 6-digit code");
+            setError(common.enterFullCode);
             return;
         }
         setLoading(true);
@@ -143,10 +207,10 @@ export default function LoginPage() {
             if (!success) {
                 setError(
                     reason === "session_expired"
-                        ? "Session expired, please start over"
+                        ? common.sessionExpired
                         : reason === "too_many_attempts"
-                          ? "Too many attempts, try again later"
-                          : "Invalid code",
+                          ? common.tooManyAttemptsLater
+                          : common.invalidCode,
                 );
                 setCode(Array(CODE_LENGTH).fill(""));
                 codeInputs.current[0]?.focus();
@@ -155,13 +219,14 @@ export default function LoginPage() {
 
             const completeRes = await completeLogin(sessionId!);
             if (!completeRes.success) {
-                setError("Something went wrong, try again");
+                setError(common.somethingWrongTryAgain);
                 return;
             }
+            await establishIdentity(completeRes.ecdhPublicKey, completeRes.wrappedEcdhPrivateKey);
             setAuthenticated(true);
             navigate("/app");
         } catch {
-            setError("Something went wrong, try again");
+            setError(common.somethingWrongTryAgain);
         } finally {
             setLoading(false);
         }
@@ -187,18 +252,19 @@ export default function LoginPage() {
     };
 
     const stepTitles = [
-        { title: "Welcome back", subtitle: "Sign in with your email" },
+        { title: tr.step0Title, subtitle: tr.step0Subtitle },
         {
-            title: "Enter your password",
+            title: tr.step1Title,
             subtitle: (
                 <>
-                    Signing in as <b>{email}</b>
+                    {tr.signingInAsPrefix}
+                    <b>{email}</b>
                 </>
             ),
         },
         {
-            title: "Two-factor authentication",
-            subtitle: "Enter the 6-digit code from your authenticator app",
+            title: tr.step2Title,
+            subtitle: tr.step2Subtitle,
         },
     ];
 
@@ -213,7 +279,7 @@ export default function LoginPage() {
                     <button
                         className={styles.backHome}
                         onClick={() => navigate("/welcome")}
-                        aria-label="Back to welcome"
+                        aria-label={common.backToWelcomeAria}
                         style={{
                             visibility: step === 0 ? "visible" : "hidden",
                         }}
@@ -255,8 +321,8 @@ export default function LoginPage() {
                                     y2="44"
                                     gradientUnits="userSpaceOnUse"
                                 >
-                                    <stop stopColor="#a78bfa" />
-                                    <stop offset="1" stopColor="#22d3ee" />
+                                    <stop stopColor="rgb(var(--accent-light-rgb))" />
+                                    <stop offset="1" stopColor="rgb(var(--accent-cyan-rgb))" />
                                 </linearGradient>
                             </defs>
                         </svg>
@@ -273,13 +339,13 @@ export default function LoginPage() {
                     ))}
                 </div>
 
-                <div className={styles.viewport}>
+                <div className={styles.viewport} style={{ height: carouselHeight }}>
                     <div
                         className={styles.track}
                         style={{ transform: `translateX(-${step * 100}%)` }}
                     >
                         {/* ── STEP 0: Email ── */}
-                        <div className={styles.slide}>
+                        <div className={styles.slide} ref={(el) => { slideRefs.current[0] = el; }} inert={step !== 0}>
                             <h2 className={styles.stepTitle}>
                                 {stepTitles[0].title}
                             </h2>
@@ -288,7 +354,7 @@ export default function LoginPage() {
                             </p>
 
                             <div className={styles.field}>
-                                <label className={styles.label}>Email</label>
+                                <label className={styles.label}>{common.emailLabel}</label>
                                 <input
                                     className={`${styles.input} ${error && step === 0 ? styles.error : ""}`}
                                     type="email"
@@ -311,23 +377,23 @@ export default function LoginPage() {
                                     onClick={handleEmailSubmit}
                                     disabled={loading}
                                 >
-                                    {loading ? "Checking…" : "Continue"}
+                                    {loading ? common.checking : common.continueLabel}
                                 </button>
                             </div>
 
                             <p className={styles.footerNote}>
-                                Don't have an account?{" "}
+                                {tr.dontHaveAccount}{" "}
                                 <button
                                     className={styles.footerLink}
                                     onClick={() => navigate("/register")}
                                 >
-                                    Create one
+                                    {tr.createOne}
                                 </button>
                             </p>
                         </div>
 
                         {/* ── STEP 1: Password ── */}
-                        <div className={styles.slide}>
+                        <div className={styles.slide} ref={(el) => { slideRefs.current[1] = el; }} inert={step !== 1}>
                             <h2 className={styles.stepTitle}>
                                 {stepTitles[1].title}
                             </h2>
@@ -336,7 +402,7 @@ export default function LoginPage() {
                             </p>
 
                             <div className={styles.field}>
-                                <label className={styles.label}>Password</label>
+                                <label className={styles.label}>{common.passwordLabel}</label>
                                 <input
                                     className={`${styles.input} ${error && step === 1 ? styles.error : ""}`}
                                     type="password"
@@ -360,7 +426,7 @@ export default function LoginPage() {
                                 <button
                                     className={styles.btnBack}
                                     onClick={goBack}
-                                    aria-label="Back"
+                                    aria-label={common.backAria}
                                 >
                                     <svg
                                         width="18"
@@ -380,23 +446,23 @@ export default function LoginPage() {
                                     onClick={handlePasswordSubmit}
                                     disabled={loading}
                                 >
-                                    {loading ? "Signing in…" : "Sign in"}
+                                    {loading ? tr.signingIn : common.signIn}
                                 </button>
                             </div>
 
                             <p className={styles.footerNote}>
-                                Forgot your password?{" "}
+                                {tr.forgotPassword}{" "}
                                 <button
                                     className={styles.footerLink}
                                     onClick={() => navigate("/recovery")}
                                 >
-                                    Change it
+                                    {tr.changeIt}
                                 </button>
                             </p>
                         </div>
 
                         {/* ── STEP 2: TOTP (only if enabled in settings) ── */}
-                        <div className={styles.slide}>
+                        <div className={styles.slide} ref={(el) => { slideRefs.current[2] = el; }} inert={step !== 2}>
                             <h2 className={styles.stepTitle}>
                                 {stepTitles[2].title}
                             </h2>
@@ -441,7 +507,7 @@ export default function LoginPage() {
                                     onClick={handleTotpSubmit}
                                     disabled={loading}
                                 >
-                                    {loading ? "Verifying…" : "Verify"}
+                                    {loading ? common.verifying : common.verify}
                                 </button>
                             </div>
                         </div>

@@ -1,0 +1,186 @@
+.list {
+    list-style: none;
+    margin: 0;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.empty {
+    margin: 40px 16px;
+    text-align: center;
+    font-size: 14px;
+    color: rgba(var(--text-muted-rgb), 0.5);
+}
+
+.item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 10px 12px;
+    border: none;
+    border-radius: 12px;
+    background: transparent;
+    color: inherit;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.item:hover {
+    background: rgba(var(--accent-rgb), 0.08);
+}
+
+.item.selected {
+    background: linear-gradient(
+        135deg,
+        rgba(var(--accent-rgb), 0.22),
+        rgba(var(--accent2-rgb), 0.14)
+    );
+}
+
+.avatar {
+    position: relative;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    color: rgb(var(--white-rgb));
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
+}
+
+.avatarGroup {
+    background: linear-gradient(135deg, rgb(var(--accent-cyan3-rgb)), rgb(var(--accent2-rgb)));
+}
+
+.avatarSaved {
+    background: linear-gradient(135deg, rgb(var(--accent-blue-rgb)), rgb(var(--accent-blue2-rgb)));
+}
+
+.body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.topRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 14.5px;
+    font-weight: 600;
+}
+
+.muteIcon {
+    flex-shrink: 0;
+    color: rgba(var(--text-muted-rgb), 0.55);
+}
+
+.time {
+    flex-shrink: 0;
+    font-size: 11.5px;
+    color: rgba(var(--text-muted-rgb), 0.6);
+}
+
+/* A span with role="button" - a real button can't be nested inside
+   the chat item, which is already a button itself. */
+.archiveBtn {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(var(--accent-light-rgb), 0.85);
+    background: rgba(var(--accent-rgb), 0.12);
+    opacity: 0;
+    cursor: pointer;
+    transition:
+        opacity 0.15s,
+        background 0.15s;
+}
+
+.item:hover .archiveBtn,
+.archiveBtn:focus-visible {
+    opacity: 1;
+}
+
+.archiveBtn:hover {
+    background: rgba(var(--accent-rgb), 0.25);
+}
+
+/* Touch devices have no hover state to reveal this on - show it plainly
+   instead, and give it a real touch target while we're at it. */
+@media (hover: none) {
+    .archiveBtn {
+        opacity: 1;
+        width: 28px;
+        height: 28px;
+    }
+}
+
+.bottomRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.preview {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    color: rgba(var(--text-muted-rgb), 0.75);
+}
+
+.badge {
+    flex-shrink: 0;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: rgb(var(--white-rgb));
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
+}
+
+.badgeMuted {
+    background: rgba(var(--text-muted-rgb), 0.35);
+}
+
+.onlineDot {
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgb(var(--success-rgb));
+    border: 2.5px solid rgb(var(--bg-page-rgb));
+    box-sizing: border-box;
+}

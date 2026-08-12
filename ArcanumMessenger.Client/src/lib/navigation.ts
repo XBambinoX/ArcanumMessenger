@@ -1,5 +1,5 @@
-import type { NavigateFunction } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import type { NavigateFunction } from "react-router";
+import { useNavigate } from "react-router";
 import { useEffect } from "react";
 
 let navigateRef: NavigateFunction | null = null;

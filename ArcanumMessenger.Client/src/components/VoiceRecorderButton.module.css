@@ -1,0 +1,218 @@
+.wrap {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.micBtn {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
+    background: rgba(var(--accent-rgb), 0.05);
+    color: rgba(var(--accent-light-rgb), 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.2s;
+    /* Without this, holding the button down on a touch screen can be read
+       as the start of a scroll/selection gesture instead of a hold. */
+    touch-action: none;
+}
+
+.micBtn:hover:not(:disabled) {
+    background: rgba(var(--accent-rgb), 0.12);
+    border-color: rgba(var(--accent-light-rgb), 0.4);
+}
+
+.micBtn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.error {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    right: 0;
+    /* No longer nowrap - the more specific per-cause messages (blocked vs.
+       not found vs. in use) run noticeably longer than the old one-liner
+       ever did, and this sits right-anchored near a button close to the
+       screen's edge, so an unwrapped line could run off-screen on a
+       narrow phone. */
+    width: max-content;
+    max-width: 220px;
+    padding: 5px 8px;
+    border-radius: 6px;
+    background: rgba(var(--danger-rgb), 0.15);
+    color: rgb(var(--danger-rgb));
+    font-size: 11.5px;
+    line-height: 1.4;
+}
+
+.wrapRecording {
+    flex: 1;
+}
+
+.recordingRow {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 4px;
+}
+
+/* Positioning only - no border-radius/overflow/transform-for-mirroring here.
+   position: fixed + centered on the viewport itself (top/left 50% + a
+   translate, not an offset from one edge) - the button this recording
+   started from sits off to one side of the compose row, so anchoring to
+   it (like StickerPicker's own panel does) would leave this noticeably
+   off-center instead of dead center on screen, and guessing a "bottom"
+   offset that clears the compose bar on every device/browser chrome
+   combination isn't reliable either. */
+.videoPanel {
+    position: fixed;
+    left: 50%;
+    /* A bit above dead center - the compose bar's own visual weight at the
+       bottom of the screen made true 50% still read as too low. */
+    top: 43%;
+    transform: translate(-50%, -50%);
+    width: 260px;
+    height: 260px;
+    z-index: 10;
+}
+
+/* Always mounted (see the component's own comment on why) - this is the
+   "not currently recording video" state, taking no space and staying
+   fully inert. */
+.videoPanelHidden {
+    display: none;
+}
+
+/* The actual clip lives here, on an element with no transform of its own -
+   .videoPanel above already has one (centering), .previewMirrored below
+   sometimes has one too (the selfie mirror). border-radius + overflow:
+   hidden alone wasn't enough - Safari/WebKit has a long-standing bug where
+   a transformed child escapes its own direct parent's overflow-hidden
+   clip regardless of whether the parent is separately transformed too.
+   clip-path uses a completely different clipping mechanism that isn't
+   subject to that bug, so it's the one actually doing the clipping here;
+   border-radius/overflow stay as a harmless fallback for anything that
+   somehow doesn't support clip-path's round syntax. */
+.videoPanelClip {
+    width: 100%;
+    height: 100%;
+    border-radius: 24px;
+    overflow: hidden;
+    clip-path: inset(0 round 24px);
+    background: rgb(var(--black-rgb));
+    box-shadow: 0 20px 50px rgba(var(--black-rgb), 0.45);
+}
+
+.previewCanvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.flipBtn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(var(--black-rgb), 0.5);
+    color: rgb(var(--white-rgb));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.flipBtn:hover {
+    background: rgba(var(--black-rgb), 0.65);
+}
+
+/* Not display: none - some browsers throttle or fully stop decoding a
+   display:none video element, which left the canvas draw loop with no
+   real frames to read (videoWidth/videoHeight never left 0). Kept in the
+   render tree and just made invisible instead, so decoding keeps running
+   normally the whole time it's actually feeding the canvas. */
+.hiddenVideo {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.recordingDot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: rgb(var(--danger-rgb));
+    flex-shrink: 0;
+    animation: recordingPulse 1.1s ease-in-out infinite;
+}
+
+@keyframes recordingPulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.35;
+    }
+}
+
+.recordingTime {
+    flex-shrink: 0;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    color: rgba(var(--text-rgb), 0.85);
+}
+
+.recordingSpacer {
+    flex: 1;
+}
+
+.cancelBtn {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: rgba(var(--danger-rgb), 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.cancelBtn:hover {
+    background: rgba(var(--danger-rgb), 0.12);
+}
+
+.confirmBtn {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgb(var(--white-rgb));
+    cursor: pointer;
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
+    box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.3);
+    transition: transform 0.15s;
+}
+
+.confirmBtn:hover {
+    transform: scale(1.05);
+}

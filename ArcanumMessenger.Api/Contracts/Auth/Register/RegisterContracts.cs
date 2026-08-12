@@ -13,8 +13,13 @@
     public record ResendCodeResponse(bool Success, string? Reason = null);
 
     // AuthKey is derived from the password on the client (Argon2id + HKDF).
-    // The server never sees the plain password.
-    public record SubmitPasswordRequest(string SessionId, string AuthKey, string KdfSalt);
+    // The server never sees the plain password. EcdhPublicKey/WrappedEcdhPrivateKey
+    // are this account's E2EE identity keypair, generated client-side in the same
+    // step - the private key is wrapped with encKey (from the same derivation),
+    // so the server only ever stores ciphertext it can't unwrap.
+    public record SubmitPasswordRequest(
+        string SessionId, string AuthKey, string KdfSalt,
+        string EcdhPublicKey, string WrappedEcdhPrivateKey);
     public record SubmitPasswordResponse(bool Success, string? Reason = null);
 
     // Phrase auths are SHA-256 hashes of the recovery phrases.
@@ -22,6 +27,8 @@
     public record ConfirmRecoveryRequest(string SessionId, string Phrase1Auth, string Phrase2Auth);
     public record ConfirmRecoveryResponse(bool Success, string? Reason = null);
 
-    public record FinalizeRegistrationRequest(string SessionId);
-    public record FinalizeRegistrationResponse(bool Success, string? Reason = null);
+    public record FinalizeRegistrationRequest(string SessionId, string? Language = null);
+    public record FinalizeRegistrationResponse(
+        bool Success, string? Reason = null,
+        string? EcdhPublicKey = null, string? WrappedEcdhPrivateKey = null);
 }

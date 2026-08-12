@@ -12,6 +12,11 @@ public class RegistrationSession
     public DateTime? CodeExpiresAt { get; set; }
     public int CodeAttempts { get; set; }
     public string? PlainEmail { get; set; }
+    // Server-side only, never sent to the client: when the email is already
+    // registered, the flow looks exactly the same from the outside (so the
+    // register form can't be used to probe which emails exist), but the
+    // mailbox owner gets a notice instead of a code.
+    public bool EmailTaken { get; set; }
 
     public int ResendCount { get; set; }
     public DateTime? LastCodeSentAt { get; set; }
@@ -20,6 +25,12 @@ public class RegistrationSession
     public string? PasswordHash { get; set; }
     // Salt the client used to derive authKey from the password; needed again at login
     public string? KdfSalt { get; set; }
+
+    // E2EE identity keypair, generated client-side alongside the password step.
+    // EcdhPublicKey is plaintext; WrappedEcdhPrivateKey is encrypted with encKey
+    // (derived from the password) and unreadable to the server.
+    public string? EcdhPublicKey { get; set; }
+    public string? WrappedEcdhPrivateKey { get; set; }
 
     // Argon2id over the client-side phrase hashes; plaintext phrases never reach the server
     public string? RecoveryPhrase1Hash { get; set; }

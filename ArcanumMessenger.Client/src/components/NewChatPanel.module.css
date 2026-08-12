@@ -1,0 +1,472 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    background: rgba(var(--overlay-rgb), 0.55);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.panel {
+    box-sizing: border-box;
+    width: 420px;
+    max-width: 100%;
+    max-height: 85vh;
+    /* Scrolling lives on .panelScroll now, not here - see
+       ChatInfoPanel.module.css's .panel comment for why: a native
+       scrollbar is browser chrome, not "content", and border-radius
+       doesn't reliably clip it in every engine (Firefox in particular can
+       render it as a flat bar cutting straight through a rounded corner).
+       overflow: hidden here is what actually guarantees nothing - the
+       inner scrollbar included - ever renders outside this rounded shape. */
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: rgb(var(--bg-elevated-rgb));
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
+    border-radius: 18px;
+    box-shadow: 0 24px 70px rgba(var(--black-rgb), 0.55), 0 0 0 1px rgba(var(--accent-rgb), 0.06) inset;
+    animation: panelPop 0.16s ease-out;
+}
+
+.panelScroll {
+    overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(var(--accent-rgb), 0.35) transparent;
+    padding: 18px 20px 20px;
+}
+
+@keyframes panelPop {
+    from {
+        opacity: 0;
+        transform: scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    padding-bottom: 14px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid rgba(var(--accent-rgb), 0.14);
+}
+
+.headerLeft {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    background: linear-gradient(135deg, rgb(var(--accent-light-rgb)), rgb(var(--accent-cyan-rgb)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.backBtn {
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    border-radius: 9px;
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    background: rgba(var(--accent-rgb), 0.05);
+    color: rgba(var(--accent-light-rgb), 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.backBtn:hover {
+    background: rgba(var(--accent-rgb), 0.12);
+    border-color: rgba(var(--accent-light-rgb), 0.4);
+}
+
+.closeBtn {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    background: rgba(var(--accent-rgb), 0.05);
+    color: rgba(var(--accent-light-rgb), 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.closeBtn:hover {
+    background: rgba(var(--accent-rgb), 0.12);
+    border-color: rgba(var(--accent-light-rgb), 0.4);
+}
+
+.searchWrap {
+    position: relative;
+    margin-bottom: 14px;
+}
+
+.searchIcon {
+    position: absolute;
+    left: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(var(--accent-light-rgb), 0.55);
+    pointer-events: none;
+    display: flex;
+}
+
+.search {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 10px 14px 10px 38px;
+    border-radius: 11px;
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
+    background: rgba(var(--accent-rgb), 0.06);
+    color: rgba(var(--text-rgb), 0.95);
+    font-family: inherit;
+    font-size: 14px;
+    outline: none;
+    box-shadow: inset 0 1px 3px rgba(var(--black-rgb), 0.18);
+    transition:
+        border-color 0.2s,
+        background 0.2s;
+}
+
+.search::placeholder {
+    color: rgba(var(--text-muted-rgb), 0.5);
+}
+
+.search:focus {
+    border-color: rgba(var(--accent-light-rgb), 0.5);
+    background: rgba(var(--accent-rgb), 0.1);
+}
+
+.groupBtn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 12px;
+    margin-bottom: 16px;
+    border-radius: 11px;
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
+    background: rgba(var(--accent-rgb), 0.06);
+    color: rgba(var(--text-rgb), 0.95);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.groupBtn:hover {
+    background: rgba(var(--accent-rgb), 0.13);
+    border-color: rgba(var(--accent-light-rgb), 0.4);
+    transform: translateY(-1px);
+}
+
+.groupIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    color: rgb(var(--white-rgb));
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
+    box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.35);
+}
+
+.sectionTitle {
+    margin: 0 0 8px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(var(--accent-light-rgb), 0.6);
+}
+
+/* Groups the contacts/search-results list into its own visually distinct
+   block instead of it blending straight into the search bar / group
+   button above it. */
+.listCard {
+    background: rgba(var(--tint-rgb), 0.02);
+    border: 1px solid rgba(var(--accent-rgb), 0.1);
+    border-radius: 14px;
+    padding: 12px 10px;
+}
+
+.contactList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.contactRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 9px 8px;
+    border: none;
+    background: transparent;
+    color: rgba(var(--text-rgb), 0.95);
+    font-family: inherit;
+    font-size: 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.contactRow:hover {
+    background: rgba(var(--accent-rgb), 0.1);
+}
+
+.contactAvatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: rgb(var(--white-rgb));
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
+}
+
+.note {
+    margin: 0;
+    padding: 6px 2px;
+    font-size: 12.5px;
+    color: rgba(var(--text-muted-rgb), 0.6);
+}
+
+.errorNote {
+    margin: 8px 0 0;
+    font-size: 12.5px;
+    color: rgb(var(--danger-rgb));
+    text-align: center;
+}
+
+.memberCheckbox {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid rgba(var(--accent-light-rgb), 0.5);
+    background: rgba(var(--bg-page-rgb), 0.4);
+    transition:
+        background 0.15s,
+        border-color 0.15s;
+}
+
+.memberCheckboxChecked {
+    border-color: rgb(var(--accent-rgb));
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
+}
+
+/* Boxes the picked-members chips into their own tray so they read as a
+   staging area, not loose tags floating between the search bar and list. */
+.chipsBox {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px;
+    margin-bottom: 14px;
+    border-radius: 12px;
+    background: rgba(var(--accent-rgb), 0.05);
+    border: 1px solid rgba(var(--accent-rgb), 0.14);
+}
+
+.selectedChips {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+}
+
+.chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 6px 5px 10px;
+    border-radius: 100px;
+    background: rgba(var(--accent-rgb), 0.16);
+    border: 1px solid rgba(var(--accent-rgb), 0.32);
+    color: rgba(var(--text-rgb), 0.95);
+    font-size: 13px;
+}
+
+.chipRemove {
+    width: 16px;
+    height: 16px;
+    line-height: 1;
+    border: none;
+    border-radius: 50%;
+    background: rgba(var(--accent-rgb), 0.25);
+    color: rgba(var(--text-rgb), 0.9);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+}
+
+.chipRemove:hover {
+    background: rgba(var(--accent-rgb), 0.45);
+}
+
+.groupDetails {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Decorative stand-in for a group photo - purely visual, gives the details
+   step a focal point instead of two bare inputs stacked on their own. */
+.groupAvatarPreview {
+    align-self: center;
+    width: 72px;
+    height: 72px;
+    margin-bottom: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgb(var(--white-rgb));
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
+    box-shadow: 0 10px 26px rgba(var(--accent-rgb), 0.4);
+}
+
+/* Groups the name + description fields into one iOS/Telegram-style card
+   with an inner divider, instead of two independently-bordered inputs. */
+.groupFieldsCard {
+    display: flex;
+    flex-direction: column;
+    border-radius: 14px;
+    border: 1px solid rgba(var(--accent-rgb), 0.16);
+    background: rgba(var(--accent-rgb), 0.045);
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+
+.groupField {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 12px 14px;
+    border: none;
+    border-bottom: 1px solid rgba(var(--accent-rgb), 0.14);
+    background: transparent;
+    color: rgba(var(--text-rgb), 0.95);
+    font-family: inherit;
+    font-size: 14px;
+    outline: none;
+    resize: vertical;
+    transition: background 0.2s;
+}
+
+.groupField:last-child {
+    border-bottom: none;
+}
+
+.groupField::placeholder {
+    color: rgba(var(--text-muted-rgb), 0.5);
+}
+
+.groupField:focus {
+    background: rgba(var(--accent-rgb), 0.09);
+}
+
+.memberCountPill {
+    align-self: flex-start;
+    margin: 0 0 12px;
+    padding: 4px 10px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(var(--accent-light-rgb), 0.85);
+    background: rgba(var(--accent-rgb), 0.12);
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
+}
+
+.createBtn {
+    width: 100%;
+    padding: 11px 12px;
+    margin-top: 6px;
+    border-radius: 11px;
+    border: none;
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
+    color: rgb(var(--white-rgb));
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(var(--accent-rgb), 0.3);
+    transition:
+        opacity 0.2s,
+        transform 0.15s;
+}
+
+.createBtn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.createBtn:not(:disabled):hover {
+    opacity: 0.92;
+    transform: translateY(-1px);
+}
+
+.panelScroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.panelScroll::-webkit-scrollbar-thumb {
+    background: rgba(var(--accent-rgb), 0.35);
+    border-radius: 3px;
+}
+
+.panelScroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* Full-screen sheet instead of a centered card - keep in sync with
+   useMediaQuery.ts's MOBILE_BREAKPOINT_QUERY. */
+@media (max-width: 760px) {
+    .overlay {
+        padding: 0;
+    }
+
+    .panel {
+        width: 100%;
+        height: 100%;
+        max-width: 100%;
+        max-height: 100%;
+        border-radius: 0;
+    }
+}

@@ -2,9 +2,21 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>arcanummessenger-client</title>
+    <!-- SVG first for browsers that use it directly (crisp at any size),
+         PNGs after as a fallback - some browsers' larger-icon surfaces
+         (Firefox/LibreWolf's new-tab tile grid among them) don't fully
+         trust a bare SVG favicon for a big preview and fall back to
+         drawing it tiny on a generated background instead of using it as
+         the whole tile, which a properly-sized PNG doesn't run into. -->
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#0d0b1e" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content" />
+    <title>Arcanum</title>
   </head>
   <body>
     <div id="root"></div>

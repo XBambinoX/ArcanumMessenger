@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import QRCode from "qrcode";
 import styles from "./TotpSetupPage.module.css";
 import { startTotpSetup, confirmTotpSetup } from "../api/totp";
@@ -142,8 +142,8 @@ export default function TotpSetupPage() {
                                     y2="44"
                                     gradientUnits="userSpaceOnUse"
                                 >
-                                    <stop stopColor="#a78bfa" />
-                                    <stop offset="1" stopColor="#22d3ee" />
+                                    <stop stopColor="rgb(var(--accent-light-rgb))" />
+                                    <stop offset="1" stopColor="rgb(var(--accent-cyan-rgb))" />
                                 </linearGradient>
                             </defs>
                         </svg>
@@ -289,7 +289,7 @@ export default function TotpSetupPage() {
                         <div className={styles.actions}>
                             <button
                                 className={styles.btnPrimary}
-                                onClick={() => navigate("/welcome")}
+                                onClick={() => navigate("/app")}
                             >
                                 Done
                             </button>

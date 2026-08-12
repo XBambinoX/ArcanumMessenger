@@ -10,5 +10,10 @@ namespace ArcanumMessenger.Contracts.Auth.Login
     public record SubmitLoginTotpResponse(bool Success, string? Reason);
 
     public record CompleteLoginRequest(string SessionId);
-    public record CompleteLoginResponse(bool Success, string? Reason = null);
+    // EcdhPublicKey/WrappedEcdhPrivateKey are null only for accounts created
+    // before E2EE shipped - the client bootstraps a fresh keypair for those
+    // via POST /api/users/me/identity-key right after this completes.
+    public record CompleteLoginResponse(
+        bool Success, string? Reason = null,
+        string? EcdhPublicKey = null, string? WrappedEcdhPrivateKey = null);
 }

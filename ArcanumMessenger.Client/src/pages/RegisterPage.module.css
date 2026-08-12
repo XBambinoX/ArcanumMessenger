@@ -1,17 +1,23 @@
 .root {
     position: relative;
-    min-height: 100vh;
+    height: 100svh;
+    box-sizing: border-box;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #0d0b1e;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: rgb(var(--bg-rgb));
+    font-family:
+        "Inter",
+        -apple-system,
+        BlinkMacSystemFont,
+        sans-serif;
     overflow: hidden;
     padding: 24px;
 }
 
 /* Background ambience */
-.orb1, .orb2 {
+.orb1,
+.orb2 {
     pointer-events: none;
     position: absolute;
     border-radius: 50%;
@@ -22,7 +28,11 @@
     left: -150px;
     width: 600px;
     height: 600px;
-    background: radial-gradient(circle, rgba(124, 58, 237, 0.18) 0%, transparent 65%);
+    background: radial-gradient(
+        circle,
+        rgba(var(--accent-rgb), 0.18) 0%,
+        transparent 65%
+    );
 }
 
 .orb2 {
@@ -30,7 +40,11 @@
     right: -150px;
     width: 550px;
     height: 550px;
-    background: radial-gradient(circle, rgba(6, 182, 212, 0.13) 0%, transparent 65%);
+    background: radial-gradient(
+        circle,
+        rgba(var(--accent-cyan2-rgb), 0.13) 0%,
+        transparent 65%
+    );
 }
 
 .grid {
@@ -38,7 +52,9 @@
     position: absolute;
     inset: 0;
     opacity: 0.03;
-    background-image: linear-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.15) 1px, transparent 1px);
+    background-image:
+        linear-gradient(rgba(var(--tint-rgb), 0.15) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(var(--tint-rgb), 0.15) 1px, transparent 1px);
     background-size: 48px 48px;
 }
 
@@ -47,14 +63,23 @@
     position: relative;
     z-index: 2;
     width: 100%;
-    max-width: 420px;
+    max-width: 460px;
+    max-height: calc(100svh - 48px);
+    box-sizing: border-box;
     border-radius: 24px;
-    border: 1px solid rgba(124, 58, 237, 0.18);
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.06), rgba(15, 12, 30, 0.9));
+    border: 1px solid rgba(var(--accent-rgb), 0.18);
+    background: linear-gradient(
+        135deg,
+        rgba(var(--accent-rgb), 0.06),
+        rgba(var(--bg-page-rgb), 0.9)
+    );
     backdrop-filter: blur(20px);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(124, 58, 237, 0.08);
+    box-shadow:
+        0 20px 60px rgba(var(--black-rgb), 0.4),
+        0 0 40px rgba(var(--accent-rgb), 0.08);
     padding: 40px 36px 36px;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 /* Logo header */
@@ -71,18 +96,26 @@
     width: 52px;
     height: 52px;
     border-radius: 14px;
-    border: 1px solid rgba(124, 58, 237, 0.45);
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.28), rgba(79, 70, 229, 0.18));
+    border: 1px solid rgba(var(--accent-rgb), 0.45);
+    background: linear-gradient(
+        135deg,
+        rgba(var(--accent-rgb), 0.28),
+        rgba(var(--accent2-rgb), 0.18)
+    );
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 0 24px rgba(124, 58, 237, 0.25);
+    box-shadow: 0 0 24px rgba(var(--accent-rgb), 0.25);
 }
 
 .brand {
     font-size: 20px;
     font-weight: 700;
-    background: linear-gradient(135deg, #a78bfa, #22d3ee);
+    background: linear-gradient(
+        135deg,
+        rgb(var(--accent-light-rgb)),
+        rgb(var(--accent-cyan-rgb))
+    );
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -102,29 +135,41 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: rgba(124, 58, 237, 0.2);
+    background: rgba(var(--accent-rgb), 0.2);
     transition: all 0.35s ease;
 }
 
-    .dot.active {
-        width: 24px;
-        border-radius: 4px;
-        background: linear-gradient(90deg, #a78bfa, #22d3ee);
-    }
+.dot.active {
+    width: 24px;
+    border-radius: 4px;
+    background: linear-gradient(
+        90deg,
+        rgb(var(--accent-light-rgb)),
+        rgb(var(--accent-cyan-rgb))
+    );
+}
 
-    .dot.done {
-        background: rgba(167, 139, 250, 0.5);
-    }
+.dot.done {
+    background: rgba(var(--accent-light-rgb), 0.5);
+}
 
 /* ── STEP VIEWPORT (carousel) ── */
 .viewport {
     position: relative;
     overflow: hidden;
+    transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .track {
     display: flex;
+    align-items: flex-start;
     transition: transform 0.4s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .viewport {
+        transition: none;
+    }
 }
 
 .slide {
@@ -138,23 +183,23 @@
 .stepTitle {
     font-size: 22px;
     font-weight: 700;
-    color: rgba(226, 232, 240, 0.95);
+    color: rgba(var(--text-rgb), 0.95);
     margin: 0 0 6px;
     text-align: center;
 }
 
 .stepSubtitle {
     font-size: 14px;
-    color: rgba(148, 163, 184, 0.7);
+    color: rgba(var(--text-muted-rgb), 0.7);
     margin: 0 0 24px;
     text-align: center;
     line-height: 1.5;
 }
 
-    .stepSubtitle b {
-        color: rgba(167, 139, 250, 0.9);
-        font-weight: 600;
-    }
+.stepSubtitle b {
+    color: rgba(var(--accent-light-rgb), 0.9);
+    font-weight: 600;
+}
 
 .field {
     display: flex;
@@ -165,43 +210,48 @@
 
 .label {
     font-size: 12px;
+    margin-left: 7%;
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: rgba(167, 139, 250, 0.6);
+    color: rgba(var(--accent-light-rgb), 0.6);
 }
 
 .input {
-    width: 100%;
+    width: 90%;
+    align-self: center;
     box-sizing: border-box;
     padding: 13px 16px;
     border-radius: 12px;
-    border: 1px solid rgba(124, 58, 237, 0.25);
-    background: rgba(124, 58, 237, 0.05);
-    color: rgba(226, 232, 240, 0.95);
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    background: rgba(var(--accent-rgb), 0.05);
+    color: rgba(var(--text-rgb), 0.95);
     font-family: inherit;
     font-size: 15px;
     outline: none;
-    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    transition:
+        border-color 0.2s,
+        background 0.2s,
+        box-shadow 0.2s;
 }
 
-    .input::placeholder {
-        color: rgba(148, 163, 184, 0.4);
-    }
+.input::placeholder {
+    color: rgba(var(--text-muted-rgb), 0.4);
+}
 
-    .input:focus {
-        border-color: rgba(167, 139, 250, 0.6);
-        background: rgba(124, 58, 237, 0.09);
-        box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
-    }
+.input:focus {
+    border-color: rgba(var(--accent-light-rgb), 0.6);
+    background: rgba(var(--accent-rgb), 0.09);
+    box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.12);
+}
 
-    .input.error {
-        border-color: rgba(248, 113, 113, 0.6);
-    }
+.input.error {
+    border-color: rgba(var(--danger-rgb), 0.6);
+}
 
 .errorText {
     font-size: 12px;
-    color: rgba(248, 113, 113, 0.85);
+    color: rgba(var(--danger-rgb), 0.85);
     margin: 2px 0 0;
 }
 
@@ -217,34 +267,37 @@
     width: 46px;
     height: 56px;
     border-radius: 12px;
-    border: 1px solid rgba(124, 58, 237, 0.25);
-    background: rgba(124, 58, 237, 0.05);
-    color: rgba(226, 232, 240, 0.95);
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    background: rgba(var(--accent-rgb), 0.05);
+    color: rgba(var(--text-rgb), 0.95);
     font-family: inherit;
     font-size: 22px;
     font-weight: 700;
     text-align: center;
     outline: none;
-    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    transition:
+        border-color 0.2s,
+        background 0.2s,
+        box-shadow 0.2s;
 }
 
-    .codeDigit:focus {
-        border-color: rgba(167, 139, 250, 0.6);
-        background: rgba(124, 58, 237, 0.09);
-        box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
-    }
+.codeDigit:focus {
+    border-color: rgba(var(--accent-light-rgb), 0.6);
+    background: rgba(var(--accent-rgb), 0.09);
+    box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.12);
+}
 
 .resendRow {
     text-align: center;
     margin-top: 16px;
     font-size: 13px;
-    color: rgba(148, 163, 184, 0.6);
+    color: rgba(var(--text-muted-rgb), 0.6);
 }
 
 .resendLink {
     background: none;
     border: none;
-    color: rgba(167, 139, 250, 0.85);
+    color: rgba(var(--accent-light-rgb), 0.85);
     font-family: inherit;
     font-size: 13px;
     font-weight: 600;
@@ -252,16 +305,16 @@
     padding: 0;
 }
 
-    .resendLink:hover {
-        color: rgba(167, 139, 250, 1);
-        text-decoration: underline;
-    }
+.resendLink:hover {
+    color: rgba(var(--accent-light-rgb), 1);
+    text-decoration: underline;
+}
 
-    .resendLink:disabled {
-        color: rgba(148, 163, 184, 0.4);
-        cursor: default;
-        text-decoration: none;
-    }
+.resendLink:disabled {
+    color: rgba(var(--text-muted-rgb), 0.4);
+    cursor: default;
+    text-decoration: none;
+}
 
 /* Password strength bar */
 .strengthRow {
@@ -274,20 +327,22 @@
     flex: 1;
     height: 3px;
     border-radius: 2px;
-    background: rgba(124, 58, 237, 0.15);
+    background: rgba(var(--accent-rgb), 0.15);
     transition: background 0.3s;
 }
 
 .strengthLabel {
     font-size: 12px;
     margin-top: 6px;
-    color: rgba(148, 163, 184, 0.6);
+    color: rgba(var(--text-muted-rgb), 0.6);
 }
 
 /* ── BUTTONS ── */
 .actions {
     display: flex;
     align-items: center;
+    /* Centers the back button + primary button together as one group */
+    justify-content: center;
     gap: 10px;
     margin-top: 24px;
 }
@@ -297,9 +352,9 @@
     width: 46px;
     height: 46px;
     border-radius: 12px;
-    border: 1px solid rgba(124, 58, 237, 0.25);
-    background: rgba(124, 58, 237, 0.05);
-    color: rgba(167, 139, 250, 0.8);
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    background: rgba(var(--accent-rgb), 0.05);
+    color: rgba(var(--accent-light-rgb), 0.8);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -307,13 +362,13 @@
     transition: all 0.2s;
 }
 
-    .btnBack:hover {
-        background: rgba(124, 58, 237, 0.12);
-        border-color: rgba(167, 139, 250, 0.4);
-    }
+.btnBack:hover {
+    background: rgba(var(--accent-rgb), 0.12);
+    border-color: rgba(var(--accent-light-rgb), 0.4);
+}
 
 .btnPrimary {
-    flex: 1;
+    width: 70%;
     position: relative;
     overflow: hidden;
     padding: 14px 20px;
@@ -322,39 +377,48 @@
     font-family: inherit;
     font-size: 15px;
     font-weight: 600;
-    color: #fff;
+    color: rgb(var(--white-rgb));
     cursor: pointer;
-    background: linear-gradient(135deg, #7c3aed, #4f46e5);
-    box-shadow: 0 0 20px rgba(124, 58, 237, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+    background: linear-gradient(
+        135deg,
+        rgb(var(--accent-rgb)),
+        rgb(var(--accent2-rgb))
+    );
+    box-shadow:
+        0 0 20px rgba(var(--accent-rgb), 0.3),
+        inset 0 1px 0 rgba(var(--white-rgb), 0.1);
+    transition:
+        transform 0.15s,
+        box-shadow 0.15s,
+        opacity 0.15s;
 }
 
-    .btnPrimary:hover:not(:disabled) {
-        transform: scale(1.02);
-        box-shadow: 0 0 26px rgba(124, 58, 237, 0.45);
-    }
+.btnPrimary:hover:not(:disabled) {
+    transform: scale(1.02);
+    box-shadow: 0 0 26px rgba(var(--accent-rgb), 0.45);
+}
 
-    .btnPrimary:active:not(:disabled) {
-        transform: scale(0.98);
-    }
+.btnPrimary:active:not(:disabled) {
+    transform: scale(0.98);
+}
 
-    .btnPrimary:disabled {
-        opacity: 0.45;
-        cursor: not-allowed;
-    }
+.btnPrimary:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
 
 /* Footer link to login */
 .footerNote {
     text-align: center;
     margin-top: 24px;
     font-size: 13px;
-    color: rgba(148, 163, 184, 0.6);
+    color: rgba(var(--text-muted-rgb), 0.6);
 }
 
 .footerLink {
     background: none;
     border: none;
-    color: rgba(167, 139, 250, 0.85);
+    color: rgba(var(--accent-light-rgb), 0.85);
     font-family: inherit;
     font-size: 13px;
     font-weight: 600;
@@ -362,9 +426,9 @@
     padding: 0;
 }
 
-    .footerLink:hover {
-        text-decoration: underline;
-    }
+.footerLink:hover {
+    text-decoration: underline;
+}
 
 /* Success step icon */
 .successIcon {
@@ -372,8 +436,12 @@
     height: 64px;
     margin: 0 auto 16px;
     border-radius: 50%;
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.25), rgba(34, 211, 238, 0.2));
-    border: 1px solid rgba(167, 139, 250, 0.4);
+    background: linear-gradient(
+        135deg,
+        rgba(var(--accent-rgb), 0.25),
+        rgba(var(--accent-cyan-rgb), 0.2)
+    );
+    border: 1px solid rgba(var(--accent-light-rgb), 0.4);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -386,9 +454,9 @@
     width: 36px;
     height: 36px;
     border-radius: 10px;
-    border: 1px solid rgba(124, 58, 237, 0.25);
-    background: rgba(124, 58, 237, 0.05);
-    color: rgba(167, 139, 250, 0.8);
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    background: rgba(var(--accent-rgb), 0.05);
+    color: rgba(var(--accent-light-rgb), 0.8);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -396,16 +464,16 @@
     transition: all 0.2s;
 }
 
-    .backHome:hover {
-        background: rgba(124, 58, 237, 0.12);
-        border-color: rgba(167, 139, 250, 0.4);
-    }
+.backHome:hover {
+    background: rgba(var(--accent-rgb), 0.12);
+    border-color: rgba(var(--accent-light-rgb), 0.4);
+}
 
 .modalOverlay {
     position: fixed;
     inset: 0;
     z-index: 50;
-    background: rgba(8, 6, 20, 0.7);
+    background: rgba(var(--overlay-rgb), 0.7);
     backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
@@ -417,29 +485,48 @@
     width: 100%;
     max-width: 380px;
     border-radius: 20px;
-    border: 1px solid rgba(124, 58, 237, 0.3);
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(15, 12, 30, 0.97));
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(124, 58, 237, 0.12);
+    border: 1px solid rgba(var(--accent-rgb), 0.3);
+    background: rgb(var(--bg-elevated-rgb));
+    box-shadow:
+        0 20px 60px rgba(var(--black-rgb), 0.35),
+        0 0 40px rgba(var(--accent-rgb), 0.1);
     padding: 28px 26px 24px;
     text-align: center;
 }
 
-.modalIcon {
-    font-size: 32px;
-    margin-bottom: 10px;
+.modalIconBox {
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 14px;
+    border-radius: 14px;
+    background: linear-gradient(
+        135deg,
+        rgba(var(--accent-rgb), 0.2),
+        rgba(var(--accent2-rgb), 0.12)
+    );
+    border: 1px solid rgba(var(--accent-rgb), 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* --accent-light-rgb, not --accent-rgb: it's the variant each theme
+       tunes for legibility against that theme's own background (light
+       purple on the dark themes, deep purple on the light one), which is
+       what every other icon in the app sits on. Raw --accent-rgb is close
+       to invisible against the dark themes' elevated surface. */
+    color: rgb(var(--accent-light-rgb));
 }
 
 .modalTitle {
     font-size: 18px;
     font-weight: 700;
-    color: rgba(226, 232, 240, 0.95);
+    color: rgba(var(--text-rgb), 0.95);
     margin: 0 0 12px;
 }
 
 .modalText {
     font-size: 13px;
     line-height: 1.6;
-    color: rgba(148, 163, 184, 0.75);
+    color: rgba(var(--text-muted-rgb), 0.75);
     margin: 0 0 12px;
     text-align: left;
 }
@@ -451,10 +538,34 @@
     margin-top: 18px;
 }
 
-.modalWarning {
-    display: block;
-    color: #ef4444;
+.modalWarningBox {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 4px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(var(--error-accent-rgb), 0.08);
+    border: 1px solid rgba(var(--error-accent-rgb), 0.25);
+    color: rgb(var(--error-accent-rgb));
+    font-size: 12.5px;
     font-weight: 600;
+    line-height: 1.5;
+    text-align: left;
+}
+
+.modalWarningBox svg {
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+/* .btnPrimary is built for the step footer's flex row (it's `flex: 1`
+   there) - on its own inside the modal that does nothing, leaving a
+   <button>'s default shrink-to-fit width. This spans it properly. */
+.modalAckBtn {
+    display: block;
+    width: 100%;
+    margin-top: 18px;
 }
 
 /* ── Email consent checkbox ── */
@@ -465,21 +576,21 @@
     margin-top: 10px;
     font-size: 12px;
     line-height: 1.5;
-    color: rgba(148, 163, 184, 0.7);
+    color: rgba(var(--text-muted-rgb), 0.7);
     cursor: pointer;
 }
 
 .consentCheckbox {
     margin-top: 2px;
     flex-shrink: 0;
-    accent-color: #7c3aed;
+    accent-color: rgb(var(--accent-rgb));
     width: 14px;
     height: 14px;
     cursor: pointer;
 }
 
 .consentWarn {
-    color: rgba(248, 113, 113, 0.75);
+    color: rgba(var(--danger-rgb), 0.75);
 }
 
 .strengthBlock {
@@ -489,20 +600,20 @@
 .strengthLabel {
     font-size: 12px;
     margin: 6px 0 0;
-    color: rgba(148, 163, 184, 0.6);
+    color: rgba(var(--text-muted-rgb), 0.6);
 }
 
 .strengthWarning {
     font-size: 12px;
     margin: 4px 0 0;
-    color: rgba(248, 113, 113, 0.85);
+    color: rgba(var(--danger-rgb), 0.85);
     line-height: 1.4;
 }
 
 .recoveryWarning {
     font-size: 12px;
     line-height: 1.5;
-    color: rgba(248, 113, 113, 0.8);
+    color: rgba(var(--danger-rgb), 0.8);
     margin: 4px 0 16px;
 }
 
@@ -511,22 +622,24 @@
     box-sizing: border-box;
     padding: 12px 14px;
     border-radius: 12px;
-    border: 1px solid rgba(124, 58, 237, 0.25);
-    background: rgba(124, 58, 237, 0.05);
-    color: rgba(226, 232, 240, 0.9);
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    background: rgba(var(--accent-rgb), 0.05);
+    color: rgba(var(--text-rgb), 0.9);
     font-family: monospace;
     font-size: 14px;
     line-height: 1.6;
     resize: none;
     outline: none;
     cursor: text;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
 }
 
-    .recoveryTextarea:focus {
-        border-color: rgba(167, 139, 250, 0.5);
-        box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
-    }
+.recoveryTextarea:focus {
+    border-color: rgba(var(--accent-light-rgb), 0.5);
+    box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.1);
+}
 
 .btnDownloadPdf {
     display: flex;
@@ -537,9 +650,9 @@
     padding: 12px 16px;
     margin-top: 4px;
     border-radius: 12px;
-    border: 1px solid rgba(124, 58, 237, 0.3);
-    background: rgba(124, 58, 237, 0.08);
-    color: rgba(226, 232, 240, 0.9);
+    border: 1px solid rgba(var(--accent-rgb), 0.3);
+    background: rgba(var(--accent-rgb), 0.08);
+    color: rgba(var(--text-rgb), 0.9);
     font-family: inherit;
     font-size: 13px;
     font-weight: 600;
@@ -547,7 +660,75 @@
     transition: all 0.2s;
 }
 
-    .btnDownloadPdf:hover {
-        background: rgba(124, 58, 237, 0.15);
-        border-color: rgba(167, 139, 250, 0.5);
+.btnDownloadPdf:hover {
+    background: rgba(var(--accent-rgb), 0.15);
+    border-color: rgba(var(--accent-light-rgb), 0.5);
+}
+
+/* ── Language picker (final step) ── */
+.langGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.langOption {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    background: rgba(var(--accent-rgb), 0.05);
+    color: rgba(var(--text-rgb), 0.85);
+    font-family: inherit;
+    font-size: 14.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.langOption:hover {
+    background: rgba(var(--accent-rgb), 0.12);
+    border-color: rgba(var(--accent-light-rgb), 0.4);
+}
+
+.langOptionActive {
+    background: linear-gradient(
+        135deg,
+        rgba(var(--accent-rgb), 0.25),
+        rgba(var(--accent2-rgb), 0.25)
+    );
+    border-color: rgba(var(--accent-light-rgb), 0.7);
+    color: rgb(var(--white-rgb));
+    box-shadow: 0 0 16px rgba(var(--accent-rgb), 0.25);
+}
+
+.langCheck {
+    color: rgb(var(--accent-light-rgb));
+}
+
+/* .root/.card's fixed padding (24px + 36px each side) leaves only ~200px
+   for content on a 320px-wide phone - not enough for 6 codeDigit boxes at
+   their desktop size (46px + 8px gap each = 316px total). Shrink both. */
+@media (max-width: 420px) {
+    .root {
+        padding: 16px;
     }
+
+    .card {
+        padding: 32px 20px 28px;
+    }
+
+    .codeRow {
+        gap: 6px;
+    }
+
+    .codeDigit {
+        width: 36px;
+        height: 46px;
+        font-size: 18px;
+    }
+}

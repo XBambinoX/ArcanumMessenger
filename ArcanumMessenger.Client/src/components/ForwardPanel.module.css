@@ -1,0 +1,148 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    background: rgba(var(--overlay-rgb), 0.55);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.panel {
+    box-sizing: border-box;
+    width: 360px;
+    max-width: 100%;
+    max-height: 70vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    background: rgb(var(--bg-elevated-rgb));
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
+    border-radius: 16px;
+    box-shadow: 0 24px 70px rgba(var(--black-rgb), 0.5);
+    padding: 18px;
+    animation: panelPop 0.16s ease-out;
+}
+
+@keyframes panelPop {
+    from {
+        opacity: 0;
+        transform: scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    flex-shrink: 0;
+}
+
+.title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    background: linear-gradient(135deg, rgb(var(--accent-light-rgb)), rgb(var(--accent-cyan-rgb)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.closeBtn {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    background: rgba(var(--accent-rgb), 0.05);
+    color: rgba(var(--accent-light-rgb), 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.closeBtn:hover {
+    background: rgba(var(--accent-rgb), 0.12);
+    border-color: rgba(var(--accent-light-rgb), 0.4);
+}
+
+.note {
+    margin: 0;
+    font-size: 13px;
+    color: rgba(var(--text-muted-rgb), 0.6);
+    text-align: center;
+    padding: 20px 4px;
+}
+
+.list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.chatRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s;
+}
+
+.chatRow:hover {
+    background: rgba(var(--accent-rgb), 0.1);
+}
+
+.avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: rgb(var(--white-rgb));
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
+}
+
+.avatarGroup {
+    background: linear-gradient(135deg, rgb(var(--accent-cyan3-rgb)), rgb(var(--accent2-rgb)));
+}
+
+.chatTitle {
+    font-size: 14px;
+    color: rgba(var(--text-rgb), 0.95);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Full-screen sheet instead of a centered card - keep in sync with
+   useMediaQuery.ts's MOBILE_BREAKPOINT_QUERY. */
+@media (max-width: 760px) {
+    .overlay {
+        padding: 0;
+    }
+
+    .panel {
+        width: 100%;
+        height: 100%;
+        max-width: 100%;
+        max-height: 100%;
+        border-radius: 0;
+    }
+}

@@ -1,0 +1,190 @@
+.empty {
+    margin: 0;
+    padding: 10px 0 4px;
+    font-size: 13px;
+    text-align: center;
+    color: rgba(var(--text-muted-rgb), 0.6);
+}
+
+.tabBar {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.tabBtn {
+    flex: 1;
+    padding: 6px 10px;
+    border-radius: 9px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: rgba(var(--text-muted-rgb), 0.75);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.tabBtn:hover {
+    background: rgba(var(--accent-rgb), 0.08);
+    color: rgba(var(--text-rgb), 0.9);
+}
+
+.tabBtnActive {
+    background: linear-gradient(
+        135deg,
+        rgba(var(--accent-rgb), 0.22),
+        rgba(var(--accent2-rgb), 0.14)
+    );
+    border-color: rgba(var(--accent-rgb), 0.3);
+    color: rgba(var(--text-rgb), 0.95);
+}
+
+.grid {
+    display: grid;
+    /* The panel grew from 320px to 420px wide (see ChatInfoPanel.module.css)
+       specifically to give this room to breathe - 4 columns instead of 3. */
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+}
+
+/* The grid-sizing responsibility (square, full column width) - separate
+   from .tile below so a right-click/long-press target can wrap the actual
+   media element without that media element (an <img>/<video>, or a plain
+   loading <div>) needing to know about sizing itself. */
+.tileWrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+}
+
+.tile {
+    width: 100%;
+    height: 100%;
+    display: block;
+    border: none;
+    border-radius: 8px;
+    object-fit: cover;
+    cursor: pointer;
+    background: rgba(var(--accent-rgb), 0.08);
+}
+
+/* Same fix as GifPicker's .gifTileLoading - the loading/failed placeholder
+   otherwise sizes from the real (non-square) media aspect ratio, runs
+   taller or wider than this square tile, and its spinner (centered on
+   that uncropped box) ends up off-center once overflow clips the excess. */
+.tileLoading {
+    width: 100%;
+    height: 100%;
+}
+
+.videoPlaceholderTile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Square like every other tile comes from .tileWrap now - nothing
+       here references EncryptedVideoPlayer's --media-aspect, so one
+       portrait clip still can't stretch its row. */
+    /* Only seen when there's no thumbnail; a real one covers it entirely. */
+    background-color: rgba(var(--accent-rgb), 0.14);
+    background-size: cover;
+    background-position: center;
+    color: rgb(var(--white-rgb));
+    user-select: none;
+}
+
+.tileSpinner {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2.5px solid rgba(var(--white-rgb), 0.3);
+    border-top-color: rgb(var(--white-rgb));
+    animation: tileSpin 0.8s linear infinite;
+}
+
+@keyframes tileSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.playIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(var(--black-rgb), 0.45);
+    font-size: 12px;
+    line-height: 1;
+}
+
+.fileTile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    aspect-ratio: 1;
+    padding: 8px;
+    border: 1px solid rgba(var(--accent-rgb), 0.15);
+    border-radius: 8px;
+    background: rgba(var(--accent-rgb), 0.06);
+    color: rgba(var(--text-rgb), 0.9);
+    font-family: inherit;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.fileIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    background: rgba(var(--accent-rgb), 0.18);
+    color: rgba(var(--accent-light-rgb), 0.9);
+    flex-shrink: 0;
+}
+
+.fileName {
+    max-width: 100%;
+    font-size: 10.5px;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fileSize {
+    font-size: 9.5px;
+    color: rgba(var(--text-muted-rgb), 0.6);
+}
+
+.loadMoreBtn {
+    display: block;
+    width: 100%;
+    margin-top: 10px;
+    padding: 8px;
+    border-radius: 9px;
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    background: transparent;
+    color: rgba(var(--text-rgb), 0.8);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.loadMoreBtn:hover {
+    background: rgba(var(--accent-rgb), 0.08);
+}
+
+.loadMoreBtn:disabled {
+    opacity: 0.6;
+    cursor: default;
+}

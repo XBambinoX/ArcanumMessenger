@@ -22,6 +22,264 @@ namespace ArcanumMessenger.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("ArcanumMessenger.Entities.Chat", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Title")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedBy")
+                        .IsUnique()
+                        .HasFilter("\"Type\" = 'saved'");
+
+                    b.ToTable("Chats");
+                });
+
+            modelBuilder.Entity("ArcanumMessenger.Entities.ChatMember", b =>
+                {
+                    b.Property<Guid>("ChatId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsMuted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("LastReadAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("MutedUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("WrappedChatKey")
+                        .HasColumnType("text");
+
+                    b.HasKey("ChatId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ChatMembers");
+                });
+
+            modelBuilder.Entity("ArcanumMessenger.Entities.Contact", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ContactId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<bool>("IsBlocked")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Nickname")
+                        .HasColumnType("text");
+
+                    b.HasKey("UserId", "ContactId");
+
+                    b.HasIndex("ContactId");
+
+                    b.ToTable("Contacts");
+                });
+
+            modelBuilder.Entity("ArcanumMessenger.Entities.MediaAsset", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<double?>("DurationSeconds")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int?>("Height")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("MimeType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ThumbnailStorageKey")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("UploaderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("Width")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UploaderId");
+
+                    b.ToTable("MediaAssets");
+                });
+
+            modelBuilder.Entity("ArcanumMessenger.Entities.Message", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<Guid>("ChatId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Content")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<DateTime?>("EditedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ForwardedFromSenderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ForwardedFromSenderName")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsEdited")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("MediaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ReplyToId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SenderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MediaId");
+
+                    b.HasIndex("ReplyToId");
+
+                    b.HasIndex("SenderId");
+
+                    b.HasIndex("ChatId", "CreatedAt");
+
+                    b.ToTable("Messages");
+                });
+
+            modelBuilder.Entity("ArcanumMessenger.Entities.MessageReaction", b =>
+                {
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Emoji")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.HasKey("MessageId", "UserId", "Emoji");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("MessageReactions");
+                });
+
+            modelBuilder.Entity("ArcanumMessenger.Entities.SavedGif", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("MediaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("SavedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<Guid>("SourceMediaId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("UserId", "MediaId");
+
+                    b.HasIndex("MediaId");
+
+                    b.ToTable("SavedGifs");
+                });
+
             modelBuilder.Entity("ArcanumMessenger.Entities.Session", b =>
                 {
                     b.Property<Guid>("Id")
@@ -53,6 +311,9 @@ namespace ArcanumMessenger.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("ReplacedBySessionId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("RevokedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -81,6 +342,12 @@ namespace ArcanumMessenger.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("NOW()");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EcdhPublicKey")
+                        .HasColumnType("text");
+
                     b.Property<string>("EmailHash")
                         .IsRequired()
                         .HasColumnType("text");
@@ -99,13 +366,16 @@ namespace ArcanumMessenger.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("PublicBioEnc")
+                    b.Property<string>("PublicIdEnc")
+                        .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("PublicEmailEnc")
+                    b.Property<string>("PublicIdHash")
+                        .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("PublicPhoneEnc")
+                    b.Property<string>("PublicIdPrefixHash")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("RecoveryPhrase1Hash")
@@ -116,18 +386,11 @@ namespace ArcanumMessenger.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<bool>("TwoFactorEnabled")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("TwoFactorSecretEnc")
-                        .HasColumnType("text");
-
-                    b.Property<string>("UsernameEnc")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<string>("WrappedDek")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("WrappedEcdhPrivateKey")
                         .HasColumnType("text");
 
                     b.HasKey("Id");
@@ -135,7 +398,220 @@ namespace ArcanumMessenger.Migrations
                     b.HasIndex("EmailHash")
                         .IsUnique();
 
+                    b.HasIndex("PublicIdHash")
+                        .IsUnique();
+
+                    b.HasIndex("PublicIdPrefixHash");
+
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("ArcanumMessenger.Entities.UserSettings", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BioEnc")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmailEnc")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("GroupNotificationsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("MessagePreviewEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("NotificationSound")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("NotificationsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("PhoneEnc")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("ReadReceiptsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("ShowAvatar")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ShowBio")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ShowEmail")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("ShowLastSeen")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ShowOnlineStatus")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("ShowPhoneNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Theme")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("TwoFactorEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("TwoFactorSecretEnc")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UsernameEnc")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("WhoCanAddMe")
+                        .HasColumnType("integer");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("UserSettings");
+                });
+
+            modelBuilder.Entity("ArcanumMessenger.Entities.Chat", b =>
+                {
+                    b.HasOne("ArcanumMessenger.Entities.User", "Creator")
+                        .WithMany()
+                        .HasForeignKey("CreatedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Creator");
+                });
+
+            modelBuilder.Entity("ArcanumMessenger.Entities.ChatMember", b =>
+                {
+                    b.HasOne("ArcanumMessenger.Entities.Chat", "Chat")
+                        .WithMany("Members")
+                        .HasForeignKey("ChatId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ArcanumMessenger.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Chat");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ArcanumMessenger.Entities.Contact", b =>
+                {
+                    b.HasOne("ArcanumMessenger.Entities.User", "ContactUser")
+                        .WithMany()
+                        .HasForeignKey("ContactId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ArcanumMessenger.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ContactUser");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ArcanumMessenger.Entities.MediaAsset", b =>
+                {
+                    b.HasOne("ArcanumMessenger.Entities.User", "Uploader")
+                        .WithMany()
+                        .HasForeignKey("UploaderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Uploader");
+                });
+
+            modelBuilder.Entity("ArcanumMessenger.Entities.Message", b =>
+                {
+                    b.HasOne("ArcanumMessenger.Entities.Chat", "Chat")
+                        .WithMany("Messages")
+                        .HasForeignKey("ChatId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ArcanumMessenger.Entities.MediaAsset", "Media")
+                        .WithMany()
+                        .HasForeignKey("MediaId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ArcanumMessenger.Entities.Message", "ReplyTo")
+                        .WithMany()
+                        .HasForeignKey("ReplyToId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ArcanumMessenger.Entities.User", "Sender")
+                        .WithMany()
+                        .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Chat");
+
+                    b.Navigation("Media");
+
+                    b.Navigation("ReplyTo");
+
+                    b.Navigation("Sender");
+                });
+
+            modelBuilder.Entity("ArcanumMessenger.Entities.MessageReaction", b =>
+                {
+                    b.HasOne("ArcanumMessenger.Entities.Message", "Message")
+                        .WithMany()
+                        .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ArcanumMessenger.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Message");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ArcanumMessenger.Entities.SavedGif", b =>
+                {
+                    b.HasOne("ArcanumMessenger.Entities.MediaAsset", "Media")
+                        .WithMany()
+                        .HasForeignKey("MediaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ArcanumMessenger.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Media");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("ArcanumMessenger.Entities.Session", b =>
@@ -147,6 +623,30 @@ namespace ArcanumMessenger.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ArcanumMessenger.Entities.UserSettings", b =>
+                {
+                    b.HasOne("ArcanumMessenger.Entities.User", "User")
+                        .WithOne("UserSettings")
+                        .HasForeignKey("ArcanumMessenger.Entities.UserSettings", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ArcanumMessenger.Entities.Chat", b =>
+                {
+                    b.Navigation("Members");
+
+                    b.Navigation("Messages");
+                });
+
+            modelBuilder.Entity("ArcanumMessenger.Entities.User", b =>
+                {
+                    b.Navigation("UserSettings")
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

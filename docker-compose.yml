@@ -20,15 +20,23 @@ services:
 
             Encryption__Kek: ${ENCRYPTION_KEK}
             Hashing__EmailPepper: ${EMAIL_HASH_PEPPER}
+            Hashing__PublicIdPepper: ${PUBLIC_ID_HASH_PEPPER}
 
             Jwt__Secret: ${JWT_SECRET}
             Jwt__Issuer: ArcanumMessenger
+
+            Media__Endpoint: http://minio:9000
+            Media__AccessKey: ${MINIO_ROOT_USER}
+            Media__SecretKey: ${MINIO_ROOT_PASSWORD}
+            Media__Bucket: arcanum-media
 
         restart: unless-stopped
         depends_on:
             db:
                 condition: service_healthy
             redis:
+                condition: service_healthy
+            minio:
                 condition: service_healthy
         healthcheck:
             test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
@@ -88,9 +96,30 @@ services:
             retries: 5
             start_period: 5s
 
+    minio:
+        image: minio/minio:latest
+        container_name: arcanum-minio
+        command: server /data --console-address ":9001"
+        ports:
+            - "9000:9000"
+            - "9001:9001"
+        environment:
+            MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+            MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+        volumes:
+            - minio_data:/data
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD", "mc", "ready", "local"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 10s
+
 volumes:
     postgres_data:
     redis_data:
+    minio_data:
 
 # Later:
 # Nginx (reverse proxy)

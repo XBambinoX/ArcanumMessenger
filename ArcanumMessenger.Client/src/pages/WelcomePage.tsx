@@ -6,8 +6,15 @@ import {
     type CSSProperties,
     type RefObject,
 } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import styles from "./WelcomePage.module.css";
+import LanguageSwitcher from "../components/LanguageSwitcher";
+import ThemeSwitcher from "../components/ThemeSwitcher";
+import { useLanguage } from "../lib/language";
+import {
+    WELCOME_TRANSLATIONS,
+    type WelcomeTranslation,
+} from "../lib/welcomeTranslations";
 
 /* ── mouse glow ── */
 function useMouseGlow(ref: RefObject<HTMLDivElement | null>) {
@@ -73,9 +80,11 @@ function useParticles(ref: RefObject<HTMLCanvasElement | null>) {
 function WelcomeCard({
     onSignIn,
     onCreate,
+    tr,
 }: {
     onSignIn: () => void;
     onCreate: () => void;
+    tr: WelcomeTranslation;
 }) {
     return (
         <div className={styles.cardWelcome}>
@@ -89,10 +98,7 @@ function WelcomeCard({
                 <span className={styles.divStar}>✦</span>
                 <span className={styles.divLineR} />
             </div>
-            <p className={styles.wcTagline}>
-                Secure messaging for those who value privacy. Communicate
-                without limits – quickly, reliably, and fully encrypted.
-            </p>
+            <p className={styles.wcTagline}>{tr.welcomeCard.tagline}</p>
             <div className={styles.wcButtons}>
                 <button className={styles.btnPrimary} onClick={onSignIn}>
                     <svg
@@ -107,7 +113,7 @@ function WelcomeCard({
                     >
                         <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" />
                     </svg>
-                    Sign in
+                    {tr.common.signIn}
                 </button>
                 <button className={styles.btnSecondary} onClick={onCreate}>
                     <svg
@@ -124,15 +130,15 @@ function WelcomeCard({
                         <circle cx="9" cy="7" r="4" />
                         <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
                     </svg>
-                    Create account
+                    {tr.common.createAccount}
                 </button>
             </div>
-            <p className={styles.wcHint}>End-to-end encrypted · Open source</p>
+            <p className={styles.wcHint}>{tr.welcomeCard.hint}</p>
             <a
                 className={styles.wcVault}
                 href="https://github.com/Blackcat-404/AuthVault---password-manager"
             >
-                Also check out AuthVault →
+                {tr.welcomeCard.vaultLink}
             </a>
         </div>
     );
@@ -141,61 +147,47 @@ function WelcomeCard({
 /* ══════════════════════════════════════
    Animated chat
 ══════════════════════════════════════ */
-const MSGS = [
-    { from: "A", text: "Hey! Have you tried Arcanum yet?" },
-    { from: "S", text: "Just signed up. So fast" },
-    { from: "A", text: "And nobody can read this" },
-    { from: "S", text: "Finally a messenger I trust 🙏" },
-] as const;
+const MSG_FROM = ["A", "S", "A", "S"] as const;
+const MSG_TIMES = ["10:24", "10:24", "10:26", "10:27"] as const;
 
-function AnimatedChat() {
+// Matches ChatWindow.tsx's own MessageStatusIcon exactly - same paths,
+// same double-check-for-read shape - so a real user recognizes the read
+// receipt instead of it looking like a different, invented icon.
+function DemoReadIcon() {
+    return (
+        <svg
+            className={styles.chatCheck}
+            width="16" height="10" viewBox="0 0 16 10" fill="none"
+            stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
+        >
+            <path d="M1 5L4.5 8.5L9.5 2" />
+            <path d="M6 5L9.5 8.5L14.5 2" />
+        </svg>
+    );
+}
+
+function AnimatedChat({ tr }: { tr: WelcomeTranslation }) {
     const [shown, setShown] = useState<number[]>([]);
-    const [typing, setTyping] = useState<"A" | "S" | null>(null);
 
+    // The real app has no "user is typing" indicator yet (that needs a
+    // realtime channel, still a roadmap item) - a demo bubble for a
+    // feature that doesn't exist would break the "identical to the real
+    // app" goal, so messages just appear on a timer instead.
     useEffect(() => {
         const T: ReturnType<typeof setTimeout>[] = [];
         const run = () => {
             setShown([]);
-            setTyping(null);
             const steps: [number, () => void][] = [
-                [500, () => setTyping("A")],
-                [
-                    1900,
-                    () => {
-                        setTyping(null);
-                        setShown([0]);
-                    },
-                ],
-                [3100, () => setTyping("S")],
-                [
-                    4700,
-                    () => {
-                        setTyping(null);
-                        setShown([0, 1]);
-                    },
-                ],
-                [5900, () => setTyping("A")],
-                [
-                    7400,
-                    () => {
-                        setTyping(null);
-                        setShown([0, 1, 2]);
-                    },
-                ],
-                [8600, () => setTyping("S")],
-                [
-                    10300,
-                    () => {
-                        setTyping(null);
-                        setShown([0, 1, 2, 3]);
-                    },
-                ],
+                [800, () => setShown([0])],
+                [2400, () => setShown([0, 1])],
+                [4000, () => setShown([0, 1, 2])],
+                [5600, () => setShown([0, 1, 2, 3])],
             ];
             steps.forEach(([d, fn]) => T.push(setTimeout(fn, d)));
             T.push(
                 setTimeout(() => {
-                    T.push(setTimeout(run, 600));
-                }, 13500),
+                    T.push(setTimeout(run, 1400));
+                }, 8200),
             );
         };
         T.push(setTimeout(run, 300));
@@ -207,87 +199,79 @@ function AnimatedChat() {
             <div className={styles.chatHead}>
                 <div className={`${styles.av} ${styles.avS}`}>S</div>
                 <div className={styles.chatHeadInfo}>
-                    <div className={styles.chatName}>Sam</div>
-                    <div className={styles.chatStatus}>
-                        <span className={styles.onlineDot} />
-                        online
-                    </div>
+                    <div className={styles.chatName}>{tr.chat.samName}</div>
+                    <div className={styles.chatStatus}>{tr.chat.online}</div>
                 </div>
-                <span className={styles.chatMenuDots}>···</span>
+                {/* Same info-circle icon as the real header's .infoBtn -
+                    the real app has no "···" menu button there at all. */}
+                <span className={styles.chatInfoBtn}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 16v-4M12 8h.01" />
+                    </svg>
+                </span>
             </div>
 
             <div className={styles.chatBody}>
-                {MSGS.map((m, i) =>
+                {/* No per-message avatar - the real ChatWindow doesn't
+                    render one either (only .bubbleRow + .own for
+                    alignment, see its own :974), just its own header
+                    avatar above, kept here for "S". */}
+                {MSG_FROM.map((from, i) =>
                     shown.includes(i) ? (
                         <div
                             key={i}
-                            className={`${styles.chatRow} ${m.from === "A" ? styles.chatRowOwn : ""}`}
+                            className={`${styles.chatRow} ${from === "A" ? styles.chatRowOwn : ""}`}
                         >
-                            {m.from !== "A" && (
-                                <div
-                                    className={`${styles.av} ${styles.avSm} ${styles.avS}`}
-                                >
-                                    S
-                                </div>
-                            )}
                             <div
-                                className={`${styles.bubble} ${m.from === "A" ? styles.bubbleOwn : styles.bubbleOther}`}
+                                className={`${styles.bubble} ${from === "A" ? styles.bubbleOwn : styles.bubbleOther}`}
                             >
-                                {m.text}
+                                {tr.chat.msgs[i]}
+                                {from === "A" && (
+                                    <span className={styles.chatMeta}>
+                                        {MSG_TIMES[i]}
+                                        <DemoReadIcon />
+                                    </span>
+                                )}
                             </div>
-                            {m.from === "A" && (
-                                <div
-                                    className={`${styles.av} ${styles.avSm} ${styles.avA}`}
-                                >
-                                    A
-                                </div>
-                            )}
                         </div>
                     ) : null,
-                )}
-                {typing && (
-                    <div
-                        className={`${styles.chatRow} ${typing === "A" ? styles.chatRowOwn : ""}`}
-                    >
-                        {typing !== "A" && (
-                            <div
-                                className={`${styles.av} ${styles.avSm} ${styles.avS}`}
-                            >
-                                S
-                            </div>
-                        )}
-                        <div
-                            className={`${styles.bubble} ${typing === "A" ? styles.bubbleOwn : styles.bubbleOther} ${styles.bubbleTyping}`}
-                        >
-                            <span className={styles.tDot} />
-                            <span className={styles.tDot} />
-                            <span className={styles.tDot} />
-                        </div>
-                        {typing === "A" && (
-                            <div
-                                className={`${styles.av} ${styles.avSm} ${styles.avA}`}
-                            >
-                                A
-                            </div>
-                        )}
-                    </div>
                 )}
             </div>
 
             <div className={styles.chatFoot}>
-                <div className={styles.chatInput}>Type a message…</div>
-                <button className={styles.chatSend} aria-label="Send">
+                <span className={styles.chatIconBtn}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                        <path d="M9 9h.01M15 9h.01" />
+                    </svg>
+                </span>
+                <div className={styles.chatInput}>{tr.chat.typeMessage}</div>
+                <span className={styles.chatIconBtn}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                        <line x1="12" y1="19" x2="12" y2="23" />
+                        <line x1="8" y1="23" x2="16" y2="23" />
+                    </svg>
+                </span>
+                {/* Same envelope path as the real send button
+                    (ChatWindow.tsx's own, ~:1470) - not a paper plane,
+                    matches the app's mail-themed branding throughout. */}
+                <button className={styles.chatSend} aria-label={tr.common.send}>
                     <svg
                         width="13"
                         height="13"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
-                        strokeWidth="2.5"
+                        strokeWidth="2"
                         strokeLinecap="round"
                         strokeLinejoin="round"
                     >
-                        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+                        <rect x="2" y="4" width="20" height="16" rx="3" />
+                        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
                     </svg>
                 </button>
             </div>
@@ -298,57 +282,49 @@ function AnimatedChat() {
 /* ══════════════════════════════════════
    Split cards (landscape: text left, visual right)
 ══════════════════════════════════════ */
-function ChatCard() {
+function ChatCard({ tr }: { tr: WelcomeTranslation }) {
     return (
         <div className={styles.cardSplit}>
             <div className={styles.splitInfo}>
-                <span className={styles.eyebrow}>Live preview</span>
-                <h2 className={styles.splitTitle}>Messages that stay yours</h2>
-                <p className={styles.splitDesc}>
-                    This is how Arcanum looks in action. Every message is
-                    encrypted on your device before it leaves – the server only
-                    ever relays ciphertext.
-                </p>
+                <span className={styles.eyebrow}>{tr.chatCard.eyebrow}</span>
+                <h2 className={styles.splitTitle}>{tr.chatCard.title}</h2>
+                <p className={styles.splitDesc}>{tr.chatCard.desc}</p>
                 <ul className={styles.bullets}>
-                    <li>End-to-end encrypted delivery</li>
-                    <li>Typing indicators in real time</li>
-                    <li>No plain-text storage, ever</li>
+                    {tr.chatCard.bullets.map((b) => (
+                        <li key={b}>{b}</li>
+                    ))}
                 </ul>
             </div>
             <div className={styles.splitVisual}>
-                <AnimatedChat />
+                <AnimatedChat tr={tr} />
             </div>
         </div>
     );
 }
 
-function PrivacyCard() {
+function PrivacyCard({ tr }: { tr: WelcomeTranslation }) {
+    const rows = [
+        { id: "username" as const, value: "••••••••••" },
+        { id: "email" as const, value: "••••••••••••••" },
+        { id: "password" as const, value: "••••••••" },
+        { id: "messages" as const, value: "••••••••••••" },
+    ];
     return (
         <div className={styles.cardSplit}>
             <div className={styles.splitInfo}>
-                <span className={styles.eyebrow}>Privacy</span>
-                <h2 className={styles.splitTitle}>Zero knowledge</h2>
-                <p className={styles.splitDesc}>
-                    Passwords and recovery phrases never leave your browser in
-                    plain form, and profile data is sealed with a separate
-                    encryption key for every user. Even a full database leak
-                    reveals nothing but ciphertext.
-                </p>
+                <span className={styles.eyebrow}>{tr.privacyCard.eyebrow}</span>
+                <h2 className={styles.splitTitle}>{tr.privacyCard.title}</h2>
+                <p className={styles.splitDesc}>{tr.privacyCard.desc}</p>
                 <div className={styles.featureTag}>AES-256-GCM · Argon2id</div>
             </div>
             <div className={styles.splitVisual}>
                 <div className={styles.privRows}>
-                    {(
-                        [
-                            ["username", "••••••••••"],
-                            ["email", "••••••••••••••"],
-                            ["password", "••••••••"],
-                            ["messages", "••••••••••••"],
-                        ] as const
-                    ).map(([k, v]) => (
-                        <div key={k} className={styles.privRow}>
-                            <span className={styles.privKey}>{k}</span>
-                            <span className={styles.privVal}>{v}</span>
+                    {rows.map((row) => (
+                        <div key={row.id} className={styles.privRow}>
+                            <span className={styles.privKey}>
+                                {tr.privacyCard.rowLabels[row.id]}
+                            </span>
+                            <span className={styles.privVal}>{row.value}</span>
                         </div>
                     ))}
                 </div>
@@ -357,16 +333,13 @@ function PrivacyCard() {
     );
 }
 
-function SpeedCard() {
+function SpeedCard({ tr }: { tr: WelcomeTranslation }) {
     return (
         <div className={styles.cardSplit}>
             <div className={styles.splitInfo}>
-                <span className={styles.eyebrow}>Performance</span>
-                <h2 className={styles.splitTitle}>Instant delivery</h2>
-                <p className={styles.splitDesc}>
-                    WebSocket connections with Redis pub/sub under the hood.
-                    Messages arrive before you blink – no polling, no delays.
-                </p>
+                <span className={styles.eyebrow}>{tr.speedCard.eyebrow}</span>
+                <h2 className={styles.splitTitle}>{tr.speedCard.title}</h2>
+                <p className={styles.splitDesc}>{tr.speedCard.desc}</p>
                 <div className={styles.featureTag}>SignalR · Redis Streams</div>
             </div>
             <div className={styles.splitVisual}>
@@ -375,7 +348,7 @@ function SpeedCard() {
                         <div className={styles.speedFill} />
                     </div>
                     <span className={styles.speedLabel}>
-                        delivered in milliseconds
+                        {tr.speedCard.label}
                     </span>
                 </div>
             </div>
@@ -383,38 +356,19 @@ function SpeedCard() {
     );
 }
 
-function SecurityCard() {
+function SecurityCard({ tr }: { tr: WelcomeTranslation }) {
     return (
         <div className={styles.cardSplit}>
             <div className={styles.splitInfo}>
-                <span className={styles.eyebrow}>Recovery</span>
-                <h2 className={styles.splitTitle}>Your keys, your control</h2>
-                <p className={styles.splitDesc}>
-                    No recovery emails, no support tickets. Forgot your
-                    password? Your secret passphrase – generated right in your
-                    browser, never sent anywhere – is all you need.
-                </p>
-                <div className={styles.featureTag}>
-                    12 words · Only you hold the keys
-                </div>
+                <span className={styles.eyebrow}>{tr.securityCard.eyebrow}</span>
+                <h2 className={styles.splitTitle}>{tr.securityCard.title}</h2>
+                <p className={styles.splitDesc}>{tr.securityCard.desc}</p>
+                <div className={styles.featureTag}>{tr.securityCard.tag}</div>
             </div>
             <div className={styles.splitVisual}>
                 <div className={styles.phraseGrid}>
-                    {[
-                        "forest",
-                        "moon",
-                        "river",
-                        "stone",
-                        "echo",
-                        "flame",
-                        "tide",
-                        "veil",
-                        "amber",
-                        "drift",
-                        "haze",
-                        "north",
-                    ].map((w) => (
-                        <span key={w} className={styles.phraseWord}>
+                    {tr.securityCard.phraseWords.map((w, i) => (
+                        <span key={i} className={styles.phraseWord}>
                             {w}
                         </span>
                     ))}
@@ -427,17 +381,7 @@ function SecurityCard() {
 /* ══════════════════════════════════════
    Carousel
 ══════════════════════════════════════ */
-const CARDS = [
-    { id: "welcome", label: "Arcanum Messenger", sub: "Your private space" },
-    { id: "chat", label: "Live preview", sub: "See Arcanum in action" },
-    { id: "privacy", label: "Zero knowledge", sub: "Your data. Your rules." },
-    { id: "speed", label: "Instant delivery", sub: "Messages in milliseconds" },
-    {
-        id: "security",
-        label: "Passphrase recovery",
-        sub: "Your keys. Your control.",
-    },
-];
+const CARD_IDS = ["welcome", "chat", "privacy", "speed", "security"] as const;
 
 function posOf(i: number, active: number, n: number): number {
     const d = (((i - active) % n) + n) % n;
@@ -463,8 +407,11 @@ function slideStyle(pos: number): CSSProperties {
    Page
 ══════════════════════════════════════ */
 export default function WelcomePage() {
-    const N = CARDS.length;
+    const N = CARD_IDS.length;
     const navigate = useNavigate();
+    const language = useLanguage();
+    const tr = WELCOME_TRANSLATIONS[language];
+    const cards = CARD_IDS.map((id) => ({ id, ...tr.cards[id] }));
     const [active, setActive] = useState(0);
     const [paused, setPaused] = useState(false);
 
@@ -502,18 +449,26 @@ export default function WelcomePage() {
     function CardContent({ id }: { id: string }) {
         if (id === "welcome")
             return (
-                <WelcomeCard onSignIn={handleSignIn} onCreate={handleCreate} />
+                <WelcomeCard
+                    onSignIn={handleSignIn}
+                    onCreate={handleCreate}
+                    tr={tr}
+                />
             );
-        if (id === "chat") return <ChatCard />;
-        if (id === "privacy") return <PrivacyCard />;
-        if (id === "speed") return <SpeedCard />;
-        return <SecurityCard />;
+        if (id === "chat") return <ChatCard tr={tr} />;
+        if (id === "privacy") return <PrivacyCard tr={tr} />;
+        if (id === "speed") return <SpeedCard tr={tr} />;
+        return <SecurityCard tr={tr} />;
     }
 
     const offWelcome = active !== 0;
 
     return (
         <div className={styles.root}>
+            <div className={styles.cornerSwitchers}>
+                <LanguageSwitcher />
+                <ThemeSwitcher />
+            </div>
             <div ref={glowRef} className={styles.mouseGlow} />
             <canvas ref={canvasRef} className={styles.particles} />
             <div className={styles.orb1} />
@@ -536,10 +491,10 @@ export default function WelcomePage() {
                     className={`${styles.topActions} ${offWelcome ? styles.topShown : ""}`}
                 >
                     <button className={styles.topSignIn} onClick={handleSignIn}>
-                        Sign in
+                        {tr.common.signIn}
                     </button>
                     <button className={styles.topCreate} onClick={handleCreate}>
-                        Create account
+                        {tr.common.createAccount}
                     </button>
                 </div>
             </header>
@@ -550,7 +505,7 @@ export default function WelcomePage() {
                 onMouseEnter={() => setPaused(true)}
                 onMouseLeave={() => setPaused(false)}
             >
-                {CARDS.map((card, i) => {
+                {cards.map((card, i) => {
                     const pos = posOf(i, active, N);
                     return (
                         <div
@@ -576,7 +531,7 @@ export default function WelcomePage() {
             <button
                 className={`${styles.navBtn} ${styles.navPrev}`}
                 onClick={() => go(-1)}
-                aria-label="Previous"
+                aria-label={tr.common.previous}
             >
                 <svg
                     width="20"
@@ -593,7 +548,7 @@ export default function WelcomePage() {
             <button
                 className={`${styles.navBtn} ${styles.navNext}`}
                 onClick={() => go(1)}
-                aria-label="Next"
+                aria-label={tr.common.next}
             >
                 <svg
                     width="20"
@@ -610,9 +565,9 @@ export default function WelcomePage() {
 
             {/* ── bottom bar ── */}
             <div className={styles.bottomBar}>
-                <p className={styles.cardCaption}>{CARDS[active].sub}</p>
+                <p className={styles.cardCaption}>{cards[active].sub}</p>
                 <div className={styles.dots}>
-                    {CARDS.map((c, i) => (
+                    {cards.map((c, i) => (
                         <button
                             key={c.id}
                             className={`${styles.dot} ${i === active ? styles.dotActive : ""}`}

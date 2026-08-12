@@ -1,11 +1,13 @@
 ﻿using ArcanumMessenger.Contracts.Auth.Register;
 using ArcanumMessenger.Data;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 using ArcanumMessenger.Services.AuthServices;
 using ArcanumMessenger.Services.AuthServices.RegisterServices;
+using ArcanumMessenger.Services.AuthServices.LoginServices;
 using ArcanumMessenger.Entities;
+using ArcanumMessenger.Controllers.Messenger;
+using System.Security.Cryptography;
 
 namespace ArcanumMessenger.Controllers.Auth;
 
@@ -17,7 +19,9 @@ public class RegisterController(
     EmailService emailService,
     EncryptionService encryption,
     EmailHasher emailHasher,
-    AuthService authService) : ControllerBase
+    PublicIdHasher publicIdHasher,
+    AuthService authService,
+    TokenIssuanceService tokenIssuance) : ControllerBase
 {
     private static readonly Regex UsernameRegex = new("^[a-zA-Z0-9_]{3,32}$", RegexOptions.Compiled);
     private static readonly Regex PhraseAuthRegex = new("^[0-9a-f]{64}$", RegexOptions.Compiled);
@@ -30,6 +34,8 @@ public class RegisterController(
 
     private const int AuthKeySize = 32;
     private const int KdfSaltSize = 16;
+    private const int EcdhPublicKeySize = 65; // uncompressed P-256 point
+    private const int WrappedPrivateKeyMaxSize = 512;
 
     private static string GenerateCode() => Rng.Next(0, 1_000_000).ToString("D6");
 
@@ -65,8 +71,14 @@ public class RegisterController(
 
         var emailHash = emailHasher.Hash(request.Email);
 
-        if (await authService.IsEmailExist(emailHash, ct))
-            return Conflict(new SubmitEmailResponse(Success: false, Reason: "email_taken"));
+        // A taken email must not be visible from the outside, or this form
+        // becomes a way to probe which emails are registered (bypassing all
+        // the anti-enumeration work in the login flow). The response and the
+        // session look exactly the same either way; the only difference is
+        // which email the mailbox owner receives. The code below is stored
+        // but never sent in the taken case, so guessing at the code step
+        // behaves identically too.
+        var emailTaken = await authService.IsEmailExist(emailHash, ct);
 
         var code = GenerateCode();
 
@@ -76,13 +88,17 @@ public class RegisterController(
         session.CodeExpiresAt = DateTime.UtcNow.AddMinutes(CodeDurationMinutesVerif);
         session.CodeAttempts = 0;
         session.LastCodeSentAt = DateTime.UtcNow;
+        session.EmailTaken = emailTaken;
         session.Step = 1;
 
         await registrationSession.UpdateAsync(request.SessionId, session, ct);
 
         try
         {
-            await emailService.SendVerificationCodeAsync(session.PlainEmail, code, ct);
+            if (emailTaken)
+                await emailService.SendAccountExistsNoticeAsync(session.PlainEmail, ct);
+            else
+                await emailService.SendVerificationCodeAsync(session.PlainEmail, code, ct);
         }
         catch
         {
@@ -160,7 +176,12 @@ public class RegisterController(
 
         try
         {
-            await emailService.SendVerificationCodeAsync(session.PlainEmail, code, ct);
+            // Same rule as SubmitEmail: a taken email gets the notice again,
+            // never a usable code.
+            if (session.EmailTaken)
+                await emailService.SendAccountExistsNoticeAsync(session.PlainEmail, ct);
+            else
+                await emailService.SendVerificationCodeAsync(session.PlainEmail, code, ct);
         }
         catch
         {
@@ -190,9 +211,15 @@ public class RegisterController(
         if (!PasswordHasher.IsBase64OfLength(request.AuthKey, AuthKeySize) || !PasswordHasher.IsBase64OfLength(request.KdfSalt, KdfSaltSize))
             return StatusCode(StatusCodes.Status422UnprocessableEntity, new SubmitPasswordResponse(Success: false, Reason: "invalid_key_format"));
 
+        if (!PasswordHasher.IsBase64OfLength(request.EcdhPublicKey, EcdhPublicKeySize) ||
+            !PasswordHasher.IsBase64OfMaxLength(request.WrappedEcdhPrivateKey, WrappedPrivateKeyMaxSize))
+            return StatusCode(StatusCodes.Status422UnprocessableEntity, new SubmitPasswordResponse(Success: false, Reason: "invalid_key_format"));
+
         // Argon2id again on the server: a DB dump must not contain ready-to-use login keys
         session.PasswordHash = PasswordHasher.Hash(request.AuthKey);
         session.KdfSalt = request.KdfSalt;
+        session.EcdhPublicKey = request.EcdhPublicKey;
+        session.WrappedEcdhPrivateKey = request.WrappedEcdhPrivateKey;
         session.Step = 3;
 
         await registrationSession.UpdateAsync(request.SessionId, session, ct);
@@ -242,13 +269,22 @@ public class RegisterController(
             return Conflict(new FinalizeRegistrationResponse(Success: false, Reason: "recovery_not_confirmed"));
 
         if (session.PasswordHash is null || session.KdfSalt is null || session.PlainEmail is null ||
-            session.RecoveryPhrase1Hash is null || session.RecoveryPhrase2Hash is null)
+            session.RecoveryPhrase1Hash is null || session.RecoveryPhrase2Hash is null ||
+            session.EcdhPublicKey is null || session.WrappedEcdhPrivateKey is null)
             return Conflict(new FinalizeRegistrationResponse(Success: false, Reason: "incomplete_session"));
 
         var emailHash = emailHasher.Hash(session.PlainEmail);
 
         if (await authService.IsEmailExist(emailHash, ct))
             return Conflict(new FinalizeRegistrationResponse(Success: false, Reason: "email_taken"));
+
+        var language = "en";
+        if (request.Language is not null)
+        {
+            if (!PrivacyEnumConverters.TryParseLanguages(request.Language, out _))
+                return BadRequest(new FinalizeRegistrationResponse(Success: false, Reason: "invalid_language"));
+            language = request.Language;
+        }
 
         // One DEK per user encrypts all of their profile fields. It is stored
         // only in its wrapped (KEK-encrypted) form — the KEK itself never
@@ -264,19 +300,48 @@ public class RegisterController(
         }
 
         var now = DateTime.UtcNow;
+
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+        string id = string.Join("-",
+            Enumerable.Range(0, 4)
+                .Select(_ => new string(
+                    Enumerable.Range(0, 4)
+                        .Select(__ => chars[RandomNumberGenerator.GetInt32(chars.Length)])
+                        .ToArray())));
+
+        var publicIdEnc = encryption.Encrypt(id, dek);
+        var normalizedId = PublicIdHasher.Normalize(id);
+        var publicIdHash = publicIdHasher.Hash(normalizedId);
+        var publicIdPrefixHash = publicIdHasher.HashPrefix(normalizedId);
+        var userId = Guid.NewGuid();
+
         var user = new User
         {
-            UsernameEnc = usernameEnc,
+            Id = userId,
+            PublicIdEnc = publicIdEnc,
+            PublicIdHash = publicIdHash,
+            PublicIdPrefixHash = publicIdPrefixHash,
             EmailHash = emailHash,
             PasswordHash = session.PasswordHash,
             KdfSalt = session.KdfSalt,
             RecoveryPhrase1Hash = session.RecoveryPhrase1Hash,
             RecoveryPhrase2Hash = session.RecoveryPhrase2Hash,
             WrappedDek = wrappedDek,
-            PublicEmailEnc = publicEmailEnc,
+            EcdhPublicKey = session.EcdhPublicKey,
+            WrappedEcdhPrivateKey = session.WrappedEcdhPrivateKey,
             LastSeen = now,
             CreatedAt = now,
             IsDeleted = false,
+
+            UserSettings = new UserSettings
+            {
+                UserId = userId,
+                UsernameEnc = usernameEnc,
+                EmailEnc = publicEmailEnc,
+                Language = language,
+                UpdatedAt = now
+            }
         };
 
         db.Users.Add(user);
@@ -284,6 +349,19 @@ public class RegisterController(
 
         await registrationSession.DeleteAsync(request.SessionId, ct);
 
-        return Ok(new FinalizeRegistrationResponse(Success: true));
+        // A freshly created account is logged in immediately - no separate
+        // sign-in step needed right after registering.
+        var deviceName = Request.Headers.UserAgent.ToString();
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+
+        var (accessToken, refreshToken) = await tokenIssuance.IssueAsync(
+            userId, deviceName, deviceType: null, ipAddress, ct);
+
+        Response.SetAuthCookies(accessToken, refreshToken);
+
+        return Ok(new FinalizeRegistrationResponse(
+            Success: true,
+            EcdhPublicKey: session.EcdhPublicKey,
+            WrappedEcdhPrivateKey: session.WrappedEcdhPrivateKey));
     }
 }
