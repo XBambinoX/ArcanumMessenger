@@ -236,7 +236,6 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
 
     const sectionTitles: Record<Section, string> = tr.sectionTitles;
 
-    const [copied, setCopied] = useState(false);
     const [settings, setSettings] = useState<SettingsState>(defaultSettings);
     const [settingsLoaded, setSettingsLoaded] = useState(false);
     const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
@@ -298,8 +297,6 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
 
     const handleCopyId = () => {
         navigator.clipboard.writeText(profile.publicId);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1500);
     };
 
     const handleAvatarClick = () => avatarInputRef.current?.click();
