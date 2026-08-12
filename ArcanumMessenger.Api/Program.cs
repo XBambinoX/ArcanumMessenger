@@ -98,6 +98,7 @@ namespace ArcanumMessenger
 
             // Background jobs
             builder.Services.AddHostedService<Services.BackgroundJobs.AccountCleanupService>();
+            builder.Services.AddHostedService<Services.BackgroundJobs.MessagePurgeService>();
 
             // Scope
             builder.Services.AddScoped<JwtService>();
