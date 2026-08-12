@@ -55,6 +55,12 @@ export interface ChatReadState {
     lastReadAt: string; // ISO timestamp
 }
 
+export interface MessageReaction {
+    emoji: string;
+    count: number;
+    reactedByMe: boolean;
+}
+
 export interface ChatMessage {
     id: string;
     chatId: string;
@@ -69,6 +75,7 @@ export interface ChatMessage {
     isOwn: boolean;
     forwardedFromSenderId: string | null;
     forwardedFromSenderName: string | null;
+    reactions: MessageReaction[];
 }
 
 export interface User {

@@ -55,14 +55,16 @@ export interface ForwardPanelTranslation {
 }
 
 export interface EmojiCategoryLabels {
+    frequent: string;
     smileys: string;
-    gestures: string;
+    people: string;
     animals: string;
     food: string;
-    activities: string;
     travel: string;
+    activities: string;
     objects: string;
     symbols: string;
+    flags: string;
 }
 
 export interface EmojiPickerTranslation {
@@ -116,40 +118,46 @@ export const EMOJI_PICKER_TRANSLATIONS: Record<Language, EmojiPickerTranslation>
     en: {
         closeAria: "Close",
         categories: {
+            frequent: "Frequently Used",
             smileys: "Smileys",
-            gestures: "Gestures & People",
+            people: "People & Body",
             animals: "Animals & Nature",
             food: "Food & Drink",
-            activities: "Activities",
             travel: "Travel & Places",
+            activities: "Activities",
             objects: "Objects",
             symbols: "Symbols",
+            flags: "Flags",
         },
     },
     uk: {
         closeAria: "Закрити",
         categories: {
+            frequent: "Часто використовувані",
             smileys: "Смайли",
-            gestures: "Жести й люди",
+            people: "Люди",
             animals: "Тварини й природа",
             food: "Їжа й напої",
-            activities: "Активності",
             travel: "Подорожі й місця",
+            activities: "Активності",
             objects: "Предмети",
             symbols: "Символи",
+            flags: "Прапори",
         },
     },
     de: {
         closeAria: "Schließen",
         categories: {
+            frequent: "Häufig verwendet",
             smileys: "Smileys",
-            gestures: "Gesten & Menschen",
+            people: "Menschen",
             animals: "Tiere & Natur",
             food: "Essen & Trinken",
-            activities: "Aktivitäten",
             travel: "Reisen & Orte",
+            activities: "Aktivitäten",
             objects: "Objekte",
             symbols: "Symbole",
+            flags: "Flaggen",
         },
     },
 };

@@ -710,6 +710,44 @@
     flex-shrink: 0;
 }
 
+.reactions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 2px;
+}
+
+.reactionPill {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
+    border-radius: 11px;
+    background: rgba(var(--accent-rgb), 0.06);
+    font-size: 12.5px;
+    line-height: 1.5;
+    cursor: pointer;
+    transition:
+        background 0.15s,
+        border-color 0.15s,
+        transform 0.1s;
+}
+
+.reactionPill:hover {
+    transform: scale(1.06);
+}
+
+.reactionPillActive {
+    border-color: rgba(var(--accent-light-rgb), 0.55);
+    background: rgba(var(--accent-rgb), 0.22);
+}
+
+.reactionCount {
+    color: rgba(var(--text-muted-rgb), 0.75);
+    font-size: 11px;
+}
+
 .meta {
     align-self: flex-end;
     display: flex;
@@ -803,6 +841,15 @@
 .emojiButtonWrap {
     position: relative;
     flex-shrink: 0;
+}
+
+/* Zero-size anchor at the click point - EmojiPicker's own .panel is
+   position:absolute; bottom:calc(100% + 10px); left:0, meant to sit above
+   whatever wrapper holds it. This gives it one anywhere on screen instead
+   of only next to the compose bar's own emoji button. */
+.reactionPickerAnchor {
+    position: fixed;
+    z-index: 20;
 }
 
 .pendingAttachment {

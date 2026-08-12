@@ -494,7 +494,11 @@ public class MessageService(
         return (dtos, null);
     }
 
-    public async Task<(bool Success, IReadOnlyList<MessageReactionDto>? Reactions, string? Reason)> ToggleReactionAsync(
+    // Adding an emoji the caller already has on this message is a no-op,
+    // not an error - the picker doesn't check first, it just always calls
+    // this. The cap is on how many distinct emoji one person has on this
+    // one message.
+    public async Task<(bool Success, IReadOnlyList<MessageReactionDto>? Reactions, string? Reason)> AddReactionAsync(
         Guid chatId, Guid messageId, Guid callerId, string emoji, CancellationToken ct)
     {
         var trimmedEmoji = emoji.Trim();
@@ -506,14 +510,9 @@ public class MessageService(
         if (!messageExists)
             return (false, null, "not_found");
 
-        var existing = await db.MessageReactions
-            .FirstOrDefaultAsync(r => r.MessageId == messageId && r.UserId == callerId && r.Emoji == trimmedEmoji, ct);
-
-        if (existing is not null)
-        {
-            db.MessageReactions.Remove(existing);
-        }
-        else
+        var alreadyReacted = await db.MessageReactions
+            .AnyAsync(r => r.MessageId == messageId && r.UserId == callerId && r.Emoji == trimmedEmoji, ct);
+        if (!alreadyReacted)
         {
             var myReactionCount = await db.MessageReactions
                 .CountAsync(r => r.MessageId == messageId && r.UserId == callerId, ct);
@@ -527,10 +526,40 @@ public class MessageService(
                 Emoji = trimmedEmoji,
                 CreatedAt = DateTime.UtcNow,
             });
+            await db.SaveChangesAsync(ct);
         }
 
-        await db.SaveChangesAsync(ct);
+        return await BroadcastReactionsAsync(chatId, messageId, callerId, ct);
+    }
 
+    // Removes the caller's reaction from this message entirely. Removing
+    // an emoji they never reacted with just does nothing (not_found), same
+    // as removing something already removed.
+    public async Task<(bool Success, IReadOnlyList<MessageReactionDto>? Reactions, string? Reason)> RemoveReactionAsync(
+        Guid chatId, Guid messageId, Guid callerId, string emoji, CancellationToken ct)
+    {
+        var trimmedEmoji = emoji.Trim();
+        if (trimmedEmoji.Length == 0)
+            return (false, null, "invalid_emoji");
+
+        var messageExists = await db.Messages.AsNoTracking()
+            .AnyAsync(m => m.Id == messageId && m.ChatId == chatId && !m.IsDeleted, ct);
+        if (!messageExists)
+            return (false, null, "not_found");
+
+        var existing = await db.MessageReactions
+            .FirstOrDefaultAsync(r => r.MessageId == messageId && r.UserId == callerId && r.Emoji == trimmedEmoji, ct);
+        if (existing is null)
+            return (false, null, "not_found");
+
+        db.MessageReactions.Remove(existing);
+        await db.SaveChangesAsync(ct);
+        return await BroadcastReactionsAsync(chatId, messageId, callerId, ct);
+    }
+
+    private async Task<(bool Success, IReadOnlyList<MessageReactionDto>? Reactions, string? Reason)> BroadcastReactionsAsync(
+        Guid chatId, Guid messageId, Guid callerId, CancellationToken ct)
+    {
         var reactionGroups = await LoadReactionGroupsAsync([messageId], ct);
         var groups = reactionGroups.GetValueOrDefault(messageId);
 

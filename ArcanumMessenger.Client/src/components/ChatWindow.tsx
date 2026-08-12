@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { HubConnection } from "@microsoft/signalr";
-import type { ChatMessage, ChatReadState, ChatSummary, MediaAsset, SavedGifEntry, User } from "../types/messenger";
-import { getMessageHistory, sendMessage, deleteMessage, editMessage, forwardMessages, type ForwardItem } from "../api/messages";
+import type { ChatMessage, ChatReadState, ChatSummary, MediaAsset, MessageReaction, SavedGifEntry, User } from "../types/messenger";
+import { getMessageHistory, sendMessage, deleteMessage, editMessage, forwardMessages, addReaction, removeReaction, type ForwardItem } from "../api/messages";
 import { getUser, getUserAvatarUrl } from "../api/users";
 import { getChats, getChatAvatarUrl } from "../api/chats";
 import { uploadMedia, uploadMediaThumbnail, deleteMedia, getSavedGifs, saveGif, unsaveGif } from "../api/media";
@@ -12,6 +12,7 @@ import { extractVideoFirstFrame } from "../lib/mediaMetadata";
 import { reencryptMediaAcrossChats } from "../lib/mediaReencrypt";
 import { encryptOutgoing, decryptIncoming, decryptIncomingList, getChatKey } from "../lib/chatCrypto";
 import { selfHealChatKeys } from "../lib/chatKeySelfHeal";
+import { recordReactionEmojiUse } from "../lib/emojiUsage";
 import UserInfoPanel from "./UserInfoPanel";
 import ChatInfoPanel from "./ChatInfoPanel";
 import EmojiPicker from "./EmojiPicker";
@@ -130,6 +131,9 @@ interface ChatWindowProps {
 
 const ANIMATE_MS = 260;
 const MAX_COMPOSE_HEIGHT = 120;
+// Same default set WhatsApp shows on a long-press - familiar enough that
+// most people already know what this row means without an explanation.
+const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
 function dayLabel(iso: string, common: AppCommonTranslation): string {
     const date = new Date(iso);
@@ -175,6 +179,7 @@ export default function ChatWindow({
     // of the tap appearing to do nothing.
     const [pendingGifSends, setPendingGifSends] = useState<{ tempId: string; media: MediaAsset }[]>([]);
     const [contextMenu, setContextMenu] = useState<{ message: ChatMessage; x: number; y: number } | null>(null);
+    const [reactionPicker, setReactionPicker] = useState<{ messageId: string; x: number; y: number; placement: "up" | "down" } | null>(null);
     const [replyTarget, setReplyTarget] = useState<ChatMessage | null>(null);
     const [editTarget, setEditTarget] = useState<ChatMessage | null>(null);
     const [selectMode, setSelectMode] = useState(false);
@@ -185,6 +190,7 @@ export default function ChatWindow({
     const messagesRef = useRef<HTMLDivElement | null>(null);
     const stickerPanelRef = useRef<HTMLDivElement | null>(null);
     const emojiPanelRef = useRef<HTMLDivElement | null>(null);
+    const reactionPickerRef = useRef<HTMLDivElement | null>(null);
     const draftInputRef = useRef<HTMLTextAreaElement | null>(null);
     const prependingRef = useRef(false);
     const uploadAbortRef = useRef<AbortController | null>(null);
@@ -289,6 +295,19 @@ export default function ChatWindow({
     }, [emojiPickerOpen]);
 
     useEffect(() => {
+        if (!reactionPicker) return;
+
+        const handleClickOutside = (e: MouseEvent) => {
+            if (reactionPickerRef.current && !reactionPickerRef.current.contains(e.target as Node)) {
+                setReactionPicker(null);
+            }
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [reactionPicker]);
+
+    useEffect(() => {
         let cancelled = false;
 
         (async () => {
@@ -369,15 +388,22 @@ export default function ChatWindow({
             });
         };
 
+        const handleReactionsChanged = (reactChatId: string, messageId: string, reactions: MessageReaction[]) => {
+            if (reactChatId !== chat.id) return;
+            setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, reactions } : m)));
+        };
+
         connection.on("ReceiveMessage", handleReceiveMessage);
         connection.on("MessageDeleted", handleMessageDeleted);
         connection.on("MessageEdited", handleMessageEdited);
         connection.on("ChatRead", handleChatRead);
+        connection.on("ReactionsChanged", handleReactionsChanged);
         return () => {
             connection.off("ReceiveMessage", handleReceiveMessage);
             connection.off("MessageDeleted", handleMessageDeleted);
             connection.off("MessageEdited", handleMessageEdited);
             connection.off("ChatRead", handleChatRead);
+            connection.off("ReactionsChanged", handleReactionsChanged);
         };
     }, [connection, chat.id, chat.wrappedChatKey]);
 
@@ -703,6 +729,28 @@ export default function ChatWindow({
         e.preventDefault();
         if (selectMode) return;
         setContextMenu({ message, x: e.clientX, y: e.clientY });
+    };
+
+    // Used by the reaction pill on a message itself - always removes one
+    // copy of your own reaction (a person can have stacked several of the
+    // same emoji, see handleAddReaction below).
+    const handleRemoveReaction = async (messageId: string, emoji: string) => {
+        const reactions = await removeReaction(chat.id, messageId, emoji);
+        if (reactions) {
+            setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, reactions } : m)));
+        }
+    };
+
+    // Used by the reaction picker (quick strip + full emoji picker) -
+    // always adds one more, so picking the same emoji twice in a row (or
+    // leaving the picker open while adding several) stacks rather than
+    // undoing the first pick. Only the pill on the message itself removes.
+    const handleAddReaction = async (messageId: string, emoji: string) => {
+        recordReactionEmojiUse(emoji);
+        const reactions = await addReaction(chat.id, messageId, emoji);
+        if (reactions) {
+            setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, reactions } : m)));
+        }
     };
 
     const toggleSelected = (messageId: string) => {
@@ -1161,6 +1209,20 @@ export default function ChatWindow({
                                             {message.content}
                                         </span>
                                     )}
+                                    {message.reactions.length > 0 && (
+                                        <div className={styles.reactions}>
+                                            {message.reactions.map((r) => (
+                                                <button
+                                                    key={r.emoji}
+                                                    className={`${styles.reactionPill} ${r.reactedByMe ? styles.reactionPillActive : ""}`}
+                                                    onClick={() => handleRemoveReaction(message.id, r.emoji)}
+                                                >
+                                                    <span>{r.emoji}</span>
+                                                    <span className={styles.reactionCount}>{r.count}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
                                     {!bareMedia && (
                                         <span className={styles.meta}>
                                             {message.isEdited && (
@@ -1511,8 +1573,34 @@ export default function ChatWindow({
                     x={contextMenu.x}
                     y={contextMenu.y}
                     items={buildMenuItems(contextMenu.message)}
+                    quickReactions={QUICK_REACTIONS}
+                    onReact={(emoji) => handleAddReaction(contextMenu.message.id, emoji)}
+                    onMoreReactions={() => {
+                        // Not enough headroom above a message near the top
+                        // of the chat to open the full picker upward -
+                        // flips down instead, same threshold as its own
+                        // max-height (min(360px, 55vh) + the 10px gap).
+                        const placement = contextMenu.y < 380 ? "down" : "up";
+                        setReactionPicker({ messageId: contextMenu.message.id, x: contextMenu.x, y: contextMenu.y, placement });
+                        setContextMenu(null);
+                    }}
                     onClose={() => setContextMenu(null)}
                 />
+            )}
+
+            {reactionPicker && (
+                <div
+                    ref={reactionPickerRef}
+                    className={styles.reactionPickerAnchor}
+                    style={{ left: Math.min(reactionPicker.x, window.innerWidth - 328), top: reactionPicker.y }}
+                >
+                    <EmojiPicker
+                        placement={reactionPicker.placement}
+                        showFrequent
+                        onClose={() => setReactionPicker(null)}
+                        onSelect={(emoji) => handleAddReaction(reactionPicker.messageId, emoji)}
+                    />
+                </div>
             )}
 
             {forwardIds && (

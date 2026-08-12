@@ -106,21 +106,38 @@ public class MessagesController(MessageService messageService, ChatAccessService
             : Ok(new EditMessageResponse(true, message));
     }
 
-    [HttpPut("{messageId:guid}/reactions")]
-    public async Task<ActionResult<ToggleReactionResponse>> ToggleReaction(
-        Guid chatId, Guid messageId, [FromBody] ToggleReactionRequest request, CancellationToken ct)
+    [HttpPost("{messageId:guid}/reactions")]
+    public async Task<ActionResult<ReactionMutationResponse>> AddReaction(
+        Guid chatId, Guid messageId, [FromBody] AddReactionRequest request, CancellationToken ct)
     {
         if (!TryGetUserId(out var userId))
             return Unauthorized();
 
         var membership = await chatAccess.GetMembershipAsync(chatId, userId, ct);
         if (membership is null)
-            return NotFound(new ToggleReactionResponse(false, null, "not_found"));
+            return NotFound(new ReactionMutationResponse(false, null, "not_found"));
 
-        var (success, reactions, reason) = await messageService.ToggleReactionAsync(chatId, messageId, userId, request.Emoji, ct);
+        var (success, reactions, reason) = await messageService.AddReactionAsync(chatId, messageId, userId, request.Emoji, ct);
         return success
-            ? Ok(new ToggleReactionResponse(true, reactions))
-            : BadRequest(new ToggleReactionResponse(false, null, reason));
+            ? Ok(new ReactionMutationResponse(true, reactions))
+            : BadRequest(new ReactionMutationResponse(false, null, reason));
+    }
+
+    [HttpDelete("{messageId:guid}/reactions/{emoji}")]
+    public async Task<ActionResult<ReactionMutationResponse>> RemoveReaction(
+        Guid chatId, Guid messageId, string emoji, CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        var membership = await chatAccess.GetMembershipAsync(chatId, userId, ct);
+        if (membership is null)
+            return NotFound(new ReactionMutationResponse(false, null, "not_found"));
+
+        var (success, reactions, reason) = await messageService.RemoveReactionAsync(chatId, messageId, userId, emoji, ct);
+        return success
+            ? Ok(new ReactionMutationResponse(true, reactions))
+            : BadRequest(new ReactionMutationResponse(false, null, reason));
     }
 
     [HttpPost("forward")]

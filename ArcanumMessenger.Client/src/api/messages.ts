@@ -1,5 +1,5 @@
 import { apiFetch } from "../lib/apiFetch";
-import type { ChatMessage, ChatReadState, MediaAsset } from "../types/messenger";
+import type { ChatMessage, ChatReadState, MediaAsset, MessageReaction } from "../types/messenger";
 
 export interface MessageHistoryResult {
     messages: ChatMessage[];
@@ -59,6 +59,38 @@ export async function editMessage(chatId: string, messageId: string, content: st
     });
     const data = await res.json();
     return data.success ? data.message : null;
+}
+
+// Adds one more copy of this emoji to the caller's own reactions on this
+// message - one person can stack the same emoji more than once, up to a
+// per-person cap enforced server-side.
+export async function addReaction(
+    chatId: string,
+    messageId: string,
+    emoji: string,
+): Promise<MessageReaction[] | null> {
+    const res = await apiFetch(`/api/chats/${chatId}/messages/${messageId}/reactions`, {
+        method: "POST",
+        credentials: "include",
+        body: JSON.stringify({ emoji }),
+    });
+    const data = await res.json();
+    return data.success ? data.reactions ?? [] : null;
+}
+
+// Removes exactly one copy of this emoji from the caller's own reactions
+// on this message.
+export async function removeReaction(
+    chatId: string,
+    messageId: string,
+    emoji: string,
+): Promise<MessageReaction[] | null> {
+    const res = await apiFetch(`/api/chats/${chatId}/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`, {
+        method: "DELETE",
+        credentials: "include",
+    });
+    const data = await res.json();
+    return data.success ? data.reactions ?? [] : null;
 }
 
 export interface ChatMediaItem {

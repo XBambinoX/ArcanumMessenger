@@ -59,9 +59,9 @@ public record ChatMediaResponse(
 
 public record ChatStatsResponse(bool Success, int MessageCount = 0, int MediaCount = 0, string? Reason = null);
 
-// Toggle, not add/remove separately - reacting with an emoji the caller
-// already put on this message removes it, any other emoji adds it
-// (capped per-user in MessageService).
-public record ToggleReactionRequest(string Emoji);
+// Add and remove are separate (not a toggle) - one person can stack the
+// same emoji on a message more than once, capped in total per person per
+// message in MessageService. Remove always drops exactly one copy.
+public record AddReactionRequest(string Emoji);
 
-public record ToggleReactionResponse(bool Success, IReadOnlyList<MessageReactionDto>? Reactions = null, string? Reason = null);
+public record ReactionMutationResponse(bool Success, IReadOnlyList<MessageReactionDto>? Reactions = null, string? Reason = null);
