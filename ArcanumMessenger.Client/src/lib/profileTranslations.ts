@@ -13,7 +13,6 @@ export interface ProfilePanelTranslation {
     logOut: string;
     copyIdTitle: string;
     closeProfileAria: string;
-    setNewPhoto: string;
     removePhotoButton: string;
     usernameLabel: string;
     usernamePlaceholder: string;
@@ -138,7 +137,6 @@ export const PROFILE_PANEL_TRANSLATIONS: Record<Language, ProfilePanelTranslatio
         logOut: "Log out",
         copyIdTitle: "Copy ID",
         closeProfileAria: "Close profile",
-        setNewPhoto: "Set New Photo",
         removePhotoButton: "Remove photo",
         usernameLabel: "Username",
         usernamePlaceholder: "Your username",
@@ -194,7 +192,6 @@ export const PROFILE_PANEL_TRANSLATIONS: Record<Language, ProfilePanelTranslatio
         logOut: "Вийти",
         copyIdTitle: "Скопіювати ID",
         closeProfileAria: "Закрити профіль",
-        setNewPhoto: "Встановити нове фото",
         removePhotoButton: "Видалити фото",
         usernameLabel: "Ім'я користувача",
         usernamePlaceholder: "Ваше ім'я користувача",
@@ -250,7 +247,6 @@ export const PROFILE_PANEL_TRANSLATIONS: Record<Language, ProfilePanelTranslatio
         logOut: "Abmelden",
         copyIdTitle: "ID kopieren",
         closeProfileAria: "Profil schließen",
-        setNewPhoto: "Neues Foto festlegen",
         removePhotoButton: "Foto entfernen",
         usernameLabel: "Benutzername",
         usernamePlaceholder: "Dein Benutzername",

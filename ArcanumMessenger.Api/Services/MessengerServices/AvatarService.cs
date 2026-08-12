@@ -23,7 +23,8 @@ public record AvatarStream(Stream Content, string ContentType, long Length);
 public class AvatarService(IAmazonS3 s3, IConfiguration config)
 {
     private const long MaxUploadBytes = 10L * 1024 * 1024;
-    private const int MaxEdge = 512;
+    private const int MaxEdge = 1024;
+    private const int JpegQuality = 92;
 
     private string Bucket => config["Media:Bucket"]!;
 
@@ -73,7 +74,7 @@ public class AvatarService(IAmazonS3 s3, IConfiguration config)
             ? original.Resize(new SKImageInfo(targetWidth, targetHeight), SKSamplingOptions.Default)
             : null;
         using var image = SKImage.FromBitmap(resized ?? original);
-        using var encoded = image.Encode(SKEncodedImageFormat.Jpeg, 85);
+        using var encoded = image.Encode(SKEncodedImageFormat.Jpeg, JpegQuality);
 
         using var jpegStream = new MemoryStream();
         encoded.SaveTo(jpegStream);

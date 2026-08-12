@@ -637,6 +637,7 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                                 <AvatarImage
                                     src={myAvatarSrc}
                                     fallback={(settingsLoaded ? (settings.username || profile.name) : profile.name).charAt(0).toUpperCase()}
+                                    onImageClick={() => window.open(myAvatarSrc, "_blank")}
                                 />
                             </div>
 
@@ -710,7 +711,6 @@ export default function ProfilePanel({ profile, onClose, onLogout, onUsernameCha
                                 </span>
                             </div>
                             <div className={styles.avatarEditHint}>
-                                <span className={styles.avatarEditTitle}>{tr.setNewPhoto}</span>
                                 <button className={styles.avatarEditSub} onClick={handleRemoveAvatar}>
                                     {tr.removePhotoButton}
                                 </button>
