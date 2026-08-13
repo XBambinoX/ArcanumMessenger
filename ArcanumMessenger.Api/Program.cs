@@ -137,7 +137,7 @@ namespace ArcanumMessenger
                 {
                     await media.EnsureIncompleteUploadLifecycleRuleAsync(CancellationToken.None);
                 }
-                catch (Amazon.S3.AmazonS3Exception ex)
+                catch (AmazonS3Exception ex)
                 {
                     // Housekeeping only (auto-abort stale chunked uploads) -
                     // must never take the whole app down if MinIO rejects it.
