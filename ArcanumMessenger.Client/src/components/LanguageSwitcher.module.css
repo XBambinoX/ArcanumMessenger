@@ -1,0 +1,34 @@
+/* Positioning (fixed/centered/z-index) lives on WelcomePage's own
+   .cornerSwitchers wrapper now, which this and ThemeSwitcher sit inside
+   as a paired group - see its comment for why. */
+.switcher {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 999px;
+    background: rgba(var(--bg-elevated-rgb), 0.55);
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    backdrop-filter: blur(8px);
+}
+
+.option {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: rgba(var(--text-rgb), 0.65);
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.option:hover {
+    color: rgba(var(--text-rgb), 0.9);
+}
+
+.optionActive {
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
+    color: rgb(var(--white-rgb));
+}

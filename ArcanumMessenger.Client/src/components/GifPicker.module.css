@@ -1,0 +1,149 @@
+.panel {
+    box-sizing: border-box;
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 0;
+    width: 380px;
+    max-width: min(380px, 80vw);
+    max-height: min(420px, 60vh);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    background: rgb(var(--bg-elevated-rgb));
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
+    border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(var(--black-rgb), 0.45);
+    padding: 16px;
+    z-index: 10;
+    animation: panelPop 0.14s ease-out;
+}
+
+@keyframes panelPop {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    flex-shrink: 0;
+}
+
+.title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    background: linear-gradient(135deg, rgb(var(--accent-light-rgb)), rgb(var(--accent-cyan-rgb)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.closeBtn {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    background: rgba(var(--accent-rgb), 0.05);
+    color: rgba(var(--accent-light-rgb), 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.closeBtn:hover {
+    background: rgba(var(--accent-rgb), 0.12);
+    border-color: rgba(var(--accent-light-rgb), 0.4);
+}
+
+.note {
+    margin: 0;
+    font-size: 13px;
+    color: rgba(var(--text-muted-rgb), 0.6);
+    text-align: center;
+    padding: 20px 4px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    /* Only ever rendered "embedded" now (inside StickerPicker), which
+       provides no padding of its own around this content - GifPicker used
+       to get that for free from its own standalone .panel. */
+    padding: 8px;
+}
+
+.gifTile {
+    padding: 0;
+    border: 1px solid rgba(var(--accent-rgb), 0.15);
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    background: rgba(var(--accent-rgb), 0.05);
+    aspect-ratio: 1;
+    transition: border-color 0.2s;
+}
+
+/* A gif sent as a <video> (as opposed to a real .gif image file) doesn't
+   reliably clip to border-radius in Firefox - see ChatWindow.module.css's
+   .mediaGifVideo comment. Square corners here rather than an unreliable
+   fix. */
+.gifTileVideo {
+    border-radius: 0;
+}
+
+.gifTile:hover {
+    border-color: rgba(var(--accent-light-rgb), 0.5);
+}
+
+.gifTile img,
+.gifTile video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* The loading/failed placeholder otherwise sizes itself from the gif's
+   real aspect ratio (see EncryptedMedia's .loading) - fine in a chat
+   bubble, but here it just needs to fill this already-square tile like
+   the loaded img/video above does. Without this, a non-square gif's
+   placeholder ran taller or wider than the tile, got clipped by
+   .gifTile's overflow: hidden, and the spinner - centered on the
+   uncropped box, not the visible one - landed off-center. */
+.gifTileLoading {
+    width: 100%;
+    height: 100%;
+}
+
+/* On mobile this becomes a bottom sheet instead of a small anchored
+   popover above the compose bar - full-screen (tried first) hid the chat
+   entirely, so picking several GIFs in a row gave no visible confirmation
+   any of them actually sent. bottom is offset by the compose row's own
+   height (42px buttons + 12px top/bottom padding, ~66px, rounded up) so
+   the sheet sits above the input row instead of covering it. Keep in
+   sync with useMediaQuery.ts's MOBILE_BREAKPOINT_QUERY. */
+@media (max-width: 760px) {
+    .panel {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 78px;
+        top: auto;
+        width: 100%;
+        max-width: 100%;
+        max-height: 42vh;
+        border-radius: 16px;
+    }
+}

@@ -5,22 +5,38 @@ services:
             dockerfile: ArcanumMessenger.Api/Dockerfile
         container_name: arcanum-api
         ports:
-            - "5135:8080"
-            - "7039:8081"
+            - "127.0.0.1:5135:8080"
         environment:
             ASPNETCORE_ENVIRONMENT: Development
-            ASPNETCORE_URLS: https://+:8081;http://+:8080
-            ASPNETCORE_Kestrel__Certificates__Default__Path: ${KESTREL_CERT_PATH}
-            ASPNETCORE_Kestrel__Certificates__Default__Password: ${KESTREL_CERT_PASSWORD}
-            ConnectionStrings__Postgres: Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+            ASPNETCORE_URLS: http://+:8080
+            ConnectionStrings__Postgres: Host=${POSTGRES_HOST};Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
             ConnectionStrings__Redis: redis:6379
-        volumes:
-            - ${HTTPS_CERT_DIR}:/https:ro
+
+            Smtp__Host: ${SMTP_HOST}
+            Smtp__Port: ${SMTP_PORT}
+            Smtp__Username: ${SMTP_USERNAME}
+            Smtp__Password: ${SMTP_PASSWORD}
+            Smtp__FromName: Arcanum Messenger
+
+            Encryption__Kek: ${ENCRYPTION_KEK}
+            Hashing__EmailPepper: ${EMAIL_HASH_PEPPER}
+            Hashing__PublicIdPepper: ${PUBLIC_ID_HASH_PEPPER}
+
+            Jwt__Secret: ${JWT_SECRET}
+            Jwt__Issuer: ArcanumMessenger
+
+            Media__Endpoint: http://minio:9000
+            Media__AccessKey: ${MINIO_ROOT_USER}
+            Media__SecretKey: ${MINIO_ROOT_PASSWORD}
+            Media__Bucket: arcanum-media
+
         restart: unless-stopped
         depends_on:
             db:
                 condition: service_healthy
             redis:
+                condition: service_healthy
+            minio:
                 condition: service_healthy
         healthcheck:
             test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
@@ -37,10 +53,12 @@ services:
         ports:
             - "5173:5173"
         environment:
-            API_URL: http://api:8080
+            VITE_CERT_PATH: /https/arcanum-lan.crt
+            VITE_KEY_PATH: /https/arcanum-lan.key
         volumes:
             - ./ArcanumMessenger.Client:/app
             - /app/node_modules
+            - ${HTTPS_CERT_DIR}:/https:ro
         depends_on:
             - api
 
@@ -48,7 +66,7 @@ services:
         image: postgres:16-alpine
         container_name: arcanum-db
         ports:
-            - "5432:5432"
+            - "127.0.0.1:5432:5432"
         environment:
             POSTGRES_DB: ${POSTGRES_DB}
             POSTGRES_USER: ${POSTGRES_USER}
@@ -57,7 +75,11 @@ services:
             - postgres_data:/var/lib/postgresql/data
         restart: unless-stopped
         healthcheck:
-            test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+            test:
+                [
+                    "CMD-SHELL",
+                    "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}",
+                ]
             interval: 10s
             timeout: 5s
             retries: 5
@@ -67,7 +89,7 @@ services:
         image: redis:7.2-alpine
         container_name: arcanum-redis
         ports:
-            - "6379:6379"
+            - "127.0.0.1:6379:6379"
         volumes:
             - redis_data:/data
         restart: unless-stopped
@@ -78,9 +100,30 @@ services:
             retries: 5
             start_period: 5s
 
+    minio:
+        image: minio/minio:latest
+        container_name: arcanum-minio
+        command: server /data --console-address ":9001"
+        ports:
+            - "127.0.0.1:9000:9000"
+            - "127.0.0.1:9001:9001"
+        environment:
+            MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+            MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+        volumes:
+            - minio_data:/data
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD", "mc", "ready", "local"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 10s
+
 volumes:
     postgres_data:
     redis_data:
+    minio_data:
 
 # Later:
 # Nginx (reverse proxy)

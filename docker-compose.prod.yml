@@ -1,0 +1,136 @@
+# Production stack - standalone, not an override of docker-compose.yml.
+# Compose merges list-type fields like `ports` by concatenating them,
+# not replacing them, so an override file can't actually remove a host
+# port the base file publishes - it would just add to it. Being fully
+# standalone here means "no host port" actually means no host port,
+# and it also means this can run alongside the dev stack (see the
+# `-prod` container names and separate volumes below) without either
+# one colliding with the other.
+#
+# nginx (the `client` service) is the only container reachable from
+# outside Docker - everything else talks over the internal network by
+# service name.
+#
+# Run with: docker compose -f docker-compose.prod.yml up
+#
+# Named explicitly (not left to default to the directory name) so this
+# gets its own network/project even when run from the same machine and
+# directory as the dev stack, instead of silently sharing one.
+name: arcanum-prod
+
+services:
+    api:
+        build:
+            context: .
+            dockerfile: ArcanumMessenger.Api/Dockerfile
+        container_name: arcanum-api-prod
+        environment:
+            ASPNETCORE_ENVIRONMENT: Production
+            ASPNETCORE_URLS: http://+:8080
+            ConnectionStrings__Postgres: Host=${POSTGRES_HOST};Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+            ConnectionStrings__Redis: redis:6379
+
+            Smtp__Host: ${SMTP_HOST}
+            Smtp__Port: ${SMTP_PORT}
+            Smtp__Username: ${SMTP_USERNAME}
+            Smtp__Password: ${SMTP_PASSWORD}
+            Smtp__FromName: Arcanum Messenger
+
+            Encryption__Kek: ${ENCRYPTION_KEK}
+            Hashing__EmailPepper: ${EMAIL_HASH_PEPPER}
+            Hashing__PublicIdPepper: ${PUBLIC_ID_HASH_PEPPER}
+
+            Jwt__Secret: ${JWT_SECRET}
+            Jwt__Issuer: ArcanumMessenger
+
+            Media__Endpoint: http://minio:9000
+            Media__AccessKey: ${MINIO_ROOT_USER}
+            Media__SecretKey: ${MINIO_ROOT_PASSWORD}
+            Media__Bucket: arcanum-media
+
+        restart: unless-stopped
+        depends_on:
+            db:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+            minio:
+                condition: service_healthy
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+            interval: 30s
+            timeout: 5s
+            retries: 3
+            start_period: 10s
+
+    client:
+        build:
+            context: ./ArcanumMessenger.Client
+            dockerfile: Dockerfile.prod
+        container_name: arcanum-client-prod
+        ports:
+            - "80:80"
+            - "443:443"
+        volumes:
+            - ${HTTPS_CERT_DIR}:/etc/nginx/certs:ro
+        restart: unless-stopped
+        depends_on:
+            - api
+        healthcheck:
+            test: ["CMD", "wget", "--no-check-certificate", "-q", "-O", "/dev/null", "https://localhost/"]
+            interval: 30s
+            timeout: 5s
+            retries: 3
+            start_period: 10s
+
+    db:
+        image: postgres:16-alpine
+        container_name: arcanum-db-prod
+        environment:
+            POSTGRES_DB: ${POSTGRES_DB}
+            POSTGRES_USER: ${POSTGRES_USER}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+        volumes:
+            - postgres_data_prod:/var/lib/postgresql/data
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 10s
+
+    redis:
+        image: redis:7.2-alpine
+        container_name: arcanum-redis-prod
+        volumes:
+            - redis_data_prod:/data
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 5s
+
+    minio:
+        image: minio/minio:latest
+        container_name: arcanum-minio-prod
+        command: server /data --console-address ":9001"
+        environment:
+            MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+            MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+        volumes:
+            - minio_data_prod:/data
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD", "mc", "ready", "local"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 10s
+
+volumes:
+    postgres_data_prod:
+    redis_data_prod:
+    minio_data_prod:

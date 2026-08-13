@@ -1,0 +1,36 @@
+/* Positioning lives on WelcomePage's own .cornerSwitchers wrapper now -
+   see its comment. This used to sit fixed at the top-right corner on its
+   own, which put it directly on top of the scrolled-in top bar's Sign
+   in/Create Account buttons (also right-aligned, in that same corner). */
+.switcher {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 999px;
+    background: rgba(var(--bg-elevated-rgb), 0.55);
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    backdrop-filter: blur(8px);
+}
+
+.option {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: rgba(var(--text-rgb), 0.65);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.option:hover {
+    color: rgba(var(--text-rgb), 0.9);
+}
+
+.optionActive {
+    background: linear-gradient(135deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
+    color: rgb(var(--white-rgb));
+}

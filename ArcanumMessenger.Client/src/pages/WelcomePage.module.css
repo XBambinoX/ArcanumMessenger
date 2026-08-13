@@ -1,687 +1,966 @@
+/* ══════════════════════════════════════
+   Root — full viewport, no scroll
+══════════════════════════════════════ */
 .root {
-    background: #0d0b1e;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    overflow-x: hidden;
-}
-
-/* ── NAVBAR ── */
-.navbar {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 100;
+    inset: 0;
+    background: rgb(var(--bg-rgb));
+    color: rgb(var(--text-rgb));
+    font-family: "Inter", system-ui, sans-serif;
+    overflow: hidden;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 48px;
-    background: rgba(13, 11, 30, 0.7);
-    backdrop-filter: blur(16px);
-    border-bottom: 1px solid rgba(124, 58, 237, 0.1);
-    transition: background 0.3s;
+    flex-direction: column;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
-.navLogo {
+/* Both switchers as one centered group - .topBar below (brand on the
+   left, Sign in/Create Account on the right, once scrolled in) already
+   claims both corners, so center-top is the one spot proven clear of it
+   regardless of scroll position. */
+.cornerSwitchers {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 50;
     display: flex;
-    align-items: center;
     gap: 10px;
 }
 
-.navLogoIcon {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    border: 1px solid rgba(124, 58, 237, 0.45);
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.28), rgba(79, 70, 229, 0.18));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.navLogoText {
-    font-size: 16px;
-    font-weight: 700;
-    background: linear-gradient(135deg, #a78bfa, #22d3ee);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.navLinks {
-    display: flex;
-    align-items: center;
-    gap: 32px;
-}
-
-.navLink {
-    position: relative;
-    font-size: 14px;
-    color: rgba(148, 163, 184, 0.7);
-    text-decoration: none;
-    transition: color 0.2s;
-    cursor: pointer;
-    background: none;
-    border: none;
-    font-family: inherit;
-    padding: 0 0 4px;
-}
-
-    .navLink:hover {
-        color: rgba(167, 139, 250, 0.9);
-    }
-
-    .navLink::after {
-        content: '';
-        position: absolute;
-        left: 0;
-        right: 100%;
-        bottom: 0;
-        height: 2px;
-        border-radius: 2px;
-        background: linear-gradient(90deg, #a78bfa, #22d3ee);
-        transition: right 0.25s ease;
-    }
-
-    .navLink.active {
-        color: rgba(167, 139, 250, 0.95);
-    }
-
-        .navLink.active::after {
-            right: 0;
-        }
-
-/* Scroll progress bar */
-.scrollProgress {
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: 2px;
-    z-index: 200;
-    background: linear-gradient(90deg, #7c3aed, #22d3ee);
-    transition: width 0.1s ease-out;
-    box-shadow: 0 0 8px rgba(124, 58, 237, 0.6);
-}
-
-/* Mouse glow */
+/* ── ambient layers ── */
 .mouseGlow {
     position: fixed;
+    width: 480px;
+    height: 480px;
+    background: radial-gradient(
+        circle,
+        rgba(var(--accent-rgb), 0.07) 0%,
+        transparent 68%
+    );
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
     top: 0;
     left: 0;
-    width: 500px;
-    height: 500px;
-    border-radius: 50%;
+    transition: transform 0.06s linear;
+}
+
+.particles {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     pointer-events: none;
-    z-index: 1;
-    background: radial-gradient(circle, rgba(124, 58, 237, 0.08) 0%, transparent 70%);
-    transform: translate(-50%, -50%);
-    will-change: transform;
+    z-index: 0;
 }
 
-.navBtn {
-    padding: 8px 20px;
-    border-radius: 10px;
-    border: 1px solid rgba(124, 58, 237, 0.4);
-    background: rgba(124, 58, 237, 0.1);
-    font-family: inherit;
-    font-size: 14px;
-    font-weight: 600;
-    color: rgba(167, 139, 250, 0.9);
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-    .navBtn:hover {
-        background: rgba(124, 58, 237, 0.2);
-        border-color: rgba(167, 139, 250, 0.5);
-    }
-
-/* ── HERO ── */
-.hero {
-    position: relative;
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    padding: 200px 24px 80px;
-    overflow: hidden;
-}
-
-.orb1, .orb2, .orb3 {
-    pointer-events: none;
-    position: absolute;
-    border-radius: 50%;
-}
-
-.orb1 {
-    top: -150px;
-    left: -150px;
-    width: 700px;
-    height: 700px;
-    background: radial-gradient(circle, rgba(124, 58, 237, 0.22) 0%, transparent 65%);
-}
-
+.orb1,
 .orb2 {
-    bottom: 100px;
-    right: 450px;
-    width: 550px;
-    height: 550px;
-    background: radial-gradient(circle, rgba(6, 182, 212, 0.15) 0%, transparent 65%);
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(90px);
+    pointer-events: none;
+    z-index: 0;
 }
-
-.orb3 {
-    top: 40%;
-    left: 65%;
-    width: 350px;
-    height: 350px;
-    background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 65%);
+.orb1 {
+    width: 520px;
+    height: 520px;
+    background: rgba(var(--accent-rgb), 0.14);
+    top: -140px;
+    left: -140px;
+}
+.orb2 {
+    width: 380px;
+    height: 380px;
+    background: rgba(var(--accent-cyan-rgb), 0.08);
+    bottom: -80px;
+    right: -80px;
 }
 
 .grid {
-    pointer-events: none;
-    position: absolute;
+    position: fixed;
     inset: 0;
-    opacity: 0.03;
-    background-image: linear-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.15) 1px, transparent 1px);
-    background-size: 48px 48px;
+    background-image:
+        linear-gradient(rgba(var(--accent-rgb), 0.035) 1px, transparent 1px),
+        linear-gradient(
+            90deg,
+            rgba(var(--accent-rgb), 0.035) 1px,
+            transparent 1px
+        );
+    background-size: 52px 52px;
+    pointer-events: none;
+    z-index: 0;
 }
 
-/* Particles canvas */
-.particles {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-}
-
-.heroInner {
+/* ══════════════════════════════════════
+   Top bar — brand + auth buttons that appear
+   once the welcome card scrolls away
+══════════════════════════════════════ */
+.topBar {
     position: relative;
-    z-index: 2;
+    z-index: 30;
+    height: 60px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 clamp(16px, 3vw, 40px);
+    pointer-events: none;
+}
+
+.topBrand {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: rgb(var(--text-rgb));
+    opacity: 0;
+    transform: translateY(-10px);
+    transition:
+        opacity 0.35s ease,
+        transform 0.35s ease;
+}
+
+.topMark {
+    height: 22px;
+    width: auto;
+}
+.topActions {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition:
+        opacity 0.35s ease,
+        transform 0.35s ease;
+}
+
+.topShown {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.topSignIn {
+    background: rgba(var(--tint-rgb), 0.04);
+    border: 1px solid rgba(var(--tint-rgb), 0.12);
+    color: rgba(var(--text-rgb), 0.85);
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 0.45rem 1.1rem;
+    border-radius: 9px;
+    cursor: pointer;
+    transition:
+        background 0.2s,
+        border-color 0.2s;
+}
+.topSignIn:hover {
+    background: rgba(var(--tint-rgb), 0.08);
+    border-color: rgba(var(--accent-light-rgb), 0.32);
+}
+
+.topCreate {
+    background: linear-gradient(
+        135deg,
+        rgb(var(--accent-rgb)),
+        rgb(var(--accent-deep-rgb))
+    );
+    border: none;
+    color: rgb(var(--white-rgb));
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 0.45rem 1.1rem;
+    border-radius: 9px;
+    cursor: pointer;
+    box-shadow: 0 3px 16px rgba(var(--accent-rgb), 0.35);
+    transition: opacity 0.2s;
+}
+.topCreate:hover {
+    opacity: 0.88;
+}
+
+/* ══════════════════════════════════════
+   Stage
+══════════════════════════════════════ */
+.stage {
+    position: relative;
+    flex: 1;
     width: 100%;
-    max-width: 860px;
+    overflow: hidden;
+    z-index: 1;
+}
+
+/* ══════════════════════════════════════
+   Slides — big landscape cards
+══════════════════════════════════════ */
+.slide {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: min(85vw, 1460px);
+    height: min(77vh, 820px);
+    min-height: 440px;
+    transition:
+        transform 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 0.5s ease;
+}
+
+/* Visual styling lives on a separate, non-transformed child. Putting
+   border-radius + overflow:hidden + backdrop-filter on the same element
+   that carries the 3D transform causes a hairline rendering seam on its
+   rounded corners in Chromium/Firefox. */
+.slideCard {
+    width: 100%;
+    height: 100%;
+    border-radius: 26px;
+    background: rgba(var(--bg-elevated-rgb), 0.88);
+    border: 1px solid rgba(var(--accent-rgb), 0.22);
+    box-shadow: 0 16px 56px rgba(var(--black-rgb), 0.5);
+    backdrop-filter: blur(8px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.slideActive {
+    border-color: rgba(var(--accent-rgb), 0.55);
+    box-shadow:
+        0 16px 64px rgba(var(--accent-rgb), 0.2),
+        0 0 0 1px rgba(var(--accent-rgb), 0.18);
+}
+
+.slideOverlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(var(--overlay-rgb), 0.45);
+    border-radius: 26px;
+    z-index: 5;
+}
+
+/* ══════════════════════════════════════
+   Prev / Next buttons
+══════════════════════════════════════ */
+.navBtn {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 20;
+    background: rgba(var(--bg-elevated-rgb), 0.8);
+    border: 1px solid rgba(var(--accent-rgb), 0.3);
+    color: rgb(var(--accent-light-rgb));
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition:
+        background 0.2s,
+        border-color 0.2s,
+        transform 0.2s;
+}
+.navBtn:hover {
+    background: rgba(var(--accent-rgb), 0.22);
+    border-color: rgba(var(--accent-light-rgb), 0.55);
+    transform: translateY(-50%) scale(1.08);
+}
+.navPrev {
+    left: clamp(10px, 2vw, 36px);
+}
+.navNext {
+    right: clamp(10px, 2vw, 36px);
+}
+
+/* ══════════════════════════════════════
+   Bottom bar
+══════════════════════════════════════ */
+.bottomBar {
+    position: relative;
+    z-index: 10;
+    height: 64px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 20px;
+    justify-content: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+}
+
+.cardCaption {
+    font-size: 0.72rem;
+    color: rgba(var(--text-rgb), 0.35);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin: 0;
+}
+
+.dots {
+    display: flex;
+    gap: 0.5rem;
+}
+.dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(var(--accent-rgb), 0.28);
+    cursor: pointer;
+    transition:
+        background 0.25s,
+        transform 0.25s;
+    padding: 0;
+}
+.dotActive {
+    background: rgb(var(--accent-rgb));
+    transform: scale(1.4);
+}
+
+/* ══════════════════════════════════════
+   Welcome card
+══════════════════════════════════════ */
+.cardWelcome {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.25rem;
+    padding: 2rem clamp(1.5rem, 6vw, 5rem);
     text-align: center;
-    opacity: 0;
-    transform: translateY(24px);
-    transition: opacity 0.8s ease, transform 0.8s ease;
 }
 
-    .heroInner.visible {
-        opacity: 1;
-        transform: translateY(0);
-    }
-
-/* Badge */
-.heroBadge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    border-radius: 100px;
-    border: 1px solid rgba(124, 58, 237, 0.3);
-    background: rgba(124, 58, 237, 0.08);
-    font-size: 12px;
-    color: rgba(167, 139, 250, 0.8);
-    letter-spacing: 0.05em;
-}
-
-.badgeDot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #a78bfa;
-    animation: blink 2s ease-in-out infinite;
-}
-
-@keyframes blink {
-    0%, 100% {
-        opacity: 1;
-    }
-
-    50% {
-        opacity: 0.3;
-    }
-}
-
-/* Logo */
-.logoWrap {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.pulseRing {
-    position: absolute;
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    background: rgba(124, 58, 237, 0.18);
-    animation: pulse 2.4s ease-in-out infinite;
-}
-
-@keyframes pulse {
-    0%, 100% {
-        transform: scale(1);
-        opacity: 0.7;
-    }
-
-    50% {
-        transform: scale(1.45);
-        opacity: 0;
-    }
-}
-
-.logoBox {
-    position: relative;
-    width: 80px;
-    height: 80px;
-    border-radius: 22px;
-    border: 1px solid rgba(124, 58, 237, 0.45);
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.28), rgba(79, 70, 229, 0.18));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 0 40px rgba(124, 58, 237, 0.28);
-}
-
-/* Brand */
-.brandName {
-    font-size: 80px;
+.wcName {
+    font-size: clamp(2.6rem, 5.5vw, 4.2rem);
     font-weight: 800;
     letter-spacing: -0.03em;
-    background: linear-gradient(135deg, #a78bfa 0%, #818cf8 45%, #22d3ee 100%);
+    line-height: 1;
+    background: linear-gradient(
+        135deg,
+        rgb(var(--text-rgb)) 25%,
+        rgb(var(--accent-light-rgb)) 55%,
+        rgb(var(--accent-cyan-rgb)) 100%
+    );
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    line-height: 1.05;
     margin: 0;
 }
 
-.brandSub {
-    font-size: 12px;
-    letter-spacing: 0.35em;
-    text-transform: uppercase;
-    color: rgba(167, 139, 250, 0.55);
-    font-weight: 500;
-    margin: 6px 0 0;
+.wcLogo {
+    height: 64px;
+    width: auto;
+    filter: drop-shadow(0 0 18px rgba(var(--accent-rgb), 0.45));
 }
 
-/* Divider */
-.divider {
+.wcSub {
+    font-size: 0.82rem;
+    letter-spacing: 0.34em;
+    text-transform: uppercase;
+    color: rgba(var(--accent-light-rgb), 0.65);
+    margin: 0.2rem 0 0;
+}
+
+.wcDivider {
     display: flex;
     align-items: center;
-    gap: 12px;
-    width: 200px;
+    gap: 0.7rem;
 }
-
-.divLine {
-    flex: 1;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(124, 58, 237, 0.4));
-}
-
+.divLine,
 .divLineR {
-    flex: 1;
+    display: block;
+    width: 64px;
     height: 1px;
-    background: linear-gradient(90deg, rgba(124, 58, 237, 0.4), transparent);
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(var(--accent-rgb), 0.5)
+    );
 }
-
+.divLineR {
+    background: linear-gradient(
+        90deg,
+        rgba(var(--accent-rgb), 0.5),
+        transparent
+    );
+}
 .divStar {
-    color: rgba(124, 58, 237, 0.5);
-    font-size: 11px;
+    color: rgb(var(--accent-rgb));
+    font-size: 0.65rem;
 }
 
-/* Description */
-.description {
-    max-width: 520px;
-    font-size: 18px;
-    line-height: 1.75;
-    color: rgba(148, 163, 184, 0.85);
+.wcTagline {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: rgba(var(--text-rgb), 0.6);
     margin: 0;
+    max-width: 460px;
 }
 
-/* Buttons */
-.buttons {
+.wcButtons {
     display: flex;
-    gap: 12px;
-    padding-top: 8px;
+    gap: 0.9rem;
     flex-wrap: wrap;
     justify-content: center;
 }
 
 .btnPrimary {
-    position: relative;
-    overflow: hidden;
-    padding: 14px 36px;
-    border-radius: 14px;
-    border: none;
-    font-family: inherit;
-    font-size: 15px;
-    font-weight: 600;
-    color: #fff;
-    cursor: pointer;
-    background: linear-gradient(135deg, #7c3aed, #4f46e5);
-    box-shadow: 0 0 24px rgba(124, 58, 237, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    transition: transform 0.15s, box-shadow 0.15s;
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    gap: 0.5rem;
+    background: linear-gradient(
+        135deg,
+        rgb(var(--accent-rgb)),
+        rgb(var(--accent-deep-rgb))
+    );
+    border: none;
+    color: rgb(var(--white-rgb));
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 0.75rem 1.8rem;
+    border-radius: 12px;
+    cursor: pointer;
+    transition:
+        opacity 0.2s,
+        transform 0.15s;
+    box-shadow: 0 4px 22px rgba(var(--accent-rgb), 0.38);
 }
-
-    .btnPrimary:hover {
-        transform: scale(1.03);
-        box-shadow: 0 0 32px rgba(124, 58, 237, 0.5);
-    }
-
-    .btnPrimary:active {
-        transform: scale(0.97);
-    }
+.btnPrimary:hover {
+    opacity: 0.88;
+    transform: translateY(-1px);
+}
 
 .btnSecondary {
-    padding: 14px 36px;
-    border-radius: 14px;
-    border: 1px solid rgba(124, 58, 237, 0.32);
-    background: rgba(124, 58, 237, 0.06);
-    font-family: inherit;
-    font-size: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: rgba(var(--tint-rgb), 0.04);
+    border: 1px solid rgba(var(--tint-rgb), 0.12);
+    color: rgba(var(--text-rgb), 0.8);
+    font-size: 0.9rem;
     font-weight: 600;
-    color: rgba(167, 139, 250, 0.9);
+    padding: 0.75rem 1.8rem;
+    border-radius: 12px;
     cursor: pointer;
-    transition: transform 0.15s, border-color 0.15s, background 0.15s;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    transition:
+        background 0.2s,
+        border-color 0.2s,
+        transform 0.15s;
+}
+.btnSecondary:hover {
+    background: rgba(var(--tint-rgb), 0.08);
+    border-color: rgba(var(--accent-light-rgb), 0.32);
+    transform: translateY(-1px);
 }
 
-    .btnSecondary:hover {
-        transform: scale(1.03);
-        border-color: rgba(167, 139, 250, 0.5);
-        background: rgba(124, 58, 237, 0.12);
-    }
-
-    .btnSecondary:active {
-        transform: scale(0.97);
-    }
-
-.footerHint {
-    font-size: 12px;
-    color: rgba(100, 116, 139, 0.55);
-    margin: 8px 0 0;
-    letter-spacing: 0.03em;
-}
-
-/* Scroll hint */
-.scrollHint {
-    position: absolute;
-    bottom: 32px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    color: rgba(148, 163, 184, 0.35);
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    animation: bounce 2s ease-in-out infinite;
-    z-index: 2;
-}
-
-@keyframes bounce {
-    0%, 100% {
-        transform: translateX(-50%) translateY(0);
-    }
-
-    50% {
-        transform: translateX(-50%) translateY(6px);
-    }
-}
-
-/* ── FEATURES ── */
-.features {
-    position: relative;
-    padding: 120px 48px;
-    background: linear-gradient(180deg, #0d0b1e 0%, #100d24 50%, #0d0b1e 100%);
-}
-
-.featuresInner {
-    max-width: 1200px;
-    margin: 0 auto;
-}
-
-.sectionLabel {
-    text-align: center;
-    font-size: 11px;
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
-    color: rgba(167, 139, 250, 0.55);
-    font-weight: 500;
-    margin-bottom: 16px;
-}
-
-.sectionTitle {
-    text-align: center;
-    font-size: 42px;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    color: rgba(226, 232, 240, 0.92);
-    margin: 0 0 12px;
-}
-
-.sectionSubtitle {
-    text-align: center;
-    font-size: 16px;
-    color: rgba(148, 163, 184, 0.7);
-    max-width: 480px;
-    margin: 0 auto 64px;
-    line-height: 1.6;
-}
-
-/* Features — big card + 2 small */
-.featGrid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto;
-    gap: 20px;
-}
-
-.featCardBig {
-    grid-row: span 2;
-}
-
-.card {
-    position: relative;
-    padding: 36px 32px;
-    border-radius: 20px;
-    border: 1px solid rgba(124, 58, 237, 0.15);
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.07), rgba(15, 12, 30, 0.85));
-    transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-    opacity: 0;
-    transform: translateY(32px);
-}
-
-    .card.visible {
-        opacity: 1;
-        transform: translateY(0);
-    }
-
-    .card:hover {
-        transform: translateY(-4px);
-        border-color: rgba(124, 58, 237, 0.35);
-        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3), 0 0 24px rgba(124, 58, 237, 0.1);
-    }
-
-    .card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 24px;
-        right: 24px;
-        height: 1px;
-        border-radius: 1px;
-        background: linear-gradient(90deg, transparent, rgba(167, 139, 250, 0.4), transparent);
-    }
-
-.cardIcon {
-    width: 52px;
-    height: 52px;
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 20px;
-}
-
-.cardTitle {
-    font-size: 18px;
-    font-weight: 600;
-    color: rgba(226, 232, 240, 0.92);
-    margin: 0 0 10px;
-}
-
-.cardText {
-    font-size: 14px;
-    line-height: 1.65;
-    color: rgba(148, 163, 184, 0.7);
+.wcHint {
+    font-size: 0.72rem;
+    color: rgba(var(--text-rgb), 0.28);
+    letter-spacing: 0.04em;
     margin: 0;
 }
 
-.featCardBig .cardTitle {
-    font-size: 22px;
-    margin-bottom: 14px;
-}
-
-.featCardBig .cardText {
-    font-size: 15px;
-}
-
-.featCardBig .cardIcon {
-    width: 64px;
-    height: 64px;
-    border-radius: 18px;
-    margin-bottom: 28px;
-}
-
-/* ── TECH STACK ── */
-.tech {
-    padding: 100px 48px;
-    background: #0d0b1e;
-}
-
-.techInner {
-    max-width: 1200px;
-    margin: 0 auto;
-}
-
-.techGrid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    margin-top: 0;
-}
-
-.techCard {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 14px;
-    padding: 32px 20px;
-    border-radius: 16px;
-    border: 1px solid rgba(124, 58, 237, 0.12);
-    background: rgba(124, 58, 237, 0.04);
-    transition: transform 0.25s, border-color 0.25s;
-    opacity: 0;
-    transform: translateY(24px);
-}
-
-    .techCard.visible {
-        opacity: 1;
-        transform: translateY(0);
-    }
-
-    .techCard:hover {
-        transform: translateY(-3px);
-        border-color: rgba(124, 58, 237, 0.3);
-    }
-
-.techIcon {
-    width: 56px;
-    height: 56px;
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 28px;
-}
-
-.techName {
-    font-size: 15px;
-    font-weight: 600;
-    color: rgba(226, 232, 240, 0.88);
-    margin: 0;
-}
-
-.techDesc {
-    font-size: 12px;
-    color: rgba(148, 163, 184, 0.6);
-    text-align: center;
-    margin: 0;
-    line-height: 1.5;
-}
-
-/* ── FOOTER ── */
-.footer {
-    border-top: 1px solid rgba(124, 58, 237, 0.1);
-    padding: 32px 24px;
-    text-align: center;
-    font-size: 12px;
-    color: rgba(100, 116, 139, 0.45);
-    letter-spacing: 0.03em;
-}
-
-.footerLink {
-    color: rgba(167, 139, 250, 0.7);
+.wcVault {
+    font-size: 0.74rem;
+    color: rgba(var(--accent-light-rgb), 0.5);
     text-decoration: none;
     transition: color 0.2s;
 }
+.wcVault:hover {
+    color: rgb(var(--accent-light-rgb));
+}
 
-    .footerLink:hover {
-        color: rgba(167, 139, 250, 1);
+/* ══════════════════════════════════════
+   Split cards — text left, visual right
+══════════════════════════════════════ */
+.cardSplit {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1.05fr 1fr;
+    gap: clamp(2rem, 4vw, 3.5rem);
+    align-items: center;
+    /* keep both columns pulled toward the centre of the wide card
+       instead of hugging its edges */
+    width: 100%;
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: clamp(1.5rem, 3vw, 2.5rem);
+    min-width: 0;
+    min-height: 0;
+}
+
+.splitInfo {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.eyebrow {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(var(--accent-light-rgb), 0.6);
+}
+
+.splitTitle {
+    font-size: clamp(1.6rem, 3vw, 2.4rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    color: rgb(var(--text-rgb));
+    margin: 0;
+}
+
+.splitDesc {
+    font-size: 0.92rem;
+    line-height: 1.7;
+    color: rgba(var(--text-rgb), 0.58);
+    margin: 0;
+    max-width: 420px;
+}
+
+.bullets {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.bullets li {
+    font-size: 0.84rem;
+    color: rgba(var(--text-rgb), 0.7);
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+}
+.bullets li::before {
+    content: "✦";
+    color: rgb(var(--accent-rgb));
+    font-size: 0.6rem;
+}
+
+.featureTag {
+    font-size: 0.72rem;
+    color: rgb(var(--accent-light-rgb));
+    background: rgba(var(--accent-rgb), 0.12);
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    border-radius: 20px;
+    padding: 0.28rem 0.85rem;
+    letter-spacing: 0.04em;
+}
+
+.splitVisual {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+}
+
+/* ══════════════════════════════════════
+   Chat frame (inside the chat card)
+══════════════════════════════════════ */
+.chatFrame {
+    width: min(360px, 100%);
+    /* Without this a flex item's shrink floor defaults to its content's
+       intrinsic width, not 0 - the fixed-width footer icon row
+       (.chatIconBtn x2 + .chatSend, all 42px) was enough on its own to
+       stop this card from shrinking to fit a narrow phone, so it
+       overflowed .splitVisual instead. */
+    min-width: 0;
+    height: min(460px, 100%);
+    background: rgb(var(--bg-rgb));
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    border-radius: 20px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 40px rgba(var(--black-rgb), 0.4);
+}
+
+/* Same tokens as the real ChatWindow.module.css's own .header (padding,
+   gap, colors) below - this is meant to read as an actual screenshot of
+   the app, not an invented lookalike. */
+.chatHead {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 18px;
+    background: rgba(var(--bg-page-rgb), 0.6);
+    border-bottom: 1px solid rgba(var(--accent-rgb), 0.12);
+    flex-shrink: 0;
+}
+
+.chatHeadInfo {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+
+.chatName {
+    font-size: 15px;
+    font-weight: 600;
+    color: rgb(var(--text-rgb));
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* The demo Sam is always "online" - the real app only colors this text
+   green for that state (no dot marker), so it's just hardcoded here. */
+.chatStatus {
+    font-size: 12px;
+    color: rgb(var(--success-rgb));
+}
+
+.chatInfoBtn {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    background: rgba(var(--accent-rgb), 0.05);
+    color: rgba(var(--accent-light-rgb), 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.chatBody {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    scrollbar-width: none;
+}
+.chatBody::-webkit-scrollbar {
+    display: none;
+}
+
+/* Same as the real ChatWindow.module.css's own .bubbleRow / .bubbleRow.own
+   - no avatar sits next to a message there, just alignment, so this
+   doesn't need row-reverse or flex-end either. */
+.chatRow {
+    display: flex;
+    justify-content: flex-start;
+    min-width: 0;
+    animation: msgIn 0.26s ease-out;
+}
+@keyframes msgIn {
+    from {
+        opacity: 0;
+        transform: translateY(7px) scale(0.95);
     }
-
-/* ── RESPONSIVE ── */
-@media (max-width: 900px) {
-    .navbar {
-        padding: 16px 24px;
+    to {
+        opacity: 1;
+        transform: none;
     }
+}
 
-    .navLinks {
-        gap: 16px;
+.chatRowOwn {
+    justify-content: flex-end;
+}
+
+.av {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+.avS {
+    background: linear-gradient(135deg, #0e7490, rgb(var(--accent-cyan-rgb)));
+    color: rgb(var(--white-rgb));
+}
+
+/* Same values as the real ChatWindow.module.css's own .bubble/.own .bubble
+   (padding, radius, colors) - this is meant to look like an actual
+   screenshot of the app, not an invented lookalike, so it borrows the
+   exact tokens rather than approximating them. */
+.bubble {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    max-width: 70%;
+    padding: 8px 12px;
+    border-radius: 16px;
+    border-bottom-left-radius: 6px;
+    background: rgba(var(--accent-rgb), 0.1);
+    border: 1px solid rgba(var(--accent-rgb), 0.14);
+    color: rgba(var(--text-rgb), 0.95);
+    font-size: 14px;
+    line-height: 1.45;
+    word-break: break-word;
+}
+.bubbleOwn {
+    border-radius: 16px;
+    border-bottom-right-radius: 6px;
+    background: linear-gradient(
+        135deg,
+        rgba(var(--accent-rgb), 0.4),
+        rgba(var(--accent2-rgb), 0.35)
+    );
+    border-color: rgba(var(--accent-light-rgb), 0.3);
+}
+.bubbleOther {
+    border-bottom-left-radius: 6px;
+}
+
+.chatMeta {
+    align-self: flex-end;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10.5px;
+    color: rgba(var(--text-muted-rgb), 0.6);
+}
+.chatCheck {
+    color: rgba(var(--accent-light-rgb), 0.95);
+}
+
+/* Same tokens as the real .footer/.inputRow/.attachBtn/.micBtn/.input/
+   .sendBtn - not an approximation, the literal values used there. */
+.chatFoot {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 18px;
+    border-top: 1px solid rgba(var(--accent-rgb), 0.12);
+    background: rgba(var(--bg-page-rgb), 0.6);
+    flex-shrink: 0;
+}
+.chatInput {
+    flex: 1;
+    min-width: 0;
+    background: rgba(var(--accent-rgb), 0.05);
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
+    border-radius: 12px;
+    padding: 11px 16px;
+    font-size: 14px;
+    color: rgba(var(--text-rgb), 0.35);
+}
+.chatIconBtn {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
+    background: rgba(var(--accent-rgb), 0.05);
+    color: rgba(var(--accent-light-rgb), 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.chatSend {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: linear-gradient(
+        135deg,
+        rgb(var(--accent-rgb)),
+        rgb(var(--accent2-rgb))
+    );
+    box-shadow: 0 0 16px rgba(var(--accent-rgb), 0.3);
+    border: none;
+    color: rgb(var(--white-rgb));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    cursor: default;
+}
+
+/* ══════════════════════════════════════
+   Card visuals (privacy / speed / security)
+══════════════════════════════════════ */
+.privRows {
+    width: min(380px, 100%);
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+.privRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    background: rgba(var(--tint-rgb), 0.03);
+    border: 1px solid rgba(var(--tint-rgb), 0.06);
+    border-radius: 9px;
+    padding: 0.55rem 1rem;
+}
+.privKey {
+    font-size: 0.76rem;
+    color: rgba(var(--text-rgb), 0.38);
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+}
+/* A run of "•" characters has no natural break point and would otherwise
+   force .privRow wider than its column on a narrow phone - same overflow
+   class as .chatFrame's, just from an unbreakable string instead of a
+   fixed-width icon row. */
+.privVal {
+    font-size: 0.78rem;
+    color: rgba(var(--accent-light-rgb), 0.55);
+    letter-spacing: 0.1em;
+    font-family: monospace;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.speedWrap {
+    width: min(380px, 100%);
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    align-items: center;
+}
+.speedTrack {
+    width: 100%;
+    height: 7px;
+    border-radius: 4px;
+    background: rgba(var(--tint-rgb), 0.07);
+    overflow: hidden;
+}
+.speedFill {
+    height: 100%;
+    width: 0;
+    border-radius: 4px;
+    background: linear-gradient(
+        90deg,
+        rgb(var(--accent-rgb)),
+        rgb(var(--accent-cyan-rgb))
+    );
+    animation:
+        speedFill 2.2s ease-out forwards,
+        speedPulse 2.2s 2.2s ease-in-out infinite;
+}
+@keyframes speedFill {
+    from {
+        width: 0;
     }
-
-    .brandName {
-        font-size: 56px;
+    to {
+        width: 100%;
     }
+}
+@keyframes speedPulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.55;
+    }
+}
+.speedLabel {
+    font-size: 0.76rem;
+    color: rgba(var(--accent-cyan-rgb), 0.65);
+}
 
-    .featGrid {
+.phraseGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    width: min(400px, 100%);
+    min-width: 0;
+}
+.phraseWord {
+    background: rgba(var(--accent-rgb), 0.1);
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
+    border-radius: 8px;
+    padding: 0.45rem 0.5rem;
+    font-size: 0.78rem;
+    color: rgba(var(--accent-light-rgb), 0.82);
+    text-align: center;
+    font-family: monospace;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ══════════════════════════════════════
+   Reduced motion
+══════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+    .slide {
+        transition: none !important;
+    }
+    .speedFill {
+        animation: none;
+        width: 100%;
+    }
+}
+
+/* ══════════════════════════════════════
+   Narrow screens
+══════════════════════════════════════ */
+@media (max-width: 760px) {
+    /* Centered fixed-overlay positioning (the desktop rule above) works
+       because there's enough room either side of it for .topBar's brand
+       (left) and Sign in/Create Account (right) to coexist on the same
+       row. On a narrow phone the three together are simply wider than
+       the screen, which is what was overlapping. Dropping the fixed
+       positioning turns this into a normal flex item instead - as the
+       first child in .root's own column layout, it lands as its own row
+       right above .topBar, reserving real height so nothing below it
+       needs to guess how much space to leave. */
+    .cornerSwitchers {
+        position: relative;
+        top: auto;
+        left: auto;
+        transform: none;
+        width: 100%;
+        justify-content: center;
+        padding-top: 14px;
+    }
+    .slide {
+        width: 88vw;
+        /* A bit shorter than before - .cornerSwitchers now reserves its
+           own real row above .topBar on mobile, so .stage has slightly
+           less height to give the slide than it used to. */
+        height: 64vh;
+        min-height: 0;
+    }
+    .cardSplit {
+        width: 76vw;
         grid-template-columns: 1fr;
+        gap: 1.2rem;
+        overflow-x: hidden;
+        overflow-y: auto;
+        align-items: start;
+        padding: 1.4rem;
     }
-
-    .featCardBig {
-        grid-row: span 1;
+    .splitVisual {
+        height: auto;
     }
-
-    .techGrid {
-        grid-template-columns: repeat(2, 1fr);
+    .chatFrame {
+        height: 460px;
     }
-
-    .features, .tech {
-        padding: 80px 24px;
-    }
-
-    .sectionTitle {
-        font-size: 30px;
+    .navBtn {
+        width: 38px;
+        height: 38px;
     }
 }

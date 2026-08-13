@@ -1,0 +1,136 @@
+import { apiFetch } from "../lib/apiFetch";
+import { deriveKeys } from "../crypto/kdf";
+
+export interface UserSettingsResponse {
+    username: string;
+    bio: string;
+    phone: string;
+    email: string;
+    notificationsEnabled: boolean;
+    groupNotifications: boolean;
+    notificationSound: string;
+    totpEnabled: boolean;
+    showLastSeen: boolean;
+    showOnlineStatus: boolean;
+    readReceiptsEnabled: boolean;
+    showPhoneNumber: "everyone" | "contacts" | "nobody";
+    showBio: "everyone" | "contacts" | "nobody";
+    showAvatar: "everyone" | "contacts" | "nobody";
+    showEmail: "everyone" | "contacts" | "nobody";
+    whoCanAddMe: "everyone" | "contacts";
+    theme: "system" | "dark" | "light";
+    language: "en" | "uk" | "de";
+}
+
+export interface UpdateAccountFieldsRequest {
+    username?: string;
+    bio?: string;
+    phone?: string;
+    email?: string;
+}
+
+export async function getUserSettings(): Promise<UserSettingsResponse> {
+    const res = await apiFetch("api/settings/get", {
+        credentials: "include",
+    });
+    return res.json();
+}
+
+export async function updateAccountFields(
+    payload: UpdateAccountFieldsRequest,
+): Promise<{ ok: boolean; reason?: string }> {
+    const res = await apiFetch("api/settings/update-account", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+    });
+    if (res.ok) return { ok: true };
+    const body = await res.json().catch(() => null);
+    return { ok: false, reason: body?.reason };
+}
+
+export async function deleteAccount(password: string, kdfSalt: string): Promise<{ ok: boolean; reason?: string }> {
+    const { authKey } = await deriveKeys(password, kdfSalt);
+
+    const res = await apiFetch("/api/settings/delete-account", {
+        method: "POST",
+        body: JSON.stringify({ authKey }),
+    });
+
+    if (res.status === 422) {
+        const body = await res.json().catch(() => null);
+        return { ok: false, reason: body?.reason ?? "invalid_password" };
+    }
+
+    if (!res.ok) {
+        return { ok: false, reason: "unknown_error" };
+    }
+
+    return { ok: true };
+}
+
+export async function getKdfSalt(): Promise<string> {
+    const res = await apiFetch("/api/settings/kdf-salt");
+    return (await res.json()).kdfSalt;
+}
+
+export interface IdentityKeysResponse {
+    ecdhPublicKey: string | null;
+    wrappedEcdhPrivateKey: string | null;
+}
+
+export async function getIdentityKeys(): Promise<IdentityKeysResponse> {
+    const res = await apiFetch("/api/settings/identity-keys");
+    return res.json();
+}
+
+export interface UpdateNotificationSettingsRequest {
+    notificationsEnabled?: boolean;
+    groupNotifications?: boolean;
+    notificationSound?: string;
+}
+
+export async function updateNotificationSettings(
+    payload: UpdateNotificationSettingsRequest,
+): Promise<void> {
+    await apiFetch("/api/settings/notifications", {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+    });
+}
+
+export interface UpdatePrivacySettingsRequest {
+    showLastSeen?: boolean;
+    showOnlineStatus?: boolean;
+    readReceiptsEnabled?: boolean;
+    showPhoneNumber?: "everyone" | "contacts" | "nobody";
+    showBio?: "everyone" | "contacts" | "nobody";
+    showAvatar?: "everyone" | "contacts" | "nobody";
+    showEmail?: "everyone" | "contacts" | "nobody";
+    whoCanAddMe?: "everyone" | "contacts";
+    totpEnabled?: boolean;
+}
+
+export async function updatePrivacySettings(
+    payload: UpdatePrivacySettingsRequest,
+): Promise<void> {
+    await apiFetch("/api/settings/privacy", {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+    });
+}
+
+export interface UpdateChatSettingsRequest {
+    theme?: "system" | "dark" | "light";
+    language?: "en" | "uk" | "de";
+}
+
+export async function updateChatSettings(
+    payload: UpdateChatSettingsRequest,
+): Promise<void> {
+    await apiFetch("/api/settings/chats", {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+    });
+}

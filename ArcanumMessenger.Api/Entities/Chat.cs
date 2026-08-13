@@ -8,6 +8,7 @@ public class Chat
     public string? Description { get; set; }
     public Guid CreatedBy { get; set; }
     public bool IsDeleted { get; set; }
+    public DateTime? DeletedAt { get; set; }
     public DateTime CreatedAt { get; set; }
 
     public User Creator { get; set; } = null!;

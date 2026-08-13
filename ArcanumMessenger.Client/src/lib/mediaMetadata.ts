@@ -1,0 +1,149 @@
+/**
+ * Reads dimensions/duration from a local file before it's encrypted and
+ * uploaded. The server can no longer decode chat media itself once it's
+ * ciphertext, so this - not SkiaSharp on the server - is now the only place
+ * this information can come from.
+ */
+
+export interface MediaDimensions {
+    width?: number;
+    height?: number;
+    durationSeconds?: number;
+}
+
+export async function readMediaMetadata(file: File): Promise<MediaDimensions> {
+    if (file.type.startsWith("image/")) {
+        try {
+            const bitmap = await createImageBitmap(file);
+            const { width, height } = bitmap;
+            bitmap.close();
+            return { width, height };
+        } catch {
+            return {};
+        }
+    }
+
+    if (file.type.startsWith("video/")) {
+        return new Promise((resolve) => {
+            const video = document.createElement("video");
+            video.preload = "metadata";
+            video.muted = true;
+            const url = URL.createObjectURL(file);
+            video.src = url;
+            video.onloadedmetadata = () => {
+                const result = { width: video.videoWidth, height: video.videoHeight, durationSeconds: video.duration };
+                URL.revokeObjectURL(url);
+                resolve(result);
+            };
+            video.onerror = () => {
+                URL.revokeObjectURL(url);
+                resolve({});
+            };
+        });
+    }
+
+    if (file.type.startsWith("audio/")) {
+        return new Promise((resolve) => {
+            const audio = document.createElement("audio");
+            audio.preload = "metadata";
+            const url = URL.createObjectURL(file);
+            audio.src = url;
+
+            let settled = false;
+            const finish = (result: MediaDimensions) => {
+                if (settled) return;
+                settled = true;
+                window.clearTimeout(timeoutId);
+                URL.revokeObjectURL(url);
+                resolve(result);
+            };
+            const timeoutId = window.setTimeout(() => finish({}), 6000);
+
+            audio.onloadedmetadata = () => {
+                if (Number.isFinite(audio.duration)) {
+                    finish({ durationSeconds: audio.duration });
+                    return;
+                }
+                // A MediaRecorder-produced file (voice messages) has no
+                // duration in its container, so Chrome reports Infinity
+                // here - a known quirk, not a broken recording. Seeking
+                // past the end forces the browser to actually probe the
+                // file and discover the real duration, which then shows up
+                // once that seek settles.
+                audio.currentTime = Number.MAX_SAFE_INTEGER;
+                audio.ontimeupdate = () => {
+                    finish(Number.isFinite(audio.duration) ? { durationSeconds: audio.duration } : {});
+                };
+            };
+            audio.onerror = () => finish({});
+        });
+    }
+
+    return {};
+}
+
+const THUMBNAIL_MAX_EDGE = 320;
+
+// Grabs the first frame of a local video file as a small JPEG - done here,
+// on the plain local File before it's ever encrypted, because that's the
+// only point this is cheap: no network, no decrypting anything, the
+// browser just needs to decode one frame of a file already sitting on
+// disk. The result gets encrypted separately and uploaded as the video's
+// thumbnail (see chatMediaCrypto.ts).
+export async function extractVideoFirstFrame(file: File): Promise<Blob | null> {
+    return new Promise((resolve) => {
+        const video = document.createElement("video");
+        video.preload = "auto";
+        video.muted = true;
+        video.playsInline = true;
+        const url = URL.createObjectURL(file);
+        video.src = url;
+
+        let settled = false;
+        const finish = (result: Blob | null) => {
+            if (settled) return;
+            settled = true;
+            window.clearTimeout(timeoutId);
+            URL.revokeObjectURL(url);
+            resolve(result);
+        };
+        // Some containers (seen in practice with certain screen-recording
+        // exports) report a real width/height but never a usable duration -
+        // video.duration comes back NaN even once frame data is available.
+        // NaN/2 is NaN, and setting currentTime to NaN is simply ignored by
+        // the spec, so `seeked` would never fire and this would hang
+        // forever with no error either. This timeout is the actual
+        // guarantee that a broken file resolves null instead of leaving
+        // the caller's upload flow waiting indefinitely.
+        const timeoutId = window.setTimeout(() => finish(null), 6000);
+
+        video.onloadeddata = () => {
+            // Not currentTime = 0: the element is already there after
+            // loadeddata, so assigning the same value can complete without
+            // ever firing `seeked` (leaving this promise hanging), and
+            // frame zero is a black/blank fade-in often enough that the
+            // resulting "preview" is just a dark rectangle. Nudging a
+            // fraction of a second in guarantees a real seek and lands on
+            // actual picture, while staying inside even very short clips.
+            const duration = video.duration;
+            video.currentTime = Number.isFinite(duration) && duration > 0
+                ? Math.min(0.3, duration / 2)
+                : 0.1;
+        };
+        video.onseeked = () => {
+            const scale = Math.min(1, THUMBNAIL_MAX_EDGE / Math.max(video.videoWidth, video.videoHeight));
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+            canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+
+            const ctx = canvas.getContext("2d");
+            if (!ctx) {
+                finish(null);
+                return;
+            }
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob((blob) => finish(blob), "image/jpeg", 0.8);
+        };
+        video.onerror = () => finish(null);
+    });
+}

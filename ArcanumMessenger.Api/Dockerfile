@@ -1,9 +1,10 @@
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
-RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+# libfontconfig1 is a runtime dependency of SkiaSharp's native library (used
+# for thumbnail generation), not otherwise needed by anything else here.
+RUN apt-get update && apt-get install -y --no-install-recommends curl libfontconfig1 && rm -rf /var/lib/apt/lists/*
 USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
-EXPOSE 8081
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
