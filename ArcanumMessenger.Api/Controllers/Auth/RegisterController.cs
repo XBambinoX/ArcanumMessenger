@@ -286,6 +286,17 @@ public class RegisterController(
             language = request.Language;
         }
 
+        // Same as language: the theme picked before signing up has to be
+        // saved here, or the new account starts on the "system" default and
+        // AppPage applies that over the user's choice on first load.
+        var theme = "system";
+        if (request.Theme is not null)
+        {
+            if (!PrivacyEnumConverters.TryParseThemes(request.Theme, out _))
+                return BadRequest(new FinalizeRegistrationResponse(Success: false, Reason: "invalid_theme"));
+            theme = request.Theme;
+        }
+
         // One DEK per user encrypts all of their profile fields. It is stored
         // only in its wrapped (KEK-encrypted) form — the KEK itself never
         // enters the database.
@@ -340,6 +351,7 @@ public class RegisterController(
                 UsernameEnc = usernameEnc,
                 EmailEnc = publicEmailEnc,
                 Language = language,
+                Theme = theme,
                 UpdatedAt = now
             }
         };

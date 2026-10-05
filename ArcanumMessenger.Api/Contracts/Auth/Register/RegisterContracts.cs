@@ -27,7 +27,7 @@
     public record ConfirmRecoveryRequest(string SessionId, string Phrase1Auth, string Phrase2Auth);
     public record ConfirmRecoveryResponse(bool Success, string? Reason = null);
 
-    public record FinalizeRegistrationRequest(string SessionId, string? Language = null);
+    public record FinalizeRegistrationRequest(string SessionId, string? Language = null, string? Theme = null);
     public record FinalizeRegistrationResponse(
         bool Success, string? Reason = null,
         string? EcdhPublicKey = null, string? WrappedEcdhPrivateKey = null);

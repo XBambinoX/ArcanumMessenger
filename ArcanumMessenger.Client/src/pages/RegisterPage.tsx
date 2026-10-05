@@ -21,6 +21,7 @@ import {
 import { toBase64, fromBase64 } from "../crypto/encoding";
 import * as sessionKeys from "../lib/sessionKeys";
 import { spreadPastedCode } from "../lib/codeInput";
+import { getTheme } from "../lib/theme";
 
 import { useNavigate } from "react-router";
 import zxcvbn from "zxcvbn";
@@ -401,7 +402,7 @@ export default function RegisterPage() {
         setLoading(true);
         try {
             const { success, reason, ecdhPublicKey, wrappedEcdhPrivateKey } =
-                await finalizeRegistration(sessionId!, interfaceLanguage);
+                await finalizeRegistration(sessionId!, interfaceLanguage, getTheme());
             if (!success) {
                 setError(
                     reason === "email_taken"
