@@ -34,6 +34,7 @@ import {
 } from "../crypto/ecdh";
 import { toBase64, fromBase64 } from "../crypto/encoding";
 import * as sessionKeys from "../lib/sessionKeys";
+import { spreadPastedCode } from "../lib/codeInput";
 import { useLanguage } from "../lib/language";
 import { AUTH_COMMON, LOGIN_TRANSLATIONS } from "../lib/authTranslations";
 
@@ -249,6 +250,17 @@ export default function LoginPage() {
         if (e.key === "Backspace" && !code[index] && index > 0) {
             codeInputs.current[index - 1]?.focus();
         }
+    };
+
+    const handleCodePaste = (
+        index: number,
+        e: React.ClipboardEvent<HTMLInputElement>,
+    ) => {
+        const pasted = spreadPastedCode(code, index, e.clipboardData.getData("text"));
+        if (!pasted) return;
+        e.preventDefault();
+        setCode(pasted.code);
+        codeInputs.current[pasted.focusIndex]?.focus();
     };
 
     const stepTitles = [
@@ -487,6 +499,9 @@ export default function LoginPage() {
                                         }
                                         onKeyDown={(e) =>
                                             handleCodeKeyDown(i, e)
+                                        }
+                                        onPaste={(e) =>
+                                            handleCodePaste(i, e)
                                         }
                                         autoFocus={step === 2 && i === 0}
                                     />

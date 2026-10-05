@@ -20,6 +20,7 @@ import {
 } from "../crypto/ecdh";
 import { toBase64, fromBase64 } from "../crypto/encoding";
 import * as sessionKeys from "../lib/sessionKeys";
+import { spreadPastedCode } from "../lib/codeInput";
 
 import { useNavigate } from "react-router";
 import zxcvbn from "zxcvbn";
@@ -442,6 +443,17 @@ export default function RegisterPage() {
         }
     };
 
+    const handleCodePaste = (
+        index: number,
+        e: React.ClipboardEvent<HTMLInputElement>,
+    ) => {
+        const pasted = spreadPastedCode(code, index, e.clipboardData.getData("text"));
+        if (!pasted) return;
+        e.preventDefault();
+        setCode(pasted.code);
+        codeInputs.current[pasted.focusIndex]?.focus();
+    };
+
     const stepTitles = [
         {
             title: tr.step0Title,
@@ -703,6 +715,9 @@ export default function RegisterPage() {
                                         }
                                         onKeyDown={(e) =>
                                             handleCodeKeyDown(i, e)
+                                        }
+                                        onPaste={(e) =>
+                                            handleCodePaste(i, e)
                                         }
                                         autoFocus={step === 2 && i === 0}
                                     />
