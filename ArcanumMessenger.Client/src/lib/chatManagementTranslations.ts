@@ -454,3 +454,137 @@ export const CHAT_INFO_TRANSLATIONS: Record<Language, ChatInfoPanelTranslation> 
         deleteMediaMessage: "Löschen",
     },
 };
+
+export interface ChatExportTranslation {
+    exportChatButton: string;
+    title: string;
+    formatLabel: string;
+    formatHtml: string;
+    formatJson: string;
+    formatBoth: string;
+    mediaLabel: string;
+    photos: string;
+    videos: string;
+    voice: string;
+    files: string;
+    gifs: string;
+    sizeLimitLabel: string;
+    sizeLimitMb: (mb: number) => string;
+    noLimit: string;
+    passwordToggle: string;
+    passwordPlaceholder: string;
+    passwordHint: string;
+    cancel: string;
+    exportButton: string;
+    exportingTitle: string;
+    exportingMessages: (done: number, total: number | null) => string;
+    exportingMedia: (done: number, total: number | null) => string;
+    packing: string;
+    cancelExport: string;
+    doneTitle: string;
+    doneText: string;
+    failedTitle: string;
+    failedText: string;
+    close: string;
+}
+
+const countOf = (done: number, total: number | null) => (total === null ? `${done}` : `${done} / ${total}`);
+
+export const CHAT_EXPORT_TRANSLATIONS: Record<Language, ChatExportTranslation> = {
+    en: {
+        exportChatButton: "Export chat history",
+        title: "Export chat history",
+        formatLabel: "Format",
+        formatHtml: "HTML",
+        formatJson: "JSON",
+        formatBoth: "Both",
+        mediaLabel: "Include media",
+        photos: "Photos",
+        videos: "Videos",
+        voice: "Voice messages",
+        files: "Files",
+        gifs: "GIFs",
+        sizeLimitLabel: "Max file size",
+        sizeLimitMb: (mb) => `${mb} MB`,
+        noLimit: "No limit",
+        passwordToggle: "Protect with a password",
+        passwordPlaceholder: "Password",
+        passwordHint: "Opens in 7-Zip, WinRAR or Keka - not in the system's built-in unzip.",
+        cancel: "Cancel",
+        exportButton: "Export",
+        exportingTitle: "Exporting...",
+        exportingMessages: (done, total) => `Messages: ${countOf(done, total)}`,
+        exportingMedia: (done, total) => `Media: ${countOf(done, total)}`,
+        packing: "Packing the archive...",
+        cancelExport: "Cancel export",
+        doneTitle: "Export ready",
+        doneText: "The archive has been saved to your downloads.",
+        failedTitle: "Export failed",
+        failedText: "Something went wrong while exporting. Please try again.",
+        close: "Close",
+    },
+    uk: {
+        exportChatButton: "Експортувати історію чату",
+        title: "Експорт історії чату",
+        formatLabel: "Формат",
+        formatHtml: "HTML",
+        formatJson: "JSON",
+        formatBoth: "Обидва",
+        mediaLabel: "Включити медіа",
+        photos: "Фото",
+        videos: "Відео",
+        voice: "Голосові повідомлення",
+        files: "Файли",
+        gifs: "GIF",
+        sizeLimitLabel: "Макс. розмір файлу",
+        sizeLimitMb: (mb) => `${mb} МБ`,
+        noLimit: "Без обмежень",
+        passwordToggle: "Захистити паролем",
+        passwordPlaceholder: "Пароль",
+        passwordHint: "Відкривається в 7-Zip, WinRAR або Keka - не вбудованим архіватором системи.",
+        cancel: "Скасувати",
+        exportButton: "Експортувати",
+        exportingTitle: "Експорт...",
+        exportingMessages: (done, total) => `Повідомлення: ${countOf(done, total)}`,
+        exportingMedia: (done, total) => `Медіа: ${countOf(done, total)}`,
+        packing: "Пакування архіву...",
+        cancelExport: "Скасувати експорт",
+        doneTitle: "Експорт готовий",
+        doneText: "Архів збережено в завантаження.",
+        failedTitle: "Не вдалося експортувати",
+        failedText: "Під час експорту щось пішло не так. Спробуйте ще раз.",
+        close: "Закрити",
+    },
+    de: {
+        exportChatButton: "Chatverlauf exportieren",
+        title: "Chatverlauf exportieren",
+        formatLabel: "Format",
+        formatHtml: "HTML",
+        formatJson: "JSON",
+        formatBoth: "Beides",
+        mediaLabel: "Medien einschließen",
+        photos: "Fotos",
+        videos: "Videos",
+        voice: "Sprachnachrichten",
+        files: "Dateien",
+        gifs: "GIFs",
+        sizeLimitLabel: "Max. Dateigröße",
+        sizeLimitMb: (mb) => `${mb} MB`,
+        noLimit: "Keine Begrenzung",
+        passwordToggle: "Mit Passwort schützen",
+        passwordPlaceholder: "Passwort",
+        passwordHint: "Lässt sich mit 7-Zip, WinRAR oder Keka öffnen - nicht mit dem integrierten Entpacker des Systems.",
+        cancel: "Abbrechen",
+        exportButton: "Exportieren",
+        exportingTitle: "Wird exportiert...",
+        exportingMessages: (done, total) => `Nachrichten: ${countOf(done, total)}`,
+        exportingMedia: (done, total) => `Medien: ${countOf(done, total)}`,
+        packing: "Archiv wird gepackt...",
+        cancelExport: "Export abbrechen",
+        doneTitle: "Export fertig",
+        doneText: "Das Archiv wurde in deinen Downloads gespeichert.",
+        failedTitle: "Export fehlgeschlagen",
+        failedText: "Beim Exportieren ist etwas schiefgelaufen. Bitte versuche es erneut.",
+        close: "Schließen",
+    },
+};
