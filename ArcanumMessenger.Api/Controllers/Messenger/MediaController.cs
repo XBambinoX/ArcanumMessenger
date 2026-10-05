@@ -79,7 +79,8 @@ public class MediaController(AppDbContext db, MediaService media, MediaAccessSer
             Response.ContentLength = result.TotalLength;
         }
 
-        return File(result.Content, result.ContentType, enableRangeProcessing: false);
+        MarkAsOpaqueDownload();
+        return File(result.Content, OpaqueContentType, enableRangeProcessing: false);
     }
 
     [HttpDelete("{id:guid}")]
@@ -105,7 +106,11 @@ public class MediaController(AppDbContext db, MediaService media, MediaAccessSer
             return NotFound();
 
         var result = await media.OpenThumbnailStreamAsync(asset, ct);
-        return result is null ? NotFound() : File(result.Content, result.ContentType);
+        if (result is null)
+            return NotFound();
+
+        MarkAsOpaqueDownload();
+        return File(result.Content, OpaqueContentType);
     }
 
     // Only the uploader can attach a thumbnail - it has to be posted right
@@ -273,6 +278,14 @@ public class MediaController(AppDbContext db, MediaService media, MediaAccessSer
         return success
             ? Ok(new ChunkedUploadActionResponse(true))
             : BadRequest(new ChunkedUploadActionResponse(false, reason));
+    }
+
+    private const string OpaqueContentType = "application/octet-stream";
+
+    private void MarkAsOpaqueDownload()
+    {
+        Response.Headers.XContentTypeOptions = "nosniff";
+        Response.Headers.ContentDisposition = "attachment";
     }
 
     private static MediaByteRange? ParseRange(string? rangeHeader)

@@ -10,7 +10,7 @@ namespace ArcanumMessenger.Services.MessengerServices;
 
 public record MediaByteRange(long Start, long? End);
 
-public record MediaStream(Stream Content, string ContentType, long TotalLength, MediaByteRange? ServedRange);
+public record MediaStream(Stream Content, long TotalLength, MediaByteRange? ServedRange);
 
 // Chat media (photo/video/gif/file) is end-to-end encrypted client-side
 // with the chat's own key before it ever reaches this service - everything
@@ -199,7 +199,7 @@ public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config, 
         try
         {
             var response = await s3.GetObjectAsync(request, ct);
-            return new MediaStream(response.ResponseStream, asset.MimeType, asset.SizeBytes, servedRange);
+            return new MediaStream(response.ResponseStream, asset.SizeBytes, servedRange);
         }
         catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
@@ -220,7 +220,7 @@ public class MediaService(AppDbContext db, IAmazonS3 s3, IConfiguration config, 
                 Key = asset.ThumbnailStorageKey,
             }, ct);
 
-            return new MediaStream(response.ResponseStream, "image/jpeg", response.ContentLength, null);
+            return new MediaStream(response.ResponseStream, response.ContentLength, null);
         }
         catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
