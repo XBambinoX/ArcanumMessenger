@@ -113,18 +113,23 @@ services:
             retries: 5
             start_period: 5s
 
+    # MinIO no longer publishes community images (minio/minio is gone from
+    # Docker Hub and the GitHub repo is archived) - this is Bitnami's frozen
+    # last build of it. It gets no more security updates, so it stays
+    # internal-only like before; swap in a maintained S3-compatible store
+    # eventually. Bitnami's own entrypoint starts the server, so there's no
+    # `command:` here, and it keeps its data under /bitnami/minio/data.
     minio:
-        image: minio/minio:latest
+        image: bitnamilegacy/minio:2025.5.24
         container_name: arcanum-minio-prod
-        command: server /data --console-address ":9001"
         environment:
             MINIO_ROOT_USER: ${MINIO_ROOT_USER}
             MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
         volumes:
-            - minio_data_prod:/data
+            - minio_data_prod:/bitnami/minio/data
         restart: unless-stopped
         healthcheck:
-            test: ["CMD", "mc", "ready", "local"]
+            test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
             interval: 10s
             timeout: 5s
             retries: 5
