@@ -121,6 +121,7 @@ namespace ArcanumMessenger
             builder.Services.AddSingleton<EmailHasher>();
             builder.Services.AddSingleton<PublicIdHasher>();
             builder.Services.AddSingleton<LoginSessionService>();
+            builder.Services.AddSingleton<LoginAttemptLimiter>();
             builder.Services.AddSingleton<TotpService>();
             builder.Services.AddSingleton<TotpSetupSessionService>();
             builder.Services.AddSingleton<RecoverySessionService>();
