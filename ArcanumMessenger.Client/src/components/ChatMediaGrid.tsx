@@ -8,16 +8,11 @@ import {
     type KeyedChat,
 } from "./EncryptedMedia";
 import MessageContextMenu from "./MessageContextMenu";
+import { formatFileSize } from "../lib/fileSize";
 import styles from "./ChatMediaGrid.module.css";
 
 function isVideoMime(mimeType: string): boolean {
     return mimeType.startsWith("video/");
-}
-
-function formatFileSize(bytes: number): string {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export interface ChatMediaGridTranslation {

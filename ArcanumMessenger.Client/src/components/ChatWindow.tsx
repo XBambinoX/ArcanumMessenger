@@ -8,12 +8,14 @@ import { uploadMedia, uploadMediaThumbnail, deleteMedia, getSavedGifs, saveGif, 
 import { EncryptedImage, EncryptedGifVideo, EncryptedVideoPlayer, EncryptedAudioPlayer, EncryptedThumbnail, downloadMediaToDisk } from "./EncryptedMedia";
 import { uploadMediaChunked, abortChunkedUpload, clearChunkedUploadResumeState, CHUNK_THRESHOLD } from "../api/chunkedUpload";
 import { formatMessageTime, formatChatTime } from "../lib/time";
+import { formatFileSize } from "../lib/fileSize";
 import { extractVideoFirstFrame } from "../lib/mediaMetadata";
 import { reencryptMediaAcrossChats } from "../lib/mediaReencrypt";
 import { encryptOutgoing, decryptIncoming, decryptIncomingList, getChatKey } from "../lib/chatCrypto";
 import { selfHealChatKeys } from "../lib/chatKeySelfHeal";
 import { recordReactionEmojiUse } from "../lib/emojiUsage";
 import { isRegionalIndicator, isBlankDraft, ZERO_WIDTH_SPACE } from "../lib/regionalIndicator";
+import { isEmojiOnlyMessage } from "../lib/emoji";
 import UserInfoPanel from "./UserInfoPanel";
 import ChatInfoPanel from "./ChatInfoPanel";
 import EmojiPicker from "./EmojiPicker";
@@ -36,12 +38,6 @@ import { CHAT_WINDOW_TRANSLATIONS } from "../lib/chatWindowTranslations";
 // in <img>, but video bytes need an actual <video> element.
 function isVideoMime(mimeType: string): boolean {
     return mimeType.startsWith("video/");
-}
-
-function formatFileSize(bytes: number): string {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 // The hub can echo a just-sent/forwarded message back before the HTTP
@@ -67,28 +63,6 @@ function replySnippet(message: ChatMessage, common: AppCommonTranslation): strin
         case "file": return message.media?.fileName ?? common.file;
         default: return "";
     }
-}
-
-// Telegram-style: a short message that is nothing but emoji renders bigger.
-// \p{Extended_Pictographic} covers the base pictographs; the explicit
-// U+1F1E6-1F1FF/U+1F3FB-1F3FF ranges cover flag regional indicators and
-// skin-tone modifiers, which are unambiguous. Plain ASCII digits/#/* are
-// NOT stripped on their own - \p{Emoji_Component} would match "123" too,
-// since digits double as keycap components - they only count as emoji when
-// they are actually part of a real keycap sequence (digit + optional
-// variation selector + the combining enclosing keycap U+20E3).
-function isEmojiOnlyMessage(text: string): boolean {
-    const trimmed = text.trim();
-    if (!trimmed) return false;
-
-    const stripped = trimmed.replace(
-        /[0-9#*]\ufe0f?\u20e3|[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u{1F3FB}-\u{1F3FF}\u200d\ufe0f\s]/gu,
-        "",
-    );
-    if (stripped.length > 0) return false;
-
-    const graphemeCount = [...new Intl.Segmenter().segment(trimmed)].length;
-    return graphemeCount > 0 && graphemeCount <= 6;
 }
 
 function isMessageRead(message: ChatMessage, readStates: ChatReadState[]): boolean {
