@@ -1,4 +1,5 @@
 import type { Language } from "./language";
+import type { MediaSkipReason } from "./chatExport";
 
 export interface UserInfoPanelTranslation {
     closeAria: string;
@@ -486,6 +487,10 @@ export interface ChatExportTranslation {
     failedTitle: string;
     failedText: string;
     close: string;
+    // inside the exported messages.html
+    htmlMessageCount: (count: number) => string;
+    htmlExportedAt: (date: string) => string;
+    htmlSkipped: Record<MediaSkipReason, string>;
 }
 
 const countOf = (done: number, total: number | null) => (total === null ? `${done}` : `${done} / ${total}`);
@@ -522,6 +527,13 @@ export const CHAT_EXPORT_TRANSLATIONS: Record<Language, ChatExportTranslation> =
         failedTitle: "Export failed",
         failedText: "Something went wrong while exporting. Please try again.",
         close: "Close",
+        htmlMessageCount: (count) => `Messages: ${count}`,
+        htmlExportedAt: (date) => `Exported ${date}`,
+        htmlSkipped: {
+            not_selected: "Not included in the export",
+            too_large: "Over the file size limit",
+            download_failed: "Could not be downloaded",
+        },
     },
     uk: {
         exportChatButton: "Експортувати історію чату",
@@ -554,6 +566,13 @@ export const CHAT_EXPORT_TRANSLATIONS: Record<Language, ChatExportTranslation> =
         failedTitle: "Не вдалося експортувати",
         failedText: "Під час експорту щось пішло не так. Спробуйте ще раз.",
         close: "Закрити",
+        htmlMessageCount: (count) => `Повідомлень: ${count}`,
+        htmlExportedAt: (date) => `Експортовано ${date}`,
+        htmlSkipped: {
+            not_selected: "Не включено в експорт",
+            too_large: "Більше за ліміт розміру",
+            download_failed: "Не вдалося завантажити",
+        },
     },
     de: {
         exportChatButton: "Chatverlauf exportieren",
@@ -586,5 +605,12 @@ export const CHAT_EXPORT_TRANSLATIONS: Record<Language, ChatExportTranslation> =
         failedTitle: "Export fehlgeschlagen",
         failedText: "Beim Exportieren ist etwas schiefgelaufen. Bitte versuche es erneut.",
         close: "Schließen",
+        htmlMessageCount: (count) => `Nachrichten: ${count}`,
+        htmlExportedAt: (date) => `Exportiert am ${date}`,
+        htmlSkipped: {
+            not_selected: "Nicht im Export enthalten",
+            too_large: "Über der Größenbeschränkung",
+            download_failed: "Konnte nicht heruntergeladen werden",
+        },
     },
 };

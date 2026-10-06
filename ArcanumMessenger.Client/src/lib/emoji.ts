@@ -195,3 +195,17 @@ export const emojiCategories: EmojiCategory[] = [
         ],
     },
 ];
+
+export function isEmojiOnlyMessage(text: string): boolean {
+    const trimmed = text.trim();
+    if (!trimmed) return false;
+
+    const stripped = trimmed.replace(
+        /[0-9#*]\ufe0f?\u20e3|[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u{1F3FB}-\u{1F3FF}\u200d\ufe0f\s]/gu,
+        "",
+    );
+    if (stripped.length > 0) return false;
+
+    const graphemeCount = [...new Intl.Segmenter().segment(trimmed)].length;
+    return graphemeCount > 0 && graphemeCount <= 6;
+}

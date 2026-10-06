@@ -3,6 +3,8 @@ import type { ChatMessage, ChatSummary, MediaAsset } from "../types/messenger";
 import { getExportHistoryPage } from "../api/messages";
 import { decryptIncomingList, getChatKey } from "./chatCrypto";
 import { downloadAndDecryptMedia } from "./mediaDownload";
+import { readThemeVariables, renderMessagesHtml } from "./exportHtml";
+import { getLanguage } from "./language";
 
 export type ExportFormat = "html" | "json" | "both";
 export type ExportMediaKind = "photos" | "videos" | "voice" | "files" | "gifs";
@@ -37,9 +39,9 @@ const MEDIA_FOLDERS: Record<MediaAsset["kind"], ExportMediaKind> = {
     gif: "gifs",
 };
 
-type MediaSkipReason = "not_selected" | "too_large" | "download_failed";
+export type MediaSkipReason = "not_selected" | "too_large" | "download_failed";
 
-interface MediaOutcome {
+export interface MediaOutcome {
     // relative to the archive's root folder
     file: string | null;
     skipped: MediaSkipReason | null;
@@ -84,15 +86,29 @@ export async function exportChat(
     await addMediaFiles(zip, `${baseName}/`, chat.id, chatKey, downloads, onProgress, signal);
 
     onProgress({ phase: "packing", done: 0, total: null });
-    // TODO: messages.html for "html"/"both" - until then every format gets result.json.
-    const result = {
-        name: chat.title,
-        type: chat.type,
-        id: chat.id,
-        exportedAt: new Date().toISOString(),
-        messages: messages.map((m) => toExportedMessage(m, outcomes)),
-    };
-    await zip.add(`${baseName}/result.json`, new TextReader(JSON.stringify(result, null, 2)), { signal });
+    const exportedAt = new Date();
+    if (options.format !== "html") {
+        const result = {
+            name: chat.title,
+            type: chat.type,
+            id: chat.id,
+            exportedAt: exportedAt.toISOString(),
+            messages: messages.map((m) => toExportedMessage(m, outcomes)),
+        };
+        await zip.add(`${baseName}/result.json`, new TextReader(JSON.stringify(result, null, 2)), { signal });
+    }
+    if (options.format !== "json") {
+        const html = renderMessagesHtml({
+            title: chat.title,
+            chatType: chat.type,
+            messages,
+            mediaOutcomes: outcomes,
+            exportedAt,
+            language: getLanguage(),
+            themeVariables: readThemeVariables(),
+        });
+        await zip.add(`${baseName}/messages.html`, new TextReader(html), { signal });
+    }
 
     const archive = await zip.close();
     signal.throwIfAborted();
