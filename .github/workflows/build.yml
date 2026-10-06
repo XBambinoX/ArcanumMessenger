@@ -107,8 +107,10 @@ jobs:
       contents: write
 
     steps:
+      # Only the installers - build-push-action uploads its build records as artifacts too
       - uses: actions/download-artifact@v8
         with:
+          pattern: arcanum-*
           path: dist
           merge-multiple: true
 

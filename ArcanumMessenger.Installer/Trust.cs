@@ -129,6 +129,7 @@ static class Trust
         string[] profileRoots =
         [
             ".mozilla/firefox",
+            ".config/mozilla/firefox", // newer Firefox on Linux
             ".librewolf",
             "snap/firefox/common/.mozilla/firefox",
             ".var/app/org.mozilla.firefox/.mozilla/firefox",

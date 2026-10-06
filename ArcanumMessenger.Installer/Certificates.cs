@@ -94,7 +94,8 @@ static partial class Certificates
     {
         using var key = RSA.Create(3072);
         var name = new X500DistinguishedNameBuilder();
-        name.AddCommonName($"Arcanum Local CA ({HostName() ?? "server"})");
+        // Unique per CA: browsers look an issuer up by name, and a namesake fails with "bad signature"
+        name.AddCommonName($"Arcanum Local CA ({HostName() ?? "server"}, {Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(4))})");
         name.AddOrganizationName("Arcanum Messenger");
 
         var request = new CertificateRequest(name.Build(), key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
