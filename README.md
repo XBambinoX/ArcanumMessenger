@@ -88,31 +88,34 @@ This is the production setup – the client is a static bundle served by nginx, 
 
 ### Installation
 
-1. **Download the installer** for your system from the [latest release](https://github.com/XBambinoX/ArcanumMessenger/releases/latest) – a single file, nothing else to install:
+1. **Download the installer and run it.** It's a single file with nothing else to install – every build is on the [latest release](https://github.com/XBambinoX/ArcanumMessenger/releases/latest).
 
-   | System | File |
-   |---|---|
-   | Linux, x86-64 | `arcanum-linux-x64` |
-   | Linux, ARM64 (Raspberry Pi 4/5) | `arcanum-linux-arm64` |
-   | macOS, Apple silicon | `arcanum-macos-arm64` |
-   | macOS, Intel | `arcanum-macos-x64` |
-   | Windows | `arcanum-windows-x64.exe` |
-
-   On Linux and macOS, straight from the terminal (pick your file from the table):
+   **Linux** – on a Raspberry Pi 4/5, take `arcanum-linux-arm64` instead:
    ```
    curl -fLo arcanum https://github.com/XBambinoX/ArcanumMessenger/releases/latest/download/arcanum-linux-x64
    chmod +x arcanum
+   ./arcanum install
    ```
 
-2. **Run it:** `./arcanum install` – or on Windows, double-click the `.exe`.
+   **macOS** – on an Intel Mac, take `arcanum-macos-x64` instead:
+   ```
+   curl -fLo arcanum https://github.com/XBambinoX/ArcanumMessenger/releases/latest/download/arcanum-macos-arm64
+   chmod +x arcanum
+   ./arcanum install
+   ```
+   It isn't signed by Apple, so if you download it with a browser instead, macOS won't open it until you run `xattr -d com.apple.quarantine arcanum`.
 
-   It checks Docker, writes `~/.arcanum/.env` with freshly generated secrets – asking you only for the SMTP mailbox to send from – and creates a TLS certificate for the addresses it finds on the machine (LAN IP, Tailscale IP, hostname), or takes certificate files you already have. Then it downloads and starts the stack and waits until everything is healthy; the database is set up automatically on first start. At the end it offers to copy itself into `/usr/local/bin`, so from then on it's just `arcanum`.
+   **Windows** – start Docker Desktop, then download [`arcanum-windows-x64.exe`](https://github.com/XBambinoX/ArcanumMessenger/releases/latest/download/arcanum-windows-x64.exe) and double-click it. It isn't signed either, so the first time SmartScreen says "Windows protected your PC" – click "More info", then "Run anyway".
+
+2. **Answer its questions.** It checks Docker, writes `~/.arcanum/.env` with freshly generated secrets – asking you only for the SMTP mailbox to send from – and creates a TLS certificate for the addresses it finds on the machine (LAN IP, Tailscale IP, hostname), or takes certificate files you already have. Then it downloads and starts the stack and waits until everything is healthy; the database is set up automatically on first start. On Linux and macOS it offers at the end to copy itself into `/usr/local/bin`, so from then on it's just `arcanum`.
 
 3. **Open one of the addresses it prints** in your browser.
 
 This, combined with Tailscale, is enough to run a real private server without ever needing a domain.
 
-Everything the installer creates lives in `~/.arcanum`: the `.env`, the `docker-compose.yml` it runs, the certificate in `certs/`, and in `ca/` the certificate authority that signed it. Plain `docker compose ...` works in that folder too.
+Everything the installer creates lives in `~/.arcanum` (`%USERPROFILE%\.arcanum` on Windows): the `.env`, the `docker-compose.yml` it runs, the certificate in `certs/`, and in `ca/` the certificate authority that signed it. Plain `docker compose ...` works in that folder too.
+
+Run without a command, the installer shows a menu with everything below – that's what double-clicking it on Windows does. Or give the command directly: `arcanum update` once it's in `/usr/local/bin`, otherwise `./arcanum update`, or `.\arcanum-windows-x64.exe update` in PowerShell.
 
 | Command | What it does |
 |---|---|
@@ -122,7 +125,7 @@ Everything the installer creates lives in `~/.arcanum`: the `.env`, the `docker-
 | `arcanum logs [service]` | follows the logs – of everything, or of `api`, `client`, `db`, `redis` or `minio` |
 | `arcanum uninstall` | removes the containers – or everything, data included |
 
-**Updating** means getting the newer installer and running `arcanum update` – each installer pulls the images of its own version, so the compose file and the images always match:
+**Updating** means getting the newer installer and running its update – each installer pulls the images of its own version, so the compose file and the images always match. Download it the same way as the first time, over the old file, or on Linux and macOS into `/usr/local/bin` if it's there (with your system's file name):
 ```
 sudo curl -fLo /usr/local/bin/arcanum https://github.com/XBambinoX/ArcanumMessenger/releases/latest/download/arcanum-linux-x64
 arcanum update

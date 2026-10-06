@@ -235,7 +235,8 @@ static partial class Certificates
     {
         while (true)
         {
-            var path = Path.GetFullPath(Paths.ExpandHome(Ui.Ask(question)));
+            // Windows' "Copy as path" and a file dropped into a terminal come quoted
+            var path = Path.GetFullPath(Paths.ExpandHome(Ui.Ask(question).Trim('"', '\'')));
             if (File.Exists(path)) return path;
             Ui.Warn($"No such file: {path}");
         }

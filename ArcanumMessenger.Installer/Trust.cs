@@ -27,9 +27,10 @@ static class Trust
             // The current user's store: no admin needed, Windows asks to confirm instead
             try
             {
+                using var publicOnly = X509CertificateLoader.LoadCertificate(ca.RawData); // never the CA's key
                 using var store = new X509Store(StoreName.Root, StoreLocation.CurrentUser);
                 store.Open(OpenFlags.ReadWrite);
-                store.Add(ca);
+                store.Add(publicOnly);
                 Ui.Ok("Trusted by Windows (and the browsers that use its store)");
             }
             catch (Exception e)
