@@ -131,6 +131,13 @@ namespace ArcanumMessenger
 
             using (var startupScope = app.Services.CreateScope())
             {
+                // Prod only - in dev, switching branches would apply (or trip over) their migrations.
+                if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
+                {
+                    var db = startupScope.ServiceProvider.GetRequiredService<AppDbContext>();
+                    await db.Database.MigrateAsync();
+                }
+
                 var media = startupScope.ServiceProvider.GetRequiredService<MediaService>();
                 await media.EnsureBucketExistsAsync(CancellationToken.None);
 

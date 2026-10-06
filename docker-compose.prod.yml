@@ -29,6 +29,7 @@ services:
             ASPNETCORE_URLS: http://+:8080
             ConnectionStrings__Postgres: Host=${POSTGRES_HOST};Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
             ConnectionStrings__Redis: redis:6379
+            Database__MigrateOnStartup: "true"
 
             Smtp__Host: ${SMTP_HOST}
             Smtp__Port: ${SMTP_PORT}

@@ -11,6 +11,10 @@
 *.sln.docstates
 *.env
 
+# install.sh: the TLS key and the downloaded installer UI
+/certs/
+/.installer/
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
