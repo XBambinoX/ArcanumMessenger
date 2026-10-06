@@ -6,20 +6,18 @@ USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+# Runs on the build machine's own platform: the published output is portable (natives for every RID included).
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["ArcanumMessenger.Api/ArcanumMessenger.csproj", "ArcanumMessenger.Api/"]
 RUN dotnet restore "./ArcanumMessenger.Api/ArcanumMessenger.csproj"
-COPY . .
+# Only the API's own folder, so a client-only change doesn't throw away this build's cache.
+COPY ArcanumMessenger.Api/ ArcanumMessenger.Api/
 WORKDIR "/src/ArcanumMessenger.Api"
-RUN dotnet build "./ArcanumMessenger.csproj" -c $BUILD_CONFIGURATION -o /app/build
-
-FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./ArcanumMessenger.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./ArcanumMessenger.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false --no-restore
 
 FROM base AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "ArcanumMessenger.dll"]

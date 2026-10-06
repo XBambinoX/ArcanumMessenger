@@ -1,0 +1,129 @@
+# master: the images as :latest. A v1.2.3 tag: the images as :1.2.3 and :1.2, the installer for every
+# platform, and only once both are done the GitHub release - so no release points at images that aren't there yet.
+name: Build and release
+
+on:
+  push:
+    branches: [master]
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  images:
+    name: ${{ matrix.image }} image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - image: arcanum-api
+            context: .
+            file: ArcanumMessenger.Api/Dockerfile
+          - image: arcanum-client
+            context: ArcanumMessenger.Client
+            file: ArcanumMessenger.Client/Dockerfile.prod
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # Only the API's runtime stage runs anything on arm64; the builds run natively
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+  installer:
+    name: ${{ matrix.asset }}
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        include:
+          - { rid: linux-x64, os: ubuntu-latest, asset: arcanum-linux-x64 }
+          - { rid: linux-arm64, os: ubuntu-latest, asset: arcanum-linux-arm64 }
+          - { rid: win-x64, os: ubuntu-latest, asset: arcanum-windows-x64.exe }
+          # On macOS, so the ad-hoc signature Apple silicon insists on gets checked before it ships
+          - { rid: osx-arm64, os: macos-latest, asset: arcanum-macos-arm64 }
+          - { rid: osx-x64, os: macos-latest, asset: arcanum-macos-x64 }
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      # The version decides which image tag the installer pulls
+      - name: Publish
+        run: |
+          dotnet publish ArcanumMessenger.Installer -c Release -r ${{ matrix.rid }} -p:Version=${GITHUB_REF_NAME#v} -o out
+          mkdir dist
+          if [ -f out/arcanum.exe ]; then mv out/arcanum.exe "dist/${{ matrix.asset }}"; else mv out/arcanum "dist/${{ matrix.asset }}"; fi
+
+      - name: Check the signature
+        if: runner.os == 'macOS'
+        run: codesign --verify --verbose "dist/${{ matrix.asset }}"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.asset }}
+          path: dist/${{ matrix.asset }}
+          if-no-files-found: error
+
+  release:
+    name: GitHub release
+    needs: [images, installer]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publish the release
+        working-directory: dist
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          sha256sum arcanum-* > SHA256SUMS
+          # A re-run only replaces the files of the release it already made
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" * --clobber
+          else
+            prerelease=""
+            [[ "$GITHUB_REF_NAME" == *-* ]] && prerelease=--prerelease
+            gh release create "$GITHUB_REF_NAME" * --title "$GITHUB_REF_NAME" --generate-notes --verify-tag $prerelease
+          fi
