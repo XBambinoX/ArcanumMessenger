@@ -32,6 +32,7 @@ You may use, modify, and distribute the code **for non-commercial purposes only*
 - **No central account recovery:** lose your device and you don't lose your account or end up in a support queue proving who you are. A BIP39 recovery phrase generated on your own client is the only way back in, and it's never stored anywhere the server could hand over.
 - **Deletion that actually deletes:** background jobs hard-delete expired messages, chats, orphaned media, and dead sessions from both the database and object storage on a schedule – gone means gone, not just hidden behind a flag in a backup somewhere.
 - **Full visibility into your own account:** see every device signed in and revoke any of them instantly, no ticket required.
+- **Your history goes with you:** export any chat to a ZIP straight from the browser – a `messages.html` that looks like the chat itself, a `result.json` for scripts, and the photos, videos, voice notes and files, optionally password-protected. It's all decrypted on your own device, so the server never sees a readable copy on the way out either.
 - **Everything you'd expect from a daily-driver messenger:** direct chats, groups, a private Saved Messages space, photos/voice/video/GIFs/stickers, replies, forwarding, reactions, editing, quick-reply (arrow keys on desktop, swipe on mobile), contacts with blocking, TOTP two-factor auth, and light/dark themes with multiple languages.
 
 ## Screenshots
@@ -49,7 +50,7 @@ You may use, modify, and distribute the code **for non-commercial purposes only*
 - Entity Framework Core + PostgreSQL
 - SignalR for real-time updates
 - Redis for caching and presence
-- MinIO (S3-compatible) for encrypted media storage
+- MinIO (S3-compatible) for encrypted media storage – the `bitnamilegacy/minio` image, since the official `minio/minio` images were discontinued; it's frozen at its last release and gets no security updates
 - Argon2 password hashing, JWT bearer auth with refresh-token rotation, TOTP two-factor auth
 
 **Frontend**
@@ -139,14 +140,23 @@ This is the production setup – a standalone `docker-compose.prod.yml` that bui
 
 5. **Apply database migrations** (run once, from a throwaway container – production keeps the database off the host network, so this runs through Docker rather than a locally installed .NET SDK):
    ```
-   docker run --rm -v "$(pwd):/src" -w /src/ArcanumMessenger.Api \
+   docker run --rm -v "$(pwd):/src:ro" \
      --network container:arcanum-db-prod \
      mcr.microsoft.com/dotnet/sdk:10.0 bash -c \
-     "dotnet tool install --global dotnet-ef && \
+     "cp -r /src/ArcanumMessenger.Api /work && cd /work && \
+      dotnet tool install --global dotnet-ef && \
+      dotnet restore && \
       ~/.dotnet/tools/dotnet-ef database update --connection \
       'Host=localhost;Port=5432;Database=arcanum;Username=arcanum_user;Password=YOUR_POSTGRES_PASSWORD'"
    ```
+   The repository is mounted read-only and the project is copied inside the container, so the build doesn't leave root-owned `bin/` and `obj/` folders in your checkout.
 
 6. **Open your browser and navigate to your server's address** (`https://localhost/`, its LAN IP, or its Tailscale address). The browser will warn you about the self-signed certificate the first time – that's expected, proceed anyway (the exact wording depends on your browser, usually something like "Advanced" -> "Proceed").
 
 This, combined with Tailscale, is enough to run a real private server without ever needing a domain.
+
+---
+
+### Upload Size Limits
+
+nginx caps request bodies under `/api/` at 16 MB (`client_max_body_size` in `ArcanumMessenger.Client/nginx/nginx.conf`). That holds as long as no single request is bigger: files from 1 MB up are sent in encrypted 10 MB chunks (the API takes up to 15 MB per chunk), and avatars are capped at 10 MB. If you raise `CHUNK_THRESHOLD` (`ArcanumMessenger.Client/src/api/chunkedUpload.ts`) or `CHUNK_SIZE` (`ArcanumMessenger.Client/src/crypto/chunkedMedia.ts`) past 16 MB, raise the nginx limit with them – otherwise uploads fail with 413 in production while still working in dev, where the Vite proxy has no limit.
