@@ -79,8 +79,12 @@ export async function exportChat(
     const messages = await collectHistory(chat, onProgress, signal);
 
     const { ZipWriter, BlobWriter, TextReader } = await import("@zip.js/zip.js/lib/zip-native.js");
-    const baseName = archiveBaseName(chat.title);
-    const zip = new ZipWriter(new BlobWriter("application/zip"));
+    // ZIP encryption covers file contents only, so a protected archive doesn't name the chat either.
+    const baseName = archiveBaseName(options.password === null ? chat.title : null);
+    const zip = new ZipWriter(
+        new BlobWriter("application/zip"),
+        options.password === null ? undefined : { password: options.password, encryptionStrength: 3 },
+    );
 
     const { outcomes, downloads } = planMedia(messages, options);
     await addMediaFiles(zip, `${baseName}/`, chat.id, chatKey, downloads, onProgress, signal);
@@ -243,8 +247,8 @@ function safeFileName(name: string, maxLength: number): string {
     return name.replace(/[\\/:*?"<>|\p{Cc}]/gu, "_").slice(0, maxLength).replace(/[. ]+$/, "");
 }
 
-function archiveBaseName(title: string): string {
-    const safeTitle = safeFileName(title, 64) || "chat";
+function archiveBaseName(title: string | null): string {
+    const safeTitle = title === null ? "export" : safeFileName(title, 64) || "chat";
     const now = new Date();
     const date = [now.getFullYear(), now.getMonth() + 1, now.getDate()]
         .map((part) => String(part).padStart(2, "0"))
