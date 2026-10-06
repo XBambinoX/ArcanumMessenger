@@ -12,6 +12,7 @@
   "dependencies": {
     "@microsoft/signalr": "^10.0.0",
     "@scure/bip39": "^2.2.0",
+    "@zip.js/zip.js": "^2.23.0",
     "hash-wasm": "^4.12.0",
     "jspdf": "^4.2.1",
     "qrcode": "^1.5.4",
