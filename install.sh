@@ -164,6 +164,10 @@ check_requirements() {
     docker info >/dev/null 2>&1 ||
         die "Can't reach the Docker daemon. Is it running, and can $(id -un) use it? (sudo usermod -aG docker $(id -un), then log in again)"
     ok "Docker $(docker version --format '{{.Server.Version}}') with Compose $(docker compose version --short)"
+    if ! docker buildx version >/dev/null 2>&1; then
+        warn "Docker's buildx plugin is missing, so builds fall back to the old, slower builder."
+        note "  Install it to speed them up: docker-buildx (Arch), docker-buildx-plugin (Debian, Ubuntu, Raspberry Pi OS)."
+    fi
     command -v openssl >/dev/null || die "openssl isn't installed."
     ok "$(openssl version | cut -d' ' -f1-2)"
 }
