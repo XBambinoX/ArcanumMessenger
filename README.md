@@ -80,7 +80,7 @@ This is the production setup – a standalone `docker-compose.prod.yml` that bui
 
 ### Prerequisites
 
-- [Docker](https://www.docker.com/) and Docker Compose
+- A Linux machine (a Raspberry Pi will do) or a Mac with [Docker](https://docs.docker.com/engine/install/) and its Compose plugin – or Windows with [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/). The installer is a bash script, so on Windows run it inside [WSL](https://learn.microsoft.com/windows/wsl/install), or skip it and set things up by hand (see below).
 - An SMTP account, for account confirmation and password recovery emails
 
 ---
@@ -93,67 +93,57 @@ This is the production setup – a standalone `docker-compose.prod.yml` that bui
    cd ArcanumMessenger
    ```
 
-2. **Configure your environment:**
+2. **Run the installer:**
+   ```
+   ./install.sh
+   ```
+   It checks Docker, writes `.env` with freshly generated secrets – asking you only for the SMTP mailbox to send from – and creates a TLS certificate for the addresses it finds on the machine (LAN IP, Tailscale IP, hostname), or takes certificate files you already have. Then it builds and starts the stack and waits until everything is healthy; the database is set up automatically on first start.
 
-   Copy the example file and fill it in:
-   ```
-   cp .env.example .env
-   ```
-
-   ```
-   POSTGRES_PASSWORD=choose_a_postgres_password
-
-   SMTP_USERNAME=your_email@gmail.com
-   SMTP_PASSWORD=your_app_password
-
-   ENCRYPTION_KEK=generate_a_random_secret
-   EMAIL_HASH_PEPPER=generate_a_random_secret
-   PUBLIC_ID_HASH_PEPPER=generate_a_random_secret
-   JWT_SECRET=generate_a_random_secret
-
-   MINIO_ROOT_USER=choose_a_minio_user
-   MINIO_ROOT_PASSWORD=choose_a_minio_password
-   ```
-
-   For the secret values, any long random string works, for example:
-   ```
-   openssl rand -base64 32
-   ```
-
-   `SMTP_USERNAME` / `SMTP_PASSWORD` can be any SMTP provider (Gmail, Outlook, a custom server). For Gmail, generate an **App password** under your Google Account's security settings and use that instead of your normal password.
-
-3. **Get a TLS certificate for nginx** and point `HTTPS_CERT_DIR` in `.env` at the folder it's in – there's no plain-HTTP fallback, nginx won't start without one. If you don't have a real domain yet, a self-signed certificate works fine for a private setup:
-   ```
-   mkdir -p ~/.aspnet/https
-   openssl req -x509 -newkey rsa:2048 -nodes -days 365 \
-     -keyout ~/.aspnet/https/arcanum-lan.key \
-     -out ~/.aspnet/https/arcanum-lan.crt \
-     -subj "/CN=localhost" \
-     -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
-   ```
-   Add every address you'll actually reach the server by to that `subjectAltName` list – your LAN IP, and the IP Tailscale assigns the machine if you're using it, e.g. `...,IP:192.168.1.50,IP:100.x.x.x`.
-
-4. **Start the stack:**
-   ```
-   docker compose -f docker-compose.prod.yml up --build -d
-   ```
-
-5. **Apply database migrations** (run once, from a throwaway container – production keeps the database off the host network, so this runs through Docker rather than a locally installed .NET SDK):
-   ```
-   docker run --rm -v "$(pwd):/src:ro" \
-     --network container:arcanum-db-prod \
-     mcr.microsoft.com/dotnet/sdk:10.0 bash -c \
-     "cp -r /src/ArcanumMessenger.Api /work && cd /work && \
-      dotnet tool install --global dotnet-ef && \
-      dotnet restore && \
-      ~/.dotnet/tools/dotnet-ef database update --connection \
-      'Host=localhost;Port=5432;Database=arcanum;Username=arcanum_user;Password=YOUR_POSTGRES_PASSWORD'"
-   ```
-   The repository is mounted read-only and the project is copied inside the container, so the build doesn't leave root-owned `bin/` and `obj/` folders in your checkout.
-
-6. **Open your browser and navigate to your server's address** (`https://localhost/`, its LAN IP, or its Tailscale address). The browser will warn you about the self-signed certificate the first time – that's expected, proceed anyway (the exact wording depends on your browser, usually something like "Advanced" -> "Proceed").
+3. **Open one of the addresses it prints** in your browser. With a self-signed certificate the browser warns you the first time – that's expected, proceed anyway (usually something like "Advanced" -> "Proceed").
 
 This, combined with Tailscale, is enough to run a real private server without ever needing a domain.
+
+**Updating** is `git pull`, then `./install.sh` again. Re-running it is always safe: it never changes a value that's already in `.env`, keeps the certificate, rebuilds, and the API applies any new database migrations as it starts.
+
+<details>
+<summary>Setting it up by hand instead</summary>
+
+1. Copy `.env.example` to `.env` and fill it in. `ENCRYPTION_KEK`, `EMAIL_HASH_PEPPER`, `PUBLIC_ID_HASH_PEPPER` and `JWT_SECRET` each take `openssl rand -base64 32`; the passwords can be any random string.
+2. Put a certificate and its key into the folder `HTTPS_CERT_DIR` points at, as `arcanum-lan.crt` and `arcanum-lan.key` – nginx has no plain-HTTP fallback.
+3. Start it: `docker compose -f docker-compose.prod.yml up --build -d`. Migrations run when the API starts.
+
+On Windows, `openssl` comes with Git for Windows (run it from Git Bash), and `HTTPS_CERT_DIR` takes forward slashes: `C:/Users/<you>/arcanum-certs`.
+
+</details>
+
+---
+
+### Backups
+
+An install is three things:
+
+- **`.env` – the one that matters most.** `ENCRYPTION_KEK` and the two peppers in it can't be recreated: lose them and existing accounts can't sign in again, and whatever the server encrypted with them stays unreadable. Keep a copy off the machine, in a password manager for example.
+- **The database:**
+  ```
+  docker exec arcanum-db-prod pg_dump -U arcanum_user -d arcanum > arcanum-db-$(date +%F).sql
+  ```
+- **Media** (stored end-to-end encrypted):
+  ```
+  docker run --rm -v arcanum-prod_minio_data_prod:/data:ro -v "$PWD":/backup alpine \
+    tar czf /backup/arcanum-media-$(date +%F).tar.gz -C /data .
+  ```
+
+The certificate in `certs/` can simply be created again.
+
+To restore on a fresh machine, put `.env` back **first** – `install.sh` won't pair a new `.env` with old data – then load the database and the media before the API ever starts:
+```
+docker compose -f docker-compose.prod.yml up -d db minio
+docker exec -i arcanum-db-prod psql -U arcanum_user -d arcanum < arcanum-db-2026-10-06.sql
+docker compose -f docker-compose.prod.yml stop minio
+docker run --rm -v arcanum-prod_minio_data_prod:/data -v "$PWD":/backup alpine \
+  tar xzf /backup/arcanum-media-2026-10-06.tar.gz -C /data
+./install.sh
+```
 
 ---
 
