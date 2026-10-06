@@ -6,7 +6,8 @@ USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+# Runs on the build machine's own platform: the published output is portable (natives for every RID included).
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["ArcanumMessenger.Api/ArcanumMessenger.csproj", "ArcanumMessenger.Api/"]

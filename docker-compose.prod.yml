@@ -11,7 +11,11 @@
 # outside Docker - everything else talks over the internal network by
 # service name.
 #
-# Run with: docker compose -f docker-compose.prod.yml up
+# The installer (ArcanumMessenger.Installer) ships this file and writes it
+# to ~/.arcanum/docker-compose.yml with ARCANUM_TAG filled in. The images
+# come from GHCR; to build them from source instead, add
+# docker-compose.build.yml:
+#   docker compose -f docker-compose.prod.yml -f docker-compose.build.yml up --build -d
 #
 # Named explicitly (not left to default to the directory name) so this
 # gets its own network/project even when run from the same machine and
@@ -20,9 +24,7 @@ name: arcanum-prod
 
 services:
     api:
-        build:
-            context: .
-            dockerfile: ArcanumMessenger.Api/Dockerfile
+        image: ghcr.io/xbambinox/arcanum-api:${ARCANUM_TAG:-latest}
         container_name: arcanum-api-prod
         environment:
             ASPNETCORE_ENVIRONMENT: Production
@@ -65,15 +67,13 @@ services:
             start_period: 10s
 
     client:
-        build:
-            context: ./ArcanumMessenger.Client
-            dockerfile: Dockerfile.prod
+        image: ghcr.io/xbambinox/arcanum-client:${ARCANUM_TAG:-latest}
         container_name: arcanum-client-prod
         ports:
             - "80:80"
             - "443:443"
         volumes:
-            - ${HTTPS_CERT_DIR}:/etc/nginx/certs:ro
+            - ${HTTPS_CERT_DIR:-./certs}:/etc/nginx/certs:ro
         restart: unless-stopped
         depends_on:
             - api
@@ -130,6 +130,9 @@ services:
             MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
         volumes:
             - minio_data_prod:/bitnami/minio/data
+        # The image declares a VOLUME here; without a mount every recreate leaves an orphaned anonymous volume
+        tmpfs:
+            - /certs
         restart: unless-stopped
         healthcheck:
             test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]

@@ -61,6 +61,7 @@ You may use, modify, and distribute the code **for non-commercial purposes only*
 **Infrastructure**
 - Docker Compose for local development
 - nginx reverse proxy with TLS in front of a static production build
+- GitHub Actions builds the production images for amd64 and arm64 into GHCR, and a single-file installer (.NET + Spectre.Console) for Linux, macOS and Windows
 
 ---
 
@@ -76,43 +77,87 @@ The one thing you're missing without a domain is a way to reach that machine fro
 
 Everything below is for anyone who wants to run their own instance. If you're just here to see what the project is about, this is a good place to stop.
 
-This is the production setup – a standalone `docker-compose.prod.yml` that builds the client into a static bundle served behind nginx, with TLS termination and a reverse proxy to the API and SignalR hubs, and keeps every internal service (database, cache, object storage, API) off the host network entirely. There's also a separate dev-only compose file for working on the code itself, but that's not what you'd run to actually use the messenger day to day.
+This is the production setup – the client is a static bundle served by nginx, which terminates TLS and proxies the API and SignalR hubs, and every internal service (database, cache, object storage, API) stays off the host network entirely. The images are built ahead of time for both amd64 and arm64, so the server only downloads them: nothing gets compiled on it, and it doesn't need the source code. There's also a separate dev-only compose file for working on the code itself, but that's not what you'd run to actually use the messenger day to day.
 
 ### Prerequisites
 
-- A Linux machine (a Raspberry Pi will do) or a Mac with [Docker](https://docs.docker.com/engine/install/) and its Compose plugin – or Windows with [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/). The installer is a bash script, so on Windows run it inside [WSL](https://learn.microsoft.com/windows/wsl/install), or skip it and set things up by hand (see below).
+- Docker with its Compose plugin: [Docker Engine](https://docs.docker.com/engine/install/) on Linux (a Raspberry Pi with a 64-bit OS will do), [Docker Desktop](https://www.docker.com/products/docker-desktop/) on macOS or Windows
 - An SMTP account, for account confirmation and password recovery emails
 
 ---
 
 ### Installation
 
-1. **Clone the repository:**
+1. **Download the installer** for your system from the [latest release](https://github.com/XBambinoX/ArcanumMessenger/releases/latest) – a single file, nothing else to install:
+
+   | System | File |
+   |---|---|
+   | Linux, x86-64 | `arcanum-linux-x64` |
+   | Linux, ARM64 (Raspberry Pi 4/5) | `arcanum-linux-arm64` |
+   | macOS, Apple silicon | `arcanum-macos-arm64` |
+   | macOS, Intel | `arcanum-macos-x64` |
+   | Windows | `arcanum-windows-x64.exe` |
+
+   On Linux and macOS, straight from the terminal (pick your file from the table):
    ```
-   git clone https://github.com/Blackcat-404/ArcanumMessenger.git
-   cd ArcanumMessenger
+   curl -fLo arcanum https://github.com/XBambinoX/ArcanumMessenger/releases/latest/download/arcanum-linux-x64
+   chmod +x arcanum
    ```
 
-2. **Run the installer:**
-   ```
-   ./install.sh
-   ```
-   It checks Docker, writes `.env` with freshly generated secrets – asking you only for the SMTP mailbox to send from – and creates a TLS certificate for the addresses it finds on the machine (LAN IP, Tailscale IP, hostname), or takes certificate files you already have. Then it builds and starts the stack and waits until everything is healthy; the database is set up automatically on first start.
+2. **Run it:** `./arcanum install` – or on Windows, double-click the `.exe`.
 
-3. **Open one of the addresses it prints** in your browser. With a self-signed certificate the browser warns you the first time – that's expected, proceed anyway (usually something like "Advanced" -> "Proceed").
+   It checks Docker, writes `~/.arcanum/.env` with freshly generated secrets – asking you only for the SMTP mailbox to send from – and creates a TLS certificate for the addresses it finds on the machine (LAN IP, Tailscale IP, hostname), or takes certificate files you already have. Then it downloads and starts the stack and waits until everything is healthy; the database is set up automatically on first start. At the end it offers to copy itself into `/usr/local/bin`, so from then on it's just `arcanum`.
+
+3. **Open one of the addresses it prints** in your browser.
 
 This, combined with Tailscale, is enough to run a real private server without ever needing a domain.
 
-**Updating** is `git pull`, then `./install.sh` again. Re-running it is always safe: it never changes a value that's already in `.env`, keeps the certificate, rebuilds, and the API applies any new database migrations as it starts.
+Everything the installer creates lives in `~/.arcanum`: the `.env`, the `docker-compose.yml` it runs, the certificate in `certs/`, and in `ca/` the certificate authority that signed it. Plain `docker compose ...` works in that folder too.
+
+| Command | What it does |
+|---|---|
+| `arcanum update` | pulls the images of this installer's version and restarts; the API applies new database migrations as it starts |
+| `arcanum start`, `arcanum stop` | starts or stops everything |
+| `arcanum status` | shows the containers and the addresses |
+| `arcanum logs [service]` | follows the logs – of everything, or of `api`, `client`, `db`, `redis` or `minio` |
+| `arcanum uninstall` | removes the containers – or everything, data included |
+
+**Updating** means getting the newer installer and running `arcanum update` – each installer pulls the images of its own version, so the compose file and the images always match:
+```
+sudo curl -fLo /usr/local/bin/arcanum https://github.com/XBambinoX/ArcanumMessenger/releases/latest/download/arcanum-linux-x64
+arcanum update
+```
+It's always safe to re-run: it never changes a value that's already in `.env`, and keeps the certificate.
+
+### Trusting the certificate
+
+The installer makes a small certificate authority (CA) of its own and signs the server's certificate with it, then offers to trust that CA on the computer it runs on – the system's list, plus Firefox (and Chrome on Linux), which keep their own; for those it needs `certutil` (`nss` on Arch, `libnss3-tools` on Debian/Ubuntu).
+
+Every other device warns about the certificate until it trusts the CA too. That's a one-time step per device: certificates renewed later are signed by the same CA. Copy `~/.arcanum/ca/arcanum-ca.crt` to the device – the `.crt`, never the `.key` next to it – and:
+
+- **Android:** search Settings for "CA certificate" → Install anyway → pick the file.
+- **iPhone, iPad:** open the file (AirDrop or mail it to yourself) → Settings → Profile Downloaded → Install. Then Settings → General → About → Certificate Trust Settings → turn it on.
+- **Windows:** double-click it → Install Certificate → Current User → Place all certificates in the following store → Trusted Root Certification Authorities.
+- **macOS:** double-click it, then in Keychain Access open it → Trust → When using this certificate: Always Trust.
+- **Firefox, anywhere:** Settings → Privacy & Security → Certificates → View Certificates → Authorities → Import.
+
+Or skip it and click through the browser's warning ("Advanced" → "Proceed"). The connection is encrypted either way; trusting the CA is what lets the browser tell it's really your server.
 
 <details>
-<summary>Setting it up by hand instead</summary>
+<summary>Running it without the installer, or from source</summary>
 
-1. Copy `.env.example` to `.env` and fill it in. `ENCRYPTION_KEK`, `EMAIL_HASH_PEPPER`, `PUBLIC_ID_HASH_PEPPER` and `JWT_SECRET` each take `openssl rand -base64 32`; the passwords can be any random string.
-2. Put a certificate and its key into the folder `HTTPS_CERT_DIR` points at, as `arcanum-lan.crt` and `arcanum-lan.key` – nginx has no plain-HTTP fallback.
-3. Start it: `docker compose -f docker-compose.prod.yml up --build -d`. Migrations run when the API starts.
+The installer only automates this. Get the repository (`git clone https://github.com/XBambinoX/ArcanumMessenger.git`), then:
 
-On Windows, `openssl` comes with Git for Windows (run it from Git Bash), and `HTTPS_CERT_DIR` takes forward slashes: `C:/Users/<you>/arcanum-certs`.
+1. Copy `.env.example` to `.env` and fill it in. `ENCRYPTION_KEK`, `EMAIL_HASH_PEPPER`, `PUBLIC_ID_HASH_PEPPER` and `JWT_SECRET` each take `openssl rand -base64 32`; the passwords can be any random string. Point `HTTPS_CERT_DIR` at your certificate's folder, or remove it to use `./certs`.
+2. Put the certificate and its key into that folder as `arcanum-lan.crt` and `arcanum-lan.key` – nginx has no plain-HTTP fallback.
+3. Start it with the published images: `docker compose -f docker-compose.prod.yml up -d` – or build the images yourself: `docker compose -f docker-compose.prod.yml -f docker-compose.build.yml up --build -d`. Migrations run when the API starts.
+
+The installer can run images you built yourself, too – give them a tag and pass it along:
+```
+ARCANUM_TAG=local docker compose -f docker-compose.prod.yml -f docker-compose.build.yml build
+ARCANUM_TAG=local ./arcanum install
+```
+The installer itself runs from source with the .NET 10 SDK: `dotnet run --project ArcanumMessenger.Installer -- install`.
 
 </details>
 
@@ -120,12 +165,13 @@ On Windows, `openssl` comes with Git for Windows (run it from Git Bash), and `HT
 
 ### Backups
 
-An install is three things:
+An install is these four things:
 
-- **`.env` – the one that matters most.** `ENCRYPTION_KEK` and the two peppers in it can't be recreated: lose them and existing accounts can't sign in again, and whatever the server encrypted with them stays unreadable. Keep a copy off the machine, in a password manager for example.
+- **`~/.arcanum/.env` – the one that matters most.** `ENCRYPTION_KEK` and the two peppers in it can't be recreated: lose them and existing accounts can't sign in again, and whatever the server encrypted with them stays unreadable. Keep a copy off the machine, in a password manager for example.
+- **`~/.arcanum/ca/`** – the certificate authority. Without it the installer makes a new one, and every device has to trust that one all over again.
 - **The database:**
   ```
-  docker exec arcanum-db-prod pg_dump -U arcanum_user -d arcanum > arcanum-db-$(date +%F).sql
+  docker exec arcanum-db-prod pg_dump -U arcanum_user -d arcanum --clean --if-exists > arcanum-db-$(date +%F).sql
   ```
 - **Media** (stored end-to-end encrypted):
   ```
@@ -135,14 +181,13 @@ An install is three things:
 
 The certificate in `certs/` can simply be created again.
 
-To restore on a fresh machine, put `.env` back **first** – `install.sh` won't pair a new `.env` with old data – then load the database and the media before the API ever starts:
+To restore on a fresh machine, put `.env` and `ca/` into `~/.arcanum` **first** – the installer won't pair a new `.env` with old data – and run `arcanum install`. Then, from the folder with the backups, load the database and the media while the API is stopped:
 ```
-docker compose -f docker-compose.prod.yml up -d db minio
+docker stop arcanum-api-prod arcanum-minio-prod
 docker exec -i arcanum-db-prod psql -U arcanum_user -d arcanum < arcanum-db-2026-10-06.sql
-docker compose -f docker-compose.prod.yml stop minio
 docker run --rm -v arcanum-prod_minio_data_prod:/data -v "$PWD":/backup alpine \
   tar xzf /backup/arcanum-media-2026-10-06.tar.gz -C /data
-./install.sh
+arcanum start
 ```
 
 ---

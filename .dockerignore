@@ -29,4 +29,3 @@ README.md
 !.git/packed-refs
 !.git/refs/heads/**
 certs
-.installer
