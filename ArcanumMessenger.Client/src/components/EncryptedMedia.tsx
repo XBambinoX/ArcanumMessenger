@@ -127,12 +127,33 @@ export function EncryptedThumbnail({ chat, mediaId, className, alt }: EncryptedT
 // unsupported/corrupt file even though nothing was actually wrong with the
 // decrypted bytes. This one is intentionally never revoked - it belongs to
 // whatever tab the browser opened, not to this component.
+//
+// A blob: URL opened as a page runs on this app's own origin, and its type
+// is whatever the sender claimed - so only types a browser shows as a
+// passive image/video viewer are opened this way. image/svg+xml above all
+// is a document that can carry script, which would run with full access to
+// this tab (E2EE identity key in sessionStorage included). Anything else
+// just doesn't open; it's still shown inline, where <img>/<video> never run
+// script. The blob is rebuilt with the checked type itself, since a type
+// string the Blob constructor rejects becomes "" - and an untyped page gets
+// content-sniffed, possibly as HTML.
+const PAGE_SAFE_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp", "image/avif", "image/bmp"]);
+
+function pageSafeType(mimeType: string): string | null {
+    const base = mimeType.split(";")[0].trim().toLowerCase();
+    if (PAGE_SAFE_IMAGE_TYPES.has(base) || /^video\/[a-z0-9.+-]+$/.test(base)) return base;
+    return null;
+}
+
 async function openFullSize(chat: KeyedChat, media: DownloadableMedia): Promise<boolean> {
+    const type = pageSafeType(media.mimeType);
+    if (!type) return false;
+
     try {
         const chatKey = await getChatKey({ id: chat.id, wrappedChatKey: chat.wrappedChatKey });
         if (!chatKey) return false;
         const blob = await downloadAndDecryptMedia(chatKey, chat.id, media);
-        window.open(URL.createObjectURL(blob), "_blank");
+        window.open(URL.createObjectURL(new Blob([blob], { type })), "_blank");
         return true;
     } catch {
         // A slow/dropped connection shouldn't surface as an unhandled

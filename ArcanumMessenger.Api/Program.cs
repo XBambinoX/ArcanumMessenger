@@ -121,6 +121,7 @@ namespace ArcanumMessenger
             builder.Services.AddSingleton<EmailHasher>();
             builder.Services.AddSingleton<PublicIdHasher>();
             builder.Services.AddSingleton<LoginSessionService>();
+            builder.Services.AddSingleton<LoginAttemptLimiter>();
             builder.Services.AddSingleton<TotpService>();
             builder.Services.AddSingleton<TotpSetupSessionService>();
             builder.Services.AddSingleton<RecoverySessionService>();
@@ -130,6 +131,13 @@ namespace ArcanumMessenger
 
             using (var startupScope = app.Services.CreateScope())
             {
+                // Prod only - in dev, switching branches would apply (or trip over) their migrations.
+                if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
+                {
+                    var db = startupScope.ServiceProvider.GetRequiredService<AppDbContext>();
+                    await db.Database.MigrateAsync();
+                }
+
                 var media = startupScope.ServiceProvider.GetRequiredService<MediaService>();
                 await media.EnsureBucketExistsAsync(CancellationToken.None);
 

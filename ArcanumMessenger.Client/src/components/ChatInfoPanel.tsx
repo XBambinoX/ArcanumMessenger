@@ -23,7 +23,8 @@ import ChatMediaGrid from "./ChatMediaGrid";
 import styles from "./ChatInfoPanel.module.css";
 import { useLanguage } from "../lib/language";
 import { APP_COMMON } from "../lib/appTranslations";
-import { CHAT_INFO_TRANSLATIONS, type ChatInfoPanelTranslation } from "../lib/chatManagementTranslations";
+import { CHAT_INFO_TRANSLATIONS, CHAT_EXPORT_TRANSLATIONS, type ChatInfoPanelTranslation } from "../lib/chatManagementTranslations";
+import ExportChatModal from "./ExportChatModal";
 
 interface ChatInfoPanelProps {
     chat: ChatSummary;
@@ -66,6 +67,7 @@ export default function ChatInfoPanel({
     const language = useLanguage();
     const common = APP_COMMON[language];
     const tr = CHAT_INFO_TRANSLATIONS[language];
+    const exportTr = CHAT_EXPORT_TRANSLATIONS[language];
     const [confirming, setConfirming] = useState(false);
     const [busy, setBusy] = useState(false);
     const [description, setDescription] = useState<string | null>(null);
@@ -74,6 +76,7 @@ export default function ChatInfoPanel({
     const [roleActionId, setRoleActionId] = useState<string | null>(null);
     const [adminListOpen, setAdminListOpen] = useState(false);
     const [manageMembersOpen, setManageMembersOpen] = useState(false);
+    const [exportOpen, setExportOpen] = useState(false);
     const [infoTab, setInfoTab] = useState<"general" | "media">("general");
     const [stats, setStats] = useState<ChatStats | null>(null);
     const avatarInputRef = useRef<HTMLInputElement | null>(null);
@@ -537,6 +540,25 @@ export default function ChatInfoPanel({
                             </>
                         )}
 
+                        <button
+                            className={styles.exportBtn}
+                            onClick={() => setExportOpen(true)}
+                        >
+                            <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            >
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                            </svg>
+                            {exportTr.exportChatButton}
+                        </button>
+
                         {chat.type !== "saved" && (
                             <button
                                 className={styles.deleteBtn}
@@ -587,6 +609,8 @@ export default function ChatInfoPanel({
                 onClose={() => setManageMembersOpen(false)}
             />
         )}
+
+        {exportOpen && <ExportChatModal chat={chat} onClose={() => setExportOpen(false)} />}
         </>
     );
 }

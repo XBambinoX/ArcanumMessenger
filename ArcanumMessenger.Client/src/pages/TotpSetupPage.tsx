@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import QRCode from "qrcode";
 import styles from "./TotpSetupPage.module.css";
 import { startTotpSetup, confirmTotpSetup } from "../api/totp";
+import { spreadPastedCode } from "../lib/codeInput";
 
 type Step = 0 | 1 | 2; // 0: show QR + secret (covers loading too), 1: enter code, 2: done
 const CODE_LENGTH = 6;
@@ -74,6 +75,17 @@ export default function TotpSetupPage() {
         if (e.key === "Backspace" && !code[index] && index > 0) {
             codeInputs.current[index - 1]?.focus();
         }
+    };
+
+    const handleCodePaste = (
+        index: number,
+        e: React.ClipboardEvent<HTMLInputElement>,
+    ) => {
+        const pasted = spreadPastedCode(code, index, e.clipboardData.getData("text"));
+        if (!pasted) return;
+        e.preventDefault();
+        setCode(pasted.code);
+        codeInputs.current[pasted.focusIndex]?.focus();
     };
 
     const handleConfirm = async () => {
@@ -232,6 +244,9 @@ export default function TotpSetupPage() {
                                         }
                                         onKeyDown={(e) =>
                                             handleCodeKeyDown(i, e)
+                                        }
+                                        onPaste={(e) =>
+                                            handleCodePaste(i, e)
                                         }
                                         autoFocus={i === 0}
                                     />

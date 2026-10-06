@@ -32,6 +32,7 @@ You may use, modify, and distribute the code **for non-commercial purposes only*
 - **No central account recovery:** lose your device and you don't lose your account or end up in a support queue proving who you are. A BIP39 recovery phrase generated on your own client is the only way back in, and it's never stored anywhere the server could hand over.
 - **Deletion that actually deletes:** background jobs hard-delete expired messages, chats, orphaned media, and dead sessions from both the database and object storage on a schedule – gone means gone, not just hidden behind a flag in a backup somewhere.
 - **Full visibility into your own account:** see every device signed in and revoke any of them instantly, no ticket required.
+- **Your history goes with you:** export any chat to a ZIP straight from the browser – a `messages.html` that looks like the chat itself, a `result.json` for scripts, and the photos, videos, voice notes and files, optionally password-protected. It's all decrypted on your own device, so the server never sees a readable copy on the way out either.
 - **Everything you'd expect from a daily-driver messenger:** direct chats, groups, a private Saved Messages space, photos/voice/video/GIFs/stickers, replies, forwarding, reactions, editing, quick-reply (arrow keys on desktop, swipe on mobile), contacts with blocking, TOTP two-factor auth, and light/dark themes with multiple languages.
 
 ## Screenshots
@@ -49,7 +50,7 @@ You may use, modify, and distribute the code **for non-commercial purposes only*
 - Entity Framework Core + PostgreSQL
 - SignalR for real-time updates
 - Redis for caching and presence
-- MinIO (S3-compatible) for encrypted media storage
+- MinIO (S3-compatible) for encrypted media storage – the `bitnamilegacy/minio` image, since the official `minio/minio` images were discontinued; it's frozen at its last release and gets no security updates
 - Argon2 password hashing, JWT bearer auth with refresh-token rotation, TOTP two-factor auth
 
 **Frontend**
@@ -60,6 +61,7 @@ You may use, modify, and distribute the code **for non-commercial purposes only*
 **Infrastructure**
 - Docker Compose for local development
 - nginx reverse proxy with TLS in front of a static production build
+- GitHub Actions builds the production images for amd64 and arm64 into GHCR, and a single-file installer (.NET + Spectre.Console) for Linux, macOS and Windows
 
 ---
 
@@ -75,78 +77,124 @@ The one thing you're missing without a domain is a way to reach that machine fro
 
 Everything below is for anyone who wants to run their own instance. If you're just here to see what the project is about, this is a good place to stop.
 
-This is the production setup – a standalone `docker-compose.prod.yml` that builds the client into a static bundle served behind nginx, with TLS termination and a reverse proxy to the API and SignalR hubs, and keeps every internal service (database, cache, object storage, API) off the host network entirely. There's also a separate dev-only compose file for working on the code itself, but that's not what you'd run to actually use the messenger day to day.
+This is the production setup – the client is a static bundle served by nginx, which terminates TLS and proxies the API and SignalR hubs, and every internal service (database, cache, object storage, API) stays off the host network entirely. The images are built ahead of time for both amd64 and arm64, so the server only downloads them: nothing gets compiled on it, and it doesn't need the source code. There's also a separate dev-only compose file for working on the code itself, but that's not what you'd run to actually use the messenger day to day.
 
 ### Prerequisites
 
-- [Docker](https://www.docker.com/) and Docker Compose
+- Docker with its Compose plugin: [Docker Engine](https://docs.docker.com/engine/install/) on Linux (a Raspberry Pi with a 64-bit OS will do), [Docker Desktop](https://www.docker.com/products/docker-desktop/) on macOS or Windows
 - An SMTP account, for account confirmation and password recovery emails
 
 ---
 
 ### Installation
 
-1. **Clone the repository:**
+1. **Download the installer and run it.** It's a single file with nothing else to install – every build is on the [latest release](https://github.com/XBambinoX/ArcanumMessenger/releases/latest).
+
+   **Linux** – on a Raspberry Pi 4/5, take `arcanum-linux-arm64` instead:
    ```
-   git clone https://github.com/Blackcat-404/ArcanumMessenger.git
-   cd ArcanumMessenger
+   curl -fLo arcanum https://github.com/XBambinoX/ArcanumMessenger/releases/latest/download/arcanum-linux-x64
+   chmod +x arcanum
+   ./arcanum install
    ```
 
-2. **Configure your environment:**
+   **macOS** – on an Intel Mac, take `arcanum-macos-x64` instead:
+   ```
+   curl -fLo arcanum https://github.com/XBambinoX/ArcanumMessenger/releases/latest/download/arcanum-macos-arm64
+   chmod +x arcanum
+   ./arcanum install
+   ```
+   It isn't signed by Apple, so if you download it with a browser instead, macOS won't open it until you run `xattr -d com.apple.quarantine arcanum`.
 
-   Copy the example file and fill it in:
-   ```
-   cp .env.example .env
-   ```
+   **Windows** – start Docker Desktop, then download [`arcanum-windows-x64.exe`](https://github.com/XBambinoX/ArcanumMessenger/releases/latest/download/arcanum-windows-x64.exe) and double-click it. It isn't signed either, so the first time SmartScreen says "Windows protected your PC" – click "More info", then "Run anyway".
 
-   ```
-   POSTGRES_PASSWORD=choose_a_postgres_password
+2. **Answer its questions.** It checks Docker, writes `~/.arcanum/.env` with freshly generated secrets – asking you only for the SMTP mailbox to send from – and creates a TLS certificate for the addresses it finds on the machine (LAN IP, Tailscale IP, hostname), or takes certificate files you already have. Then it downloads and starts the stack and waits until everything is healthy; the database is set up automatically on first start. On Linux and macOS it offers at the end to copy itself into `/usr/local/bin`, so from then on it's just `arcanum`.
 
-   SMTP_USERNAME=your_email@gmail.com
-   SMTP_PASSWORD=your_app_password
-
-   ENCRYPTION_KEK=generate_a_random_secret
-   EMAIL_HASH_PEPPER=generate_a_random_secret
-   PUBLIC_ID_HASH_PEPPER=generate_a_random_secret
-   JWT_SECRET=generate_a_random_secret
-
-   MINIO_ROOT_USER=choose_a_minio_user
-   MINIO_ROOT_PASSWORD=choose_a_minio_password
-   ```
-
-   For the secret values, any long random string works, for example:
-   ```
-   openssl rand -base64 32
-   ```
-
-   `SMTP_USERNAME` / `SMTP_PASSWORD` can be any SMTP provider (Gmail, Outlook, a custom server). For Gmail, generate an **App password** under your Google Account's security settings and use that instead of your normal password.
-
-3. **Get a TLS certificate for nginx** and point `HTTPS_CERT_DIR` in `.env` at the folder it's in – there's no plain-HTTP fallback, nginx won't start without one. If you don't have a real domain yet, a self-signed certificate works fine for a private setup:
-   ```
-   mkdir -p ~/.aspnet/https
-   openssl req -x509 -newkey rsa:2048 -nodes -days 365 \
-     -keyout ~/.aspnet/https/arcanum-lan.key \
-     -out ~/.aspnet/https/arcanum-lan.crt \
-     -subj "/CN=localhost" \
-     -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
-   ```
-   Add every address you'll actually reach the server by to that `subjectAltName` list – your LAN IP, and the IP Tailscale assigns the machine if you're using it, e.g. `...,IP:192.168.1.50,IP:100.x.x.x`.
-
-4. **Start the stack:**
-   ```
-   docker compose -f docker-compose.prod.yml up --build -d
-   ```
-
-5. **Apply database migrations** (run once, from a throwaway container – production keeps the database off the host network, so this runs through Docker rather than a locally installed .NET SDK):
-   ```
-   docker run --rm -v "$(pwd):/src" -w /src/ArcanumMessenger.Api \
-     --network container:arcanum-db-prod \
-     mcr.microsoft.com/dotnet/sdk:10.0 bash -c \
-     "dotnet tool install --global dotnet-ef && \
-      ~/.dotnet/tools/dotnet-ef database update --connection \
-      'Host=localhost;Port=5432;Database=arcanum;Username=arcanum_user;Password=YOUR_POSTGRES_PASSWORD'"
-   ```
-
-6. **Open your browser and navigate to your server's address** (`https://localhost/`, its LAN IP, or its Tailscale address). The browser will warn you about the self-signed certificate the first time – that's expected, proceed anyway (the exact wording depends on your browser, usually something like "Advanced" -> "Proceed").
+3. **Open one of the addresses it prints** in your browser.
 
 This, combined with Tailscale, is enough to run a real private server without ever needing a domain.
+
+Everything the installer creates lives in `~/.arcanum` (`%USERPROFILE%\.arcanum` on Windows): the `.env`, the `docker-compose.yml` it runs, the certificate in `certs/`, and in `ca/` the certificate authority that signed it. Plain `docker compose ...` works in that folder too.
+
+Run without a command, the installer shows a menu with everything below – that's what double-clicking it on Windows does. Or give the command directly: `arcanum update` once it's in `/usr/local/bin`, otherwise `./arcanum update`, or `.\arcanum-windows-x64.exe update` in PowerShell.
+
+| Command | What it does |
+|---|---|
+| `arcanum update` | pulls the images of this installer's version and restarts; the API applies new database migrations as it starts |
+| `arcanum start`, `arcanum stop` | starts or stops everything |
+| `arcanum status` | shows the containers and the addresses |
+| `arcanum logs [service]` | follows the logs – of everything, or of `api`, `client`, `db`, `redis` or `minio` |
+| `arcanum uninstall` | removes the containers – or everything, data included |
+
+**Updating** means getting the newer installer and running its update – each installer pulls the images of its own version, so the compose file and the images always match. Download it the same way as the first time, over the old file, or on Linux and macOS into `/usr/local/bin` if it's there (with your system's file name):
+```
+sudo curl -fLo /usr/local/bin/arcanum https://github.com/XBambinoX/ArcanumMessenger/releases/latest/download/arcanum-linux-x64
+arcanum update
+```
+It's always safe to re-run: it never changes a value that's already in `.env`, and keeps the certificate.
+
+### Trusting the certificate
+
+The installer makes a small certificate authority (CA) of its own and signs the server's certificate with it, then offers to trust that CA on the computer it runs on – the system's list, plus Firefox (and Chrome on Linux), which keep their own; for those it needs `certutil` (`nss` on Arch, `libnss3-tools` on Debian/Ubuntu).
+
+Every other device warns about the certificate until it trusts the CA too. That's a one-time step per device: certificates renewed later are signed by the same CA. Copy `~/.arcanum/ca/arcanum-ca.crt` to the device – the `.crt`, never the `.key` next to it – and:
+
+- **Android:** search Settings for "CA certificate" → Install anyway → pick the file.
+- **iPhone, iPad:** open the file (AirDrop or mail it to yourself) → Settings → Profile Downloaded → Install. Then Settings → General → About → Certificate Trust Settings → turn it on.
+- **Windows:** double-click it → Install Certificate → Current User → Place all certificates in the following store → Trusted Root Certification Authorities.
+- **macOS:** double-click it, then in Keychain Access open it → Trust → When using this certificate: Always Trust.
+- **Firefox, anywhere:** Settings → Privacy & Security → Certificates → View Certificates → Authorities → Import.
+
+Or skip it and click through the browser's warning ("Advanced" → "Proceed"). The connection is encrypted either way; trusting the CA is what lets the browser tell it's really your server.
+
+<details>
+<summary>Running it without the installer, or from source</summary>
+
+The installer only automates this. Get the repository (`git clone https://github.com/XBambinoX/ArcanumMessenger.git`), then:
+
+1. Copy `.env.example` to `.env` and fill it in. `ENCRYPTION_KEK`, `EMAIL_HASH_PEPPER`, `PUBLIC_ID_HASH_PEPPER` and `JWT_SECRET` each take `openssl rand -base64 32`; the passwords can be any random string. Point `HTTPS_CERT_DIR` at your certificate's folder, or remove it to use `./certs`.
+2. Put the certificate and its key into that folder as `arcanum-lan.crt` and `arcanum-lan.key` – nginx has no plain-HTTP fallback.
+3. Start it with the published images: `docker compose -f docker-compose.prod.yml up -d` – or build the images yourself: `docker compose -f docker-compose.prod.yml -f docker-compose.build.yml up --build -d`. Migrations run when the API starts.
+
+The installer can run images you built yourself, too – give them a tag and pass it along:
+```
+ARCANUM_TAG=local docker compose -f docker-compose.prod.yml -f docker-compose.build.yml build
+ARCANUM_TAG=local ./arcanum install
+```
+The installer itself runs from source with the .NET 10 SDK: `dotnet run --project ArcanumMessenger.Installer -- install`.
+
+</details>
+
+---
+
+### Backups
+
+An install is these four things:
+
+- **`~/.arcanum/.env` – the one that matters most.** `ENCRYPTION_KEK` and the two peppers in it can't be recreated: lose them and existing accounts can't sign in again, and whatever the server encrypted with them stays unreadable. Keep a copy off the machine, in a password manager for example.
+- **`~/.arcanum/ca/`** – the certificate authority. Without it the installer makes a new one, and every device has to trust that one all over again.
+- **The database:**
+  ```
+  docker exec arcanum-db-prod pg_dump -U arcanum_user -d arcanum --clean --if-exists > arcanum-db-$(date +%F).sql
+  ```
+- **Media** (stored end-to-end encrypted):
+  ```
+  docker run --rm -v arcanum-prod_minio_data_prod:/data:ro -v "$PWD":/backup alpine \
+    tar czf /backup/arcanum-media-$(date +%F).tar.gz -C /data .
+  ```
+
+The certificate in `certs/` can simply be created again.
+
+To restore on a fresh machine, put `.env` and `ca/` into `~/.arcanum` **first** – the installer won't pair a new `.env` with old data – and run `arcanum install`. Then, from the folder with the backups, load the database and the media while the API is stopped:
+```
+docker stop arcanum-api-prod arcanum-minio-prod
+docker exec -i arcanum-db-prod psql -U arcanum_user -d arcanum < arcanum-db-2026-10-06.sql
+docker run --rm -v arcanum-prod_minio_data_prod:/data -v "$PWD":/backup alpine \
+  tar xzf /backup/arcanum-media-2026-10-06.tar.gz -C /data
+arcanum start
+```
+
+---
+
+### Upload Size Limits
+
+nginx caps request bodies under `/api/` at 16 MB (`client_max_body_size` in `ArcanumMessenger.Client/nginx/nginx.conf`). That holds as long as no single request is bigger: files from 1 MB up are sent in encrypted 10 MB chunks (the API takes up to 15 MB per chunk), and avatars are capped at 10 MB. If you raise `CHUNK_THRESHOLD` (`ArcanumMessenger.Client/src/api/chunkedUpload.ts`) or `CHUNK_SIZE` (`ArcanumMessenger.Client/src/crypto/chunkedMedia.ts`) past 16 MB, raise the nginx limit with them – otherwise uploads fail with 413 in production while still working in dev, where the Vite proxy has no limit.

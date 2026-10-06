@@ -1,4 +1,4 @@
-import { apiFetch } from "../lib/apiFetch";
+import { ApiError, apiFetch } from "../lib/apiFetch";
 import type { ChatMessage, ChatReadState, MediaAsset, MessageReaction } from "../types/messenger";
 
 export interface MessageHistoryResult {
@@ -17,6 +17,23 @@ export async function getMessageHistory(
     });
     const data = await res.json();
     return { messages: data.messages ?? [], hasMore: data.hasMore ?? false, readStates: data.readStates ?? [] };
+}
+
+// Throws on an error instead of reading it as "no more messages", so an export can't silently come out cut short.
+export async function getExportHistoryPage(
+    chatId: string,
+    before: string | null,
+    signal: AbortSignal,
+): Promise<{ messages: ChatMessage[]; hasMore: boolean }> {
+    const params = new URLSearchParams({ take: "100" });
+    if (before) params.set("before", before);
+    const res = await apiFetch(`/api/chats/${chatId}/messages?${params}`, {
+        credentials: "include",
+        signal,
+    });
+    if (!res.ok) throw new ApiError(res.status, `history page failed: ${res.status}`);
+    const data = await res.json();
+    return { messages: data.messages ?? [], hasMore: data.hasMore ?? false };
 }
 
 export async function sendMessage(

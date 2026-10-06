@@ -100,10 +100,11 @@ services:
             retries: 5
             start_period: 5s
 
+    # Same image as docker-compose.prod.yml - see the comment there for why
+    # it's not minio/minio anymore.
     minio:
-        image: minio/minio:latest
+        image: bitnamilegacy/minio:2025.5.24
         container_name: arcanum-minio
-        command: server /data --console-address ":9001"
         ports:
             - "127.0.0.1:9000:9000"
             - "127.0.0.1:9001:9001"
@@ -111,10 +112,10 @@ services:
             MINIO_ROOT_USER: ${MINIO_ROOT_USER}
             MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
         volumes:
-            - minio_data:/data
+            - minio_data:/bitnami/minio/data
         restart: unless-stopped
         healthcheck:
-            test: ["CMD", "mc", "ready", "local"]
+            test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
             interval: 10s
             timeout: 5s
             retries: 5

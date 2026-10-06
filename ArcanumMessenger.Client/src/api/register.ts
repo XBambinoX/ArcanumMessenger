@@ -92,6 +92,7 @@ export async function confirmRecovery(
 export async function finalizeRegistration(
     sessionId: string,
     language?: string,
+    theme?: string,
 ): Promise<{
     success: boolean;
     reason?: string;
@@ -102,7 +103,7 @@ export async function finalizeRegistration(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ sessionId, language }),
+        body: JSON.stringify({ sessionId, language, theme }),
     });
     return res.json();
 }

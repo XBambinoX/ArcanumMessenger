@@ -11,7 +11,11 @@
 # outside Docker - everything else talks over the internal network by
 # service name.
 #
-# Run with: docker compose -f docker-compose.prod.yml up
+# The installer (ArcanumMessenger.Installer) ships this file and writes it
+# to ~/.arcanum/docker-compose.yml with ARCANUM_TAG filled in. The images
+# come from GHCR; to build them from source instead, add
+# docker-compose.build.yml:
+#   docker compose -f docker-compose.prod.yml -f docker-compose.build.yml up --build -d
 #
 # Named explicitly (not left to default to the directory name) so this
 # gets its own network/project even when run from the same machine and
@@ -20,15 +24,14 @@ name: arcanum-prod
 
 services:
     api:
-        build:
-            context: .
-            dockerfile: ArcanumMessenger.Api/Dockerfile
+        image: ghcr.io/xbambinox/arcanum-api:${ARCANUM_TAG:-latest}
         container_name: arcanum-api-prod
         environment:
             ASPNETCORE_ENVIRONMENT: Production
             ASPNETCORE_URLS: http://+:8080
             ConnectionStrings__Postgres: Host=${POSTGRES_HOST};Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
             ConnectionStrings__Redis: redis:6379
+            Database__MigrateOnStartup: "true"
 
             Smtp__Host: ${SMTP_HOST}
             Smtp__Port: ${SMTP_PORT}
@@ -64,20 +67,20 @@ services:
             start_period: 10s
 
     client:
-        build:
-            context: ./ArcanumMessenger.Client
-            dockerfile: Dockerfile.prod
+        image: ghcr.io/xbambinox/arcanum-client:${ARCANUM_TAG:-latest}
         container_name: arcanum-client-prod
         ports:
             - "80:80"
             - "443:443"
         volumes:
-            - ${HTTPS_CERT_DIR}:/etc/nginx/certs:ro
+            - ${HTTPS_CERT_DIR:-./certs}:/etc/nginx/certs:ro
         restart: unless-stopped
         depends_on:
             - api
         healthcheck:
-            test: ["CMD", "wget", "--no-check-certificate", "-q", "-O", "/dev/null", "https://localhost/"]
+            # 127.0.0.1, not localhost - alpine resolves localhost to ::1
+            # first, and nginx only listens on IPv4 here.
+            test: ["CMD", "wget", "--no-check-certificate", "-q", "-O", "/dev/null", "https://127.0.0.1/"]
             interval: 30s
             timeout: 5s
             retries: 3
@@ -113,18 +116,26 @@ services:
             retries: 5
             start_period: 5s
 
+    # MinIO no longer publishes community images (minio/minio is gone from
+    # Docker Hub and the GitHub repo is archived) - this is Bitnami's frozen
+    # last build of it. It gets no more security updates, so it stays
+    # internal-only like before; swap in a maintained S3-compatible store
+    # eventually. Bitnami's own entrypoint starts the server, so there's no
+    # `command:` here, and it keeps its data under /bitnami/minio/data.
     minio:
-        image: minio/minio:latest
+        image: bitnamilegacy/minio:2025.5.24
         container_name: arcanum-minio-prod
-        command: server /data --console-address ":9001"
         environment:
             MINIO_ROOT_USER: ${MINIO_ROOT_USER}
             MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
         volumes:
-            - minio_data_prod:/data
+            - minio_data_prod:/bitnami/minio/data
+        # The image declares a VOLUME here; without a mount every recreate leaves an orphaned anonymous volume
+        tmpfs:
+            - /certs
         restart: unless-stopped
         healthcheck:
-            test: ["CMD", "mc", "ready", "local"]
+            test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
             interval: 10s
             timeout: 5s
             retries: 5

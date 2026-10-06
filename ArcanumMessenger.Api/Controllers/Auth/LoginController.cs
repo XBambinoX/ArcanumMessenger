@@ -12,6 +12,7 @@ public class LoginController(
     EmailHasher emailHasher,
     AuthService authService,
     TokenIssuanceService tokenIssuance,
+    LoginAttemptLimiter attemptLimiter,
     ILogger<LoginController> logger) : ControllerBase
 {
 
@@ -59,12 +60,21 @@ public class LoginController(
         if (request.AuthKey == null || !PasswordHasher.IsBase64OfLength(request.AuthKey, AuthKeySize))
             return BadRequest(new SubmitLoginPasswordResponse(Success: false, RequiresTotp: false, Reason: "invalid_format"));
 
+        // Checked before the Argon2id verify, so a blocked caller doesn't get
+        // to spend the server's CPU/memory on it either.
+        if (await attemptLimiter.IsBlockedAsync(LoginAttemptLimiter.Step.Password, session.EmailHash!))
+            return StatusCode(StatusCodes.Status429TooManyRequests, new SubmitLoginPasswordResponse(Success: false, RequiresTotp: false, Reason: "too_many_attempts"));
+
         var (isPassCorrect, requiresTotp) = await authService.CheckPassAsync(session.EmailHash!, request.AuthKey, ct);
 
         if (isPassCorrect)
         {
             session.Step++;
             await loginSession.UpdateAsync(request.SessionId, session, ct);
+        }
+        else
+        {
+            await attemptLimiter.RecordFailureAsync(LoginAttemptLimiter.Step.Password, session.EmailHash!);
         }
 
         return isPassCorrect ? Ok(new SubmitLoginPasswordResponse(Success: true, RequiresTotp: requiresTotp, Reason: null))
@@ -92,12 +102,19 @@ public class LoginController(
         if (string.IsNullOrEmpty(request.Code) || request.Code.Length != 6 || !request.Code.All(char.IsDigit))
             return BadRequest(new SubmitLoginTotpResponse(Success: false, Reason: "invalid_format"));
 
+        if (await attemptLimiter.IsBlockedAsync(LoginAttemptLimiter.Step.Totp, session.EmailHash!))
+            return StatusCode(StatusCodes.Status429TooManyRequests, new SubmitLoginTotpResponse(Success: false, Reason: "too_many_attempts"));
+
         var isCodeCorrect = await authService.CheckTotpAsync(session.EmailHash!, request.Code, ct);
 
         if (isCodeCorrect)
         {
             session.Step++;
             await loginSession.UpdateAsync(request.SessionId, session, ct);
+        }
+        else
+        {
+            await attemptLimiter.RecordFailureAsync(LoginAttemptLimiter.Step.Totp, session.EmailHash!);
         }
 
         return isCodeCorrect ? Ok(new SubmitLoginTotpResponse(Success: true, Reason: null))
@@ -136,6 +153,7 @@ public class LoginController(
         Response.SetAuthCookies(accessToken, refreshToken);
 
         await loginSession.DeleteAsync(request.SessionId, ct);
+        await attemptLimiter.ResetAsync(session.EmailHash!);
 
         return Ok(new CompleteLoginResponse(
             Success: true, EcdhPublicKey: user.EcdhPublicKey, WrappedEcdhPrivateKey: user.WrappedEcdhPrivateKey));

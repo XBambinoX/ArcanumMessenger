@@ -11,6 +11,9 @@
 *.sln.docstates
 *.env
 
+# The TLS key docker-compose.prod.yml mounts when run from the repo
+/certs/
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
