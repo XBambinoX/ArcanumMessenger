@@ -12,6 +12,7 @@ ENV_FILE=.env
 CERT_NAME=arcanum-lan # the file names nginx.conf loads
 API_CONTAINER=arcanum-api-prod
 CLIENT_CONTAINER=arcanum-client-prod
+DB_VOLUME=arcanum-prod_postgres_data_prod # compose project "arcanum-prod" + the volume's name
 
 GUM_VERSION=2.0.2
 GUM="$PWD/.installer/gum-$GUM_VERSION"
@@ -165,6 +166,34 @@ check_requirements() {
     ok "Docker $(docker version --format '{{.Server.Version}}') with Compose $(docker compose version --short)"
     command -v openssl >/dev/null || die "openssl isn't installed."
     ok "$(openssl version | cut -d' ' -f1-2)"
+}
+
+# A new .env can't run on an old database: Postgres keeps the password it was created with,
+# and data encrypted with the old keys stays unreadable with new ones.
+check_old_data() {
+    if [ -f "$ENV_FILE" ] || ! docker volume inspect "$DB_VOLUME" >/dev/null 2>&1; then
+        return 0
+    fi
+
+    section "Data from an earlier install"
+    warn "This machine still has the database of an earlier Arcanum install, but no .env for it."
+    note "A new .env means new passwords and keys - that database won't accept them."
+    local choice
+    choice=$("$GUM" choose --header "What should happen to the old data?" \
+        "Stop here - I'll put its .env back first" \
+        "Delete it and start fresh")
+    case "$choice" in
+        Stop*)
+            note "Put the old .env next to install.sh and run ./install.sh again."
+            exit 0
+            ;;
+    esac
+
+    "$GUM" confirm --default=false "This permanently deletes every account, message and file of that install. Delete?" || exit 0
+    # Any cert dir will do for `down` - without .env the path would be empty, which compose rejects.
+    HTTPS_CERT_DIR=. "$GUM" spin --title "Removing the old containers and data..." -- \
+        docker compose -f "$COMPOSE_FILE" down -v
+    ok "Old data removed"
 }
 
 env_get() {
@@ -382,6 +411,10 @@ wait_until_healthy() {
         warn "Arcanum didn't come up within 5 minutes. The API's last log lines:"
     fi
     compose logs --tail 30 api >&2 || true
+    if compose logs api 2>/dev/null | grep -q 28P01; then
+        warn "The database was created with a different POSTGRES_PASSWORD than the one in $ENV_FILE."
+        note "Put back the .env it was created with - or, to start over, delete that data with: docker compose -f $COMPOSE_FILE down -v (all accounts and messages go with it)."
+    fi
     die "Fix what's above and run ./install.sh again. Full logs: docker compose -f $COMPOSE_FILE logs"
 }
 
@@ -430,6 +463,7 @@ main() {
         banner "Production installer"
     fi
     check_requirements
+    check_old_data
     configure
     setup_certificate
     start_stack
